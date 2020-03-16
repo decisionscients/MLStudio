@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from pytest import mark
+import sklearn.linear_model as lm
 
 from mlstudio.supervised.regression import LinearRegression
 from mlstudio.supervised.regression import LassoRegression
@@ -120,6 +121,36 @@ class RegressionTests:
         est = regression(epochs=10, theta_init=theta_init)
         with pytest.raises(ValueError):
             est.fit(X,y)
+
+    @mark.regression
+    @mark.regression_analytical
+    def test_regression_analytical(self, split_regression_data):
+        X, X_test, y, y_test = split_regression_data
+        with pytest.raises(ValueError):
+            est = LinearRegression(method='x')
+            est.fit(X,y)
+        est = LinearRegression(method='ols')            
+        est.fit(X,y)
+        score1 = est.score(X_test, y_test)
+        print("----------------------------")
+        print(score1)
+        est = LinearRegression(method='pinv')            
+        est.fit(X,y)
+        score2 = est.score(X_test, y_test)
+        print("----------------------------")
+        print(score2)        
+        est = LinearRegression(epochs=1000)            
+        est.fit(X,y)        
+        score3 = est.score(X_test, y_test)        
+        print("----------------------------")
+        print(score3)    
+        est = lm.LinearRegression()            
+        est.fit(X,y)
+        y_pred = est.predict(X_test)
+        score4 = np.mean(y_test - y_pred)**2
+        print("----------------------------")
+        print(score4)  
+
 
     @mark.regression
     @mark.regression_rate
@@ -251,7 +282,7 @@ class RegressionTests:
     def test_regression_history_w_val_data_w_metric(self, regression, get_regression_data):        
         X, y = get_regression_data     
         stop = EarlyStop()   
-        est = regression(epochs=10, learning_rate=0.001, metric='mse', early_stop=stop)
+        est = regression(epochs=10, learning_rate=0.001, val_size=0.3, metric='mse', early_stop=stop)
         est.fit(X, y)        
         # Test epoch history
         assert est.history.total_epochs == len(est.history.epoch_log.get('epoch')), "number of epochs in log doesn't match epochs"        

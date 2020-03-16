@@ -174,9 +174,8 @@ class MSE(RegressionMetric):
         self.worst = np.Inf
         self.precision_factor = -1
     
-    def __call__(self, y, y_pred):
-        e = y-y_pred
-        return np.mean(e**2)
+    def __call__(self, y, y_pred):        
+        return np.mean(y-y_pred)**2
 
 class NMSE(RegressionMetric):
     """Computes negative mean squared error given data and parameters."""
@@ -192,9 +191,8 @@ class NMSE(RegressionMetric):
         self.precision_factor = 1
 
     
-    def __call__(self, y, y_pred):
-        e = y-y_pred
-        return np.mean(e**2) * -1
+    def __call__(self, y, y_pred):        
+        return -np.mean(y-y_pred)**2
 
 class RMSE(RegressionMetric):
     """Computes root mean squared error given data and parameters."""
@@ -297,7 +295,7 @@ class MAPE(RegressionMetric):
     def __call__(self, y, y_pred):        
         return 100*np.mean(np.abs((y-y_pred)/y))
 
-class RegressionMetricFactory:
+class RegressionScorerFactory:
     """Returns the requested score class."""
 
     def __call__(self, metric='mse'):
@@ -341,7 +339,7 @@ class Accuracy(ClassificationMetric):
             y_pred = decode(y_pred)
         return np.sum(np.equal(y,y_pred)) / y.shape[0]
 
-class ClassificationMetricFactory:
+class ClassificationScorerFactory:
     """Returns the requested score class."""
 
     def __call__(self, metric='accuracy'):

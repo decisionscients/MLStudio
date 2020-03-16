@@ -36,7 +36,7 @@ from mlstudio.supervised.regression import RidgeRegression
 from mlstudio.supervised.regression import ElasticNetRegression
 
 from mlstudio.supervised.estimator.cost import RegressionCostFactory
-from mlstudio.supervised.estimator.metrics import RegressionMetricFactory
+from mlstudio.supervised.estimator.metrics import RegressionScorerFactory
 
 # ============================================================================ #
 
@@ -45,10 +45,16 @@ def get_regression_data():
     X, y = datasets.load_boston(return_X_y=True)
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)
+    return X, y
+
+@fixture(scope="session")
+def split_regression_data():
+    X, y = datasets.load_boston(return_X_y=True)
+    scaler = StandardScaler()    
+    X = scaler.fit_transform(X)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3,
                             random_state=50)
     return X_train, X_test, y_train, y_test
-
 # ============================================================================ #
 #                                 COST                                         #
 # ============================================================================ #
@@ -154,7 +160,7 @@ def get_categorical_cost_gradient():
 # ============================================================================ #
 #                            EARLY STOP                                        #
 # ============================================================================ #
-@fixture(scope='session', params=['mae',
+@fixture(scope='function', params=['mae',
                                   'mse',
                                   'rmse',
                                   'mae',
@@ -165,7 +171,7 @@ def get_categorical_cost_gradient():
 def models_by_metric(request):
     model = LinearRegression(metric=request.param)
     model.cost_function = RegressionCostFactory()(cost='quadratic')
-    model.scorer = RegressionMetricFactory()(metric=request.param)    
+    model.scorer = RegressionScorerFactory()(metric=request.param)    
     return model 
 
 @fixture(scope='session', params=['train_cost',
@@ -175,7 +181,7 @@ def models_by_metric(request):
 def early_stop_monitor(request):
     return request.param    
 
-@fixture(scope='session', params=['mae',
+@fixture(scope='function', params=['mae',
                                   'mse',
                                   'rmse',
                                   'medae'])                                  
@@ -184,10 +190,10 @@ def model_lower_is_better(request):
                             val_size=0.3, precision=0.1,
                             patience=2)
     model.cost_function = RegressionCostFactory()(cost='quadratic')
-    model.scorer = RegressionMetricFactory()(metric=request.param)                            
+    model.scorer = RegressionScorerFactory()(metric=request.param)                            
     return model
 
-@fixture(scope='session', params=['r2',
+@fixture(scope='function', params=['r2',
                                   'var_explained',
                                   'nmse',
                                   'nrmse'])                                  
@@ -196,14 +202,14 @@ def model_higher_is_better(request):
                             val_size=0.3, precision=0.1,
                             patience=2)
     model.cost_function = RegressionCostFactory()(cost='quadratic')
-    model.scorer = RegressionMetricFactory()(metric=request.param)                            
+    model.scorer = RegressionScorerFactory()(metric=request.param)                            
     return model    
 
 # ============================================================================ #
 #                              METRICS                                         #
 # ============================================================================ #  
 
-@fixture(scope='session')
+@fixture(scope='function')
 def predict_y():
     X, y = datasets.load_boston(return_X_y=True)
     scaler = StandardScaler()    
@@ -216,7 +222,7 @@ def predict_y():
 # ============================================================================ #
 #                               REGRESSION                                     #
 # ============================================================================ #  
-@fixture(scope='session', params=[LinearRegression,
+@fixture(scope='function', params=[LinearRegression,
                                    LassoRegression,
                                    RidgeRegression,
                                    ElasticNetRegression])

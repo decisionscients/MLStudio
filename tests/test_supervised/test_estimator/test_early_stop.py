@@ -29,7 +29,7 @@ import pytest
 from pytest import mark
 
 from mlstudio.supervised.estimator.early_stop import EarlyStop
-from mlstudio.supervised.estimator.metrics import RegressionMetricFactory
+from mlstudio.supervised.estimator.metrics import RegressionScorerFactory
 from mlstudio.supervised.regression import LinearRegression
 
 # --------------------------------------------------------------------------- #

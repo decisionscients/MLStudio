@@ -21,134 +21,28 @@
 """Linear Regression, L1, L2 and ElasticNet Regression classes."""
 from abc import abstractmethod
 import numpy as np
+from numpy.linalg import inv, svd
 
 from mlstudio.supervised.estimator.regularizers import L1, L2, ElasticNet
 from mlstudio.supervised.estimator.gradient import GradientDescent
-from mlstudio.supervised.estimator.metrics import RegressionMetricFactory
+from mlstudio.supervised.estimator.metrics import RegressionScorerFactory
 from mlstudio.supervised.estimator.cost import RegressionCostFactory
 
 import warnings
 
 # --------------------------------------------------------------------------- #
-#                            LINEAR REGRESSION                                #
+#                          REGRESSION CLASS                                   #
 # --------------------------------------------------------------------------- #
 
-class LinearRegression(GradientDescent):
-    """Performs linear regression analytically or by gradient descent.
-    
-    Parameters
-    ----------
-    analytical : Boolean (Default=False)
-        If True, the closed form solution is used; otherwise, gradient descent.
+class Regression(GradientDescent):
+    """Base class for all regression classes."""
 
-    learning_rate : float or LearningRateSchedule instance, optional (default=0.01)
-        Learning rate or learning rate schedule.
-
-    batch_size : None or int, optional (default=None)
-        The number of examples to include in a single batch.
-
-    theta_init : None or array_like, optional (default=None)
-        Initial values for the parameters :math:`\\theta`
-
-    epochs : int, optional (default=1000)
-        The number of epochs to execute during training
-
-    cost : str, (default='quadratic')
-        The string name for the cost function
-
-        'quadratic':
-            Quadratic or Mean Squared Error (MSE) cost 
-        'mae':
-            Mean Absolute Error (MAE)
-        'huber':
-            Computes Huber cost
-
-    metric : str, optional (default='mse')
-        Metrics used to evaluate regression scores:
-
-        'r2': 
-            R2 - The coefficient of determination
-        'var_explained': 
-            Percentage of variance explained
-        'mae':
-            Mean absolute error
-        'mape':
-            Mean absolute percentage error
-        'mse':
-            Mean squared error
-        'nmse':
-            Negative mean squared error
-        'rmse':
-            Root mean squared error
-        'nrmse':
-            Negative root mean squared error
-        'msle':
-            Mean squared log error
-        'rmsle':
-            Root mean squared log error
-        'medae':
-            Median absolute error
-
-    early_stop : Bool or EarlyStop subclass, optional (default=True)
-        The early stopping algorithm to use during training.
-
-    val_size : Float, default=0.3
-        The proportion of the training set to allocate to the validation set.
-        Must be between 0 and 1. Only used when early_stop is not False.
-
-    patience : int, default=5
-        The number of consecutive iterations with no improvement to wait before
-        early stopping.
-
-    precision : float, default=0.01
-        The stopping criteria. The precision with which improvement in training
-        cost or validation score is measured e.g. training cost at time k+1
-        has improved if it has dropped training cost (k) * precision.
-
-    verbose : bool, optional (default=False)
-        If true, performance during training is summarized to sysout.
-
-    checkpoint : None or int, optional (default=100)
-        If verbose, report performance each 'checkpoint' epochs
-
-    name : None or str, optional (default=None)
-        The name of the model used for plotting
-
-    seed : None or int, optional (default=None)
-        Random state seed        
-
-    Attributes
-    ----------
-    coef_ : array-like shape (n_features,1) or (n_features, n_classes)
-        Coefficient of the features in X. 
-
-    intercept_ : array-like, shape(1,) or (n_classes,) 
-        Intercept (a.k.a. bias) added to the decision function. 
-
-    epochs_ : int
-        Total number of epochs executed.
-
-    Methods
-    -------
-    fit(X,y) Fits the model to input X and output y
-    predict(X) Renders predictions for input X using learned parameters
-    score(X,y) Computes a score using metric designated in __init__.
-    summary() Prints a summary of the model to sysout.  
-
-    See Also
-    --------
-    regression.LassoRegression : Lasso Regression
-    regression.RidgeRegression : Ridge Regression
-    regression.ElasticNetRegression : ElasticNet Regression
-    """    
-
-
-    
+    DEFAULT_METRIC = 'mse'
     def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None, 
-                 epochs=1000, cost='quadratic', metric='mse', analytical=False,
-                 early_stop=False, val_size=0.3, patience=5, precision=0.001,
+                 epochs=1000, cost='quadratic', metric='mse', 
+                 early_stop=False, val_size=0.0, patience=5, precision=0.001,
                  verbose=False, checkpoint=100, name=None, seed=None):
-        super(LinearRegression, self).__init__(learning_rate=learning_rate, 
+        super(Regression, self).__init__(learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
                                          epochs=epochs, cost=cost, 
@@ -160,10 +54,9 @@ class LinearRegression(GradientDescent):
                                          verbose=verbose, checkpoint=checkpoint, 
                                          name=name, seed=seed)     
  
+    @abstractmethod
     def _set_name(self):
-        self._set_algorithm_name()
-        self.task = "Linear Regression"
-        self.name = self.name or self.task + ' with ' + self._algorithm  
+        pass    
 
     def _get_cost_function(self):
         """Obtains the cost function associated with the cost parameter."""
@@ -177,7 +70,7 @@ class LinearRegression(GradientDescent):
     def _get_scorer(self):
         """Obtains the scoring function associated with the metric parameter."""
         if self.metric is not None:
-            scorer = RegressionMetricFactory()(metric=self.metric)
+            scorer = RegressionScorerFactory()(metric=self.metric)
             if not scorer:
                 msg = str(self.metric) + ' is not a supported regression metric.'
                 raise ValueError(msg)
@@ -233,15 +126,211 @@ class LinearRegression(GradientDescent):
         if self.metric:
             score = self.scorer(y=y, y_pred=y_pred)    
         else:
-            score = RegressionMetricFactory()(metric=self.DEFAULT_METRIC)(y=y, y_pred=y_pred)        
+            score = RegressionScorerFactory()(metric=self.DEFAULT_METRIC)(y=y, y_pred=y_pred)        
         return score
+
+# --------------------------------------------------------------------------- #
+#                            LINEAR REGRESSION                                #
+# --------------------------------------------------------------------------- #
+
+class LinearRegression(Regression):
+    """Performs linear regression analytically or by gradient descent.
+    
+    Parameters
+    ----------
+    method : str (Default = 'gradient-descent')
+        Model parameters may be estimated using one of three methods:
+            'gradient_descent' : numerical approximation
+            'ols' : ordinary least squares approximation
+            'pinv' : Moore-Penrose pseudoinverse estimation
+
+    learning_rate : float or LearningRateSchedule instance, optional (default=0.01)
+        Learning rate or learning rate schedule.
+
+    batch_size : None or int, optional (default=None)
+        The number of examples to include in a single batch.
+
+    theta_init : None or array_like, optional (default=None)
+        Initial values for the parameters :math:`\\theta`
+
+    epochs : int, optional (default=1000)
+        The number of epochs to execute during training
+
+    cost : str, (default='quadratic')
+        The string name for the cost function
+
+        'quadratic':
+            Quadratic or Mean Squared Error (MSE) cost 
+        'mae':
+            Mean Absolute Error (MAE)
+        'huber':
+            Computes Huber cost
+
+    metric : str, optional (default='mse')
+        Metrics used to evaluate regression scores:
+
+        'r2': 
+            R2 - The coefficient of determination
+        'var_explained': 
+            Percentage of variance explained
+        'mae':
+            Mean absolute error
+        'mape':
+            Mean absolute percentage error
+        'mse':
+            Mean squared error
+        'nmse':
+            Negative mean squared error
+        'rmse':
+            Root mean squared error
+        'nrmse':
+            Negative root mean squared error
+        'msle':
+            Mean squared log error
+        'rmsle':
+            Root mean squared log error
+        'medae':
+            Median absolute error
+
+    early_stop : Bool or EarlyStop subclass, optional (default=True)
+        The early stopping algorithm to use during training.
+
+    val_size : Float, default=0.0
+        The proportion of the training set to allocate to the validation set.
+        Must be between 0 and 1. Only used when early_stop is not False.
+
+    patience : int, default=5
+        The number of consecutive iterations with no improvement to wait before
+        early stopping.
+
+    precision : float, default=0.01
+        The stopping criteria. The precision with which improvement in training
+        cost or validation score is measured e.g. training cost at time k+1
+        has improved if it has dropped training cost (k) * precision.
+
+    verbose : bool, optional (default=False)
+        If true, performance during training is summarized to sysout.
+
+    checkpoint : None or int, optional (default=100)
+        If verbose, report performance each 'checkpoint' epochs
+
+    name : None or str, optional (default=None)
+        The name of the model used for plotting
+
+    seed : None or int, optional (default=None)
+        Random state seed        
+
+    Attributes
+    ----------
+    coef_ : array-like shape (n_features,1) or (n_features, n_classes)
+        Coefficient of the features in X. 
+
+    intercept_ : array-like, shape(1,) or (n_classes,) 
+        Intercept (a.k.a. bias) added to the decision function. 
+
+    epochs_ : int
+        Total number of epochs executed.
+
+    Methods
+    -------
+    fit(X,y) Fits the model to input X and output y
+    predict(X) Renders predictions for input X using learned parameters
+    score(X,y) Computes a score using metric designated in __init__.
+    summary() Prints a summary of the model to sysout.  
+
+    See Also
+    --------
+    regression.LassoRegression : Lasso Regression
+    regression.RidgeRegression : Ridge Regression
+    regression.ElasticNetRegression : ElasticNet Regression
+    """    
+
+
+    
+    def __init__(self, method='gradient_descent', learning_rate=0.01, batch_size=None, 
+                 theta_init=None, epochs=1000, cost='quadratic', metric='mse', 
+                 early_stop=False, val_size=0.0, patience=5, precision=0.001,
+                 verbose=False, checkpoint=100, name=None, seed=None):
+        super(LinearRegression, self).__init__(learning_rate=learning_rate, 
+                                         batch_size=batch_size, 
+                                         theta_init=theta_init, 
+                                         epochs=epochs, cost=cost, 
+                                         metric=metric, 
+                                         early_stop=early_stop, 
+                                         val_size=val_size, 
+                                         patience=patience, 
+                                         precision=precision,
+                                         verbose=verbose, checkpoint=checkpoint, 
+                                         name=name, seed=seed)     
+        self._method = method
+ 
+    def _set_name(self):
+        self._set_algorithm_name()
+        self.task = "Linear Regression"
+        if self._method == 'gradient_descent':
+            self.name = self.name or self.task + ' with ' + self._algorithm  
+        elif self._method == 'ols':
+            self.name = self.name or self.task + ' using Ordinary Least Squares'
+        else:
+            self.name = self.name or self.task + ' using Moore-Penrose pseudoinverse'
+
+    def _validate_params(self):
+        super(LinearRegression, self)._validate_params()
+        methods = ['gradient_descent', 'ols', 'pinv']
+        if self._method not in methods:
+            raise ValueError("method must be either 'gradient_descent', 'ols',\
+                or 'pinv'.")
+
+    def fit(self, X, y):
+        """Fits the model to the data.
+
+        If analytical is True, linear regression is performed via ordinary least
+        squares approximation of the parameters.  Otherwise, model parameters
+        are estimated using gradient descent.
+
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Training data
+
+        y : numpy array, shape (n_samples,)
+            Target values 
+
+        Returns
+        -------
+        self : returns instance of self._
+        """
+        if self._method == 'gradient_descent':
+            super(LinearRegression, self).fit(X, y)
+
+        else:
+            log = {}
+            log['X'] = X
+            log['y'] = y
+
+            self._begin_training(log)
+
+            # Compute OLS or Moore-Penrose pseudoinverse
+            if self._method == 'ols':
+                # Calculate coefficients using closed-form solution
+                self._theta = inv(self._X_design.transpose().dot(self._X_design)).dot(self._X_design.transpose()).dot(self._y)
+            else:
+                # Use Moore-Penrose pseudoinverse 
+                U, S, V = np.linalg.svd(self._X_design.T.dot(self._X_design))                 
+                S = np.diag(S)
+                X_inv = V.dot(np.linalg.pinv(S)).dot(U.T)
+                self._theta = X_inv.dot(self._X_design.T).dot(self._y)     
+
+            self._end_training()
+        return self
+
 
 # --------------------------------------------------------------------------- #
 #                         LASSO REGRESSION CLASS                              #
 # --------------------------------------------------------------------------- #
 
 
-class LassoRegression(LinearRegression):
+class LassoRegression(Regression):
     """Trains lasso regression models using Gradient Descent.
     
     Parameters
@@ -300,7 +389,7 @@ class LassoRegression(LinearRegression):
     early_stop : Bool or EarlyStop subclass, optional (default=True)
         The early stopping algorithm to use during training.
 
-    val_size : Float, default=0.3
+    val_size : Float, default=0.0
         The proportion of the training set to allocate to the validation set.
         Must be between 0 and 1. Only used when early_stop is not False.
 
@@ -353,7 +442,7 @@ class LassoRegression(LinearRegression):
     def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None, 
                  alpha=0.0001, epochs=1000, cost='quadratic', 
                  metric='mse',  early_stop=False, 
-                 val_size=0.3, patience=5, precision=0.001,
+                 val_size=0.0, patience=5, precision=0.001,
                  verbose=False, checkpoint=100, name=None, seed=None):
         super(LassoRegression, self).__init__(learning_rate=learning_rate, 
                                          batch_size=batch_size, 
@@ -377,7 +466,7 @@ class LassoRegression(LinearRegression):
 # --------------------------------------------------------------------------- #
 #                         RIDGE REGRESSION CLASS                              #
 # --------------------------------------------------------------------------- #
-class RidgeRegression(LinearRegression):
+class RidgeRegression(Regression):
     """Trains ridge regression models using Gradient Descent.
     
     Parameters
@@ -436,7 +525,7 @@ class RidgeRegression(LinearRegression):
     early_stop : Bool or EarlyStop subclass, optional (default=True)
         The early stopping algorithm to use during training.
 
-    val_size : Float, default=0.3
+    val_size : Float, default=0.0
         The proportion of the training set to allocate to the validation set.
         Must be between 0 and 1. Only used when early_stop is not False.
 
@@ -489,7 +578,7 @@ class RidgeRegression(LinearRegression):
     def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None, 
                  alpha=0.0001, epochs=1000, cost='quadratic', 
                  metric='mse',  early_stop=False, 
-                 val_size=0.3, patience=5, precision=0.001,
+                 val_size=0.0, patience=5, precision=0.001,
                  verbose=False, checkpoint=100, name=None, seed=None):
         super(RidgeRegression, self).__init__(learning_rate=learning_rate, 
                                          batch_size=batch_size, 
@@ -516,7 +605,7 @@ class RidgeRegression(LinearRegression):
 # --------------------------------------------------------------------------- #
 
 
-class ElasticNetRegression(LinearRegression):
+class ElasticNetRegression(Regression):
     """Trains lasso regression models using Gradient Descent.
     
     Parameters
@@ -580,7 +669,7 @@ class ElasticNetRegression(LinearRegression):
     early_stop : Bool or EarlyStop subclass, optional (default=True)
         The early stopping algorithm to use during training.
 
-    val_size : Float, default=0.3
+    val_size : Float, default=0.0
         The proportion of the training set to allocate to the validation set.
         Must be between 0 and 1. Only used when early_stop is not False.
 
@@ -633,7 +722,7 @@ class ElasticNetRegression(LinearRegression):
     def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None, 
                  alpha=0.0001, ratio=0.15, epochs=1000, cost='quadratic', 
                  metric='mse',  early_stop=False, 
-                 val_size=0.3, patience=5, precision=0.001,
+                 val_size=0.0, patience=5, precision=0.001,
                  verbose=False, checkpoint=100, name=None, seed=None):
         super(ElasticNetRegression, self).__init__(learning_rate=learning_rate, 
                                          batch_size=batch_size, 

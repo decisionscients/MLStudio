@@ -40,7 +40,7 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
 
     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
                  theta_init=None,  epochs=1000, early_stop=False, patience=5, 
-                 precision=0.001, cost='quadratic', metric='mse',  val_size=0.3, 
+                 precision=0.001, cost='quadratic', metric='mse',  val_size=0.0, 
                  verbose=False, checkpoint=100, seed=None):
         # Public parameters
         self.name = name
@@ -87,7 +87,7 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
 
     @property
     def coef(self):
-        self._coef
+        return self._coef
 
     @property
     def intercept(self):
@@ -211,14 +211,14 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
 
     def _get_convergence_monitor(self):
         
-        if self.metric:
+        if self.metric and self._val_size > 0:
             convergence_monitor = EarlyStop(early_stop=self.early_stop,
                                                         monitor='val_score',
                                                         precision=self.precision,
                                                         patience=self.patience)
         else:
             convergence_monitor = EarlyStop(early_stop=self.early_stop,
-                                                        monitor='val_cost',
+                                                        monitor='train_cost',
                                                         precision=self.precision,
                                                         patience=self.patience)
          
@@ -344,7 +344,7 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
                              'theta': self._theta.copy(), 'train_cost': J}
                 # Compute gradient 
                 gradient = self._cost_function.gradient(
-                    X_batch, y_batch, y_pred) - self._regularizer.gradient(self._theta)
+                    X_batch, y_batch, y_pred) + self._regularizer.gradient(self._theta)
                 # Update parameters              
                 self._theta -= self.learning_rate * gradient
                 # Update batch log
