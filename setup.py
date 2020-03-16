@@ -38,7 +38,7 @@ setup(
     include_package_data=True,
     keywords='MLStudio',
     name='MLStudio',
-    packages=find_packages(include=['MLStudio', 'MLStudio.*']),
+    packages=find_packages(include=['mlstudio', 'mlstudio.*']),
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
