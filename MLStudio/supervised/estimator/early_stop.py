@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod, ABCMeta
 
 import numpy as np
 
-from mlstudio.supervised.gradient.callbacks import Callback
+from mlstudio.supervised.estimator.callbacks import Callback
 
 # --------------------------------------------------------------------------- #
 #                              EARLY STOP                                     #
@@ -64,7 +64,7 @@ class EarlyStop(Callback):
         self.monitor = monitor
         self.precision = precision
         self.patience = patience
-        self.epochs_ = 0
+        self._epochs_trained = 0
         self.converged = False
         self.best_weights_ = None        
         # Instance variables

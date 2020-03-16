@@ -28,59 +28,80 @@ from sklearn.base import RegressorMixin
 import warnings
 
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
-from mlstudio.supervised.gradient.callbacks import CallbackList, Callback
-from mlstudio.supervised.gradient.monitor import History, Progress, summary
-from mlstudio.supervised.gradient.early_stop import EarlyStop
+from mlstudio.supervised.estimator.callbacks import CallbackList, Callback
+from mlstudio.supervised.estimator.monitor import History, Progress, summary
+from mlstudio.supervised.estimator.early_stop import EarlyStop
 # --------------------------------------------------------------------------- #
 
-class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
+class GradientDescent(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
     """Base class gradient descent estimator."""
 
     DEFAULT_METRIC = 'mse'
 
-    def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None, 
-                 epochs=1000, cost='quadratic', metric='mse', 
-                 early_stop=False, val_size=0.3, patience=5, precision=0.001,
-                 verbose=False, checkpoint=100, name=None, seed=None):
-        self._learning_rate = learning_rate
-        self._batch_size = batch_size
-        self._theta_init = theta_init
-        self._epochs = epochs
-        self._cost = cost
-        self._metric = metric
-        self._early_stop = early_stop
-        self._val_size = val_size
-        self._patience = patience
-        self._precision = precision
-        self._verbose = verbose
-        self._checkpoint = checkpoint
-        self._name = name
-        self._seed = seed
-        # Instance variables
+    def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
+                 theta_init=None,  epochs=1000, early_stop=False, patience=5, 
+                 precision=0.001, cost='quadratic', metric='mse',  val_size=0.3, 
+                 verbose=False, checkpoint=100, seed=None):
+        # Public parameters
+        self.name = name
+        self.learning_rate = learning_rate
+        self.batch_size = batch_size
+        self.theta_init = theta_init
+        self.epochs = epochs
+        self.early_stop = early_stop
+        self.patience = patience
+        self.precision = precision  
+        self.metric = metric        
+        self.verbose = verbose
+        # Private parameters
+        self._cost = cost                
+        self._val_size = val_size      
+        self._checkpoint = checkpoint        
+        self._seed = seed  
+
+        # Public instance variables        
+        self.converged = False
+        self.history = None
+        # Private instance variables        
+        self._fitted = False
+        self._theta = None
         self._epoch = 0
-        self._batch = 0
-        self._converged = False
+        self._batch = 0        
         self._cbks = None
         self._X = self._y = self._X_val = self._y_val = None
         self._regularizer = lambda x: 0
-        self._regularizer.gradient = lambda x: 0
-        self._algorithm = None
-        self._metric_name = None
-        # Functions
-        self._scorer = None
+        self._regularizer.gradient = lambda x: 0        
+        # Private Functions        
+        self.scorer = None
         self._cost_function = None
         self._convergence_monitor = None
-        # Attributes
-        self.fitted_ = False
-        self.coef_ = None
-        self.intercept_ = None
-        self.epochs_ = 0
+        # Read only attributes / properties        
+        self._algorithm = None
+        self._coef = None
+        self._intercept = None
+        self._epochs_trained = 0
+
+    @property
+    def algorithm(self):
+        return self._algorithm
+
+    @property
+    def coef(self):
+        self._coef
+
+    @property
+    def intercept(self):
+        return self._intercept
+
+    @property
+    def epochs_trained(self):
+        return self._epochs_trained
 
     def _set_algorithm_name(self):
         """Sets the name of the algorithm for plotting purposes."""
-        if self._batch_size is None:
+        if self.batch_size is None:
             self._algorithm = 'Batch Gradient Descent'
-        elif self._batch_size == 1:
+        elif self.batch_size == 1:
             self._algorithm = 'Stochastic Gradient Descent'
         else:
             self._algorithm = 'Minibatch Gradient Descent'
@@ -97,30 +118,30 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
 
     def _validate_params(self):
         """Validate parameters."""
-        if not isinstance(self._learning_rate, (int, float)):
+        if not isinstance(self.learning_rate, (int, float)):
             raise TypeError("learning_rate must provide an int or a float.")
-        if self._batch_size is not None:
-            if not isinstance(self._batch_size, int):
+        if self.batch_size is not None:
+            if not isinstance(self.batch_size, int):
                 raise TypeError("batch_size must provide an integer.")            
-        if self._theta_init is not None:
-            if not isinstance(self._theta_init, (list, pd.core.series.Series, np.ndarray)):
+        if self.theta_init is not None:
+            if not isinstance(self.theta_init, (list, pd.core.series.Series, np.ndarray)):
                 raise TypeError("theta must be an array like object.")            
-        if not isinstance(self._epochs, int):
+        if not isinstance(self.epochs, int):
             raise TypeError("epochs must be an integer.")        
-        if self._early_stop:
-            if not isinstance(self._early_stop, (bool,EarlyStop)):
+        if self.early_stop:
+            if not isinstance(self.early_stop, (bool,EarlyStop)):
                 raise TypeError("early stop is not a valid EarlyStop callable.")
-        if self._early_stop:
+        if self.early_stop:
             if not isinstance(self._val_size, float) or self._val_size < 0 or self._val_size >= 1:
                 raise ValueError("val_size must be a float between 0 and 1.")
-        if not isinstance(self._patience, int):
+        if not isinstance(self.patience, int):
             raise ValueError("patience must be an integer")
-        if not isinstance(self._precision, float) or self._precision < 0 or self._precision >= 1:
+        if not isinstance(self.precision, float) or self.precision < 0 or self.precision >= 1:
             raise ValueError("precision must be a float between 0 and 1.")            
-        if self._metric is not None:
-            if not isinstance(self._metric, str):
+        if self.metric is not None:
+            if not isinstance(self.metric, str):
                 raise TypeError("metric must be string containing name of metric for scoring")                
-        if not isinstance(self._verbose, bool):
+        if not isinstance(self.verbose, bool):
             raise TypeError("verbose must be either True or False")
         if self._checkpoint is not None:
             if not isinstance(self._checkpoint, int):
@@ -168,7 +189,7 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
             y_pred_val = self._predict(self._X_val)
             log['val_cost'] = self._cost_function(y=self._y_val, y_pred=y_pred_val)        
         # Compute scores 
-        if self._metric is not None:            
+        if self.metric is not None:            
             log['train_score'] = self.score(self._X_design, self._y)
             if self._val_size:
                 log['val_score'] = self.score(self._X_val, self._y_val)        
@@ -190,31 +211,31 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
 
     def _get_convergence_monitor(self):
         
-        if self._metric:
-            convergence_monitor = EarlyStop(early_stop=self._early_stop,
+        if self.metric:
+            convergence_monitor = EarlyStop(early_stop=self.early_stop,
                                                         monitor='val_score',
-                                                        precision=self._precision,
-                                                        patience=self._patience)
+                                                        precision=self.precision,
+                                                        patience=self.patience)
         else:
-            convergence_monitor = EarlyStop(early_stop=self._early_stop,
+            convergence_monitor = EarlyStop(early_stop=self.early_stop,
                                                         monitor='val_cost',
-                                                        precision=self._precision,
-                                                        patience=self._patience)
+                                                        precision=self.precision,
+                                                        patience=self.patience)
          
         return convergence_monitor
 
     def _compile(self):
         """Obtains external objects and add key functions to the log."""
         self._cost_function = self._get_cost_function()
-        self._scorer = self._get_scorer()        
+        self.scorer = self._get_scorer()        
         self._convergence_monitor = self._get_convergence_monitor()
 
     def _init_callbacks(self):
         # Initialize callback list
         self._cbks = CallbackList()        
         # Instantiate monitor callbacks and add to list
-        self._history = History()
-        self._cbks.append(self._history)
+        self.history = History()
+        self._cbks.append(self.history)
         self._progress = Progress()        
         self._cbks.append(self._progress)
         # Add additional callbacks if available
@@ -226,13 +247,13 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
     
     def _init_weights(self):
         """Initializes weights"""        
-        if self._theta_init is not None:
-            if self._theta_init.shape[0] != self._X_design.shape[1]:
+        if self.theta_init is not None:
+            if self.theta_init.shape[0] != self._X_design.shape[1]:
                 raise ValueError("theta_init shape mispatch. Expected shape %s,"
                                  " but theta_init.shape = %s." % ((self._X_design.shape[1],1),
-                                 self._theta_init.shape))
+                                 self.theta_init.shape))
             else:
-                self._theta = np.atleast_2d(self._theta_init).reshape(-1,1)
+                self._theta = np.atleast_2d(self.theta_init).reshape(-1,1)
         else:
             n_features = self._X_design.shape[1]
             np.random.seed(seed=self._seed)
@@ -242,8 +263,8 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
         """Performs initializations required at the beginning of training."""
         self._epoch = 0
         self._batch = 0
-        self._converged = False
-        self.fitted_ = False
+        self.converged = False
+        self._fitted = False
         self._validate_params()
         self._validate_data(log.get('X'), log.get('y'))        
         self._prepare_data(log.get('X'), log.get('y'))
@@ -256,10 +277,10 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
     def _end_training(self, log=None):
         """Closes history callout and assign final and best weights."""
         self._cbks.on_train_end()
-        self.intercept_ = self._theta[0]
-        self.coef_ = self._theta[1:]
-        self.epochs_ = self._epoch
-        self.fitted_ = True
+        self._intercept = self._theta[0]
+        self._coef = self._theta[1:]
+        self._epochs_trained = self._epoch
+        self._fitted = True
 
     def _begin_epoch(self):
         """Increment the epoch count and shuffle the data."""
@@ -274,7 +295,7 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
         log = log or {}
         # Update log with current learning rate and parameters theta
         log['epoch'] = self._epoch
-        log['learning_rate'] = self._learning_rate
+        log['learning_rate'] = self.learning_rate
         log['theta'] = self._theta.copy()     
         # Compute performance statistics for epoch and post to history
         log = self._evaluate_epoch(log)
@@ -306,11 +327,11 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
         train_log = {'X': X, 'y': y}
         self._begin_training(train_log)
         
-        while (self._epoch < self._epochs and not self._converged):
+        while (self._epoch < self.epochs and not self.converged):
 
             self._begin_epoch()
 
-            for X_batch, y_batch in batch_iterator(self._X_design, self._y, batch_size=self._batch_size):
+            for X_batch, y_batch in batch_iterator(self._X_design, self._y, batch_size=self.batch_size):
 
                 self._begin_batch()
                 # Compute prediction
@@ -325,7 +346,7 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
                 gradient = self._cost_function.gradient(
                     X_batch, y_batch, y_pred) - self._regularizer.gradient(self._theta)
                 # Update parameters              
-                self._theta -= self._learning_rate * gradient
+                self._theta -= self.learning_rate * gradient
                 # Update batch log
                 self._end_batch(batch_log)
 
@@ -340,10 +361,10 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
         if X.shape[1] == self._theta.shape[0]:
             y_pred = X.dot(self._theta)
         else:
-            if not self.fitted_:
+            if not self._fitted:
                 raise Exception("This %(name)s instance is not fitted "
                                  "yet" % {'name': type(self).__name__})              
-            y_pred = self.intercept_ + X.dot(self.coef_)
+            y_pred = self._intercept + X.dot(self._coef)
         return y_pred            
 
     @abstractmethod
@@ -359,4 +380,4 @@ class Estimator(ABC, BaseEstimator, RegressorMixin, metaclass=ABCMeta):
         pass
 
     def summary(self):
-        summary(self._history)
+        summary(self.history)

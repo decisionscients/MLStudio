@@ -24,7 +24,7 @@
 import datetime
 import numpy as np
 import types
-from mlstudio.supervised.gradient.callbacks import Callback
+from mlstudio.supervised.estimator.callbacks import Callback
 
 # --------------------------------------------------------------------------- #
 #                             HISTORY CLASS                                   #

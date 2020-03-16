@@ -22,10 +22,10 @@
 from abc import abstractmethod
 import numpy as np
 
-from mlstudio.supervised.gradient.regularizers import L1, L2, ElasticNet
-from mlstudio.supervised.gradient.estimator import Estimator
-from mlstudio.supervised.gradient.metrics import RegressionMetricFactory
-from mlstudio.supervised.gradient.cost import RegressionCostFactory
+from mlstudio.supervised.estimator.regularizers import L1, L2, ElasticNet
+from mlstudio.supervised.estimator.gradient import GradientDescent
+from mlstudio.supervised.estimator.metrics import RegressionMetricFactory
+from mlstudio.supervised.estimator.cost import RegressionCostFactory
 
 import warnings
 
@@ -33,7 +33,7 @@ import warnings
 #                            LINEAR REGRESSION                                #
 # --------------------------------------------------------------------------- #
 
-class LinearRegression(Estimator):
+class LinearRegression(GradientDescent):
     """Performs linear regression analytically or by gradient descent.
     
     Parameters
@@ -163,13 +163,13 @@ class LinearRegression(Estimator):
     def _set_name(self):
         self._set_algorithm_name()
         self.task = "Linear Regression"
-        self.name = self.name or self.task + ' with ' + self.algorithm  
+        self.name = self.name or self.task + ' with ' + self._algorithm  
 
     def _get_cost_function(self):
         """Obtains the cost function associated with the cost parameter."""
-        cost_function = RegressionCostFactory()(cost=self.cost)
+        cost_function = RegressionCostFactory()(cost=self._cost)
         if not cost_function:
-            msg = str(self.cost) + ' is not a supported regression cost function.'
+            msg = str(self._cost) + ' is not a supported regression cost function.'
             raise ValueError(msg)
         else:
             return cost_function
@@ -241,7 +241,7 @@ class LinearRegression(Estimator):
 # --------------------------------------------------------------------------- #
 
 
-class LassoRegression(Regression):
+class LassoRegression(LinearRegression):
     """Trains lasso regression models using Gradient Descent.
     
     Parameters
@@ -372,12 +372,12 @@ class LassoRegression(Regression):
     def _set_name(self):
         self._set_algorithm_name()
         self.task = "Lasso Regression"
-        self.name = self.name or self.task + ' with ' + self.algorithm
+        self.name = self.name or self.task + ' with ' + self._algorithm
 
 # --------------------------------------------------------------------------- #
 #                         RIDGE REGRESSION CLASS                              #
 # --------------------------------------------------------------------------- #
-class RidgeRegression(Regression):
+class RidgeRegression(LinearRegression):
     """Trains ridge regression models using Gradient Descent.
     
     Parameters
@@ -509,14 +509,14 @@ class RidgeRegression(Regression):
         """Sets name of model for plotting purposes."""
         self._set_algorithm_name()
         self.task = "Ridge Regression"
-        self.name = self.name or self.task + ' with ' + self.algorithm
+        self.name = self.name or self.task + ' with ' + self._algorithm
 
 # --------------------------------------------------------------------------- #
 #                        ELASTICNET REGRESSION CLASS                          #
 # --------------------------------------------------------------------------- #
 
 
-class ElasticNetRegression(Regression):
+class ElasticNetRegression(LinearRegression):
     """Trains lasso regression models using Gradient Descent.
     
     Parameters
@@ -654,4 +654,4 @@ class ElasticNetRegression(Regression):
         """Sets name of model for plotting purposes."""
         self._set_algorithm_name()
         self.task = "ElasticNet Regression"
-        self.name = self.name or self.task + ' with ' + self.algorithm
+        self.name = self.name or self.task + ' with ' + self._algorithm
