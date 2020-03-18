@@ -21,6 +21,8 @@
 import os
 import numpy as np
 from pytest import mark
+import shutil
+from sklearn.model_selection import ShuffleSplit
 
 from mlstudio.supervised.regression import LinearRegression
 from mlstudio.visual.model_selection import CostCurve, LearningCurve
@@ -52,7 +54,7 @@ class CostCurveTests:
 
     @mark.cost_curve
     def test_cost_curve_color_facets(self, get_regression_data):
-        path = "./tests/test_visual/figures/learning_rate_cost_curve.png"
+        path = "./tests/test_visual/figures/learning_rate_cost_curve_w_facets.png"
         param_grid = {'learning_rate' : np.logspace(-3,-1, num=10).tolist(),
                       'batch_size': [32,64,128,256,512]}
         X, y = get_regression_data
@@ -62,14 +64,18 @@ class CostCurveTests:
                facet_col='batch_size')
         cc.show()
         cc.save(filepath=path)
-        assert os.path.exists(path), "Figure not saved."        
+        assert os.path.exists(path), "Figure not saved." 
+        shutil.rmtree(os.path.dirname(path))
+
+
 
 class LearningCurveTests:
 
     @mark.learning_curve   
     def test_learning_curve(self, get_regression_data):
         X, y = get_regression_data
-        est = LinearRegression(epochs=10)
+        cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
+        est = LinearRegression(epochs=1000)
         lc = LearningCurve(est)
-        lc.fit(X,y)
+        lc.fit(X,y, cv=cv)
         lc.show()

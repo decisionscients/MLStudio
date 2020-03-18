@@ -217,7 +217,7 @@ class LearningCurve(Visualatrix):
     def __init__(self, estimator, **kwargs):
         super(LearningCurve, self).__init__(**kwargs)
         self._estimator = estimator     
-        self._title = self._title or estimator.description   
+        self._title = self._title or str(estimator.description + "<br>Learning Curve Plot")
 
     def fit(self, X, y, cv=None, n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
         """Generates the learning curve plot
@@ -265,51 +265,80 @@ class LearningCurve(Visualatrix):
             (default: np.linspace(0.1, 1.0, 5))
 
         """
-
-        self._fig = go.Figure()
-
         train_sizes, train_scores, test_scores = \
             learning_curve(self._estimator, X, y, cv=cv, n_jobs=n_jobs,
-                           train_sizes=train_sizes, return_times=False,
-                           verbose=10)
+                           train_sizes=train_sizes, return_times=False)
 
         train_scores_mean = np.mean(train_scores, axis=1)
         train_scores_std = np.std(train_scores, axis=1)
         test_scores_mean = np.mean(test_scores, axis=1)
         test_scores_std = np.std(test_scores, axis=1)
 
-        print(train_sizes)
-        print(train_scores)
-
-        # Plot training scores line
-        self._fig.add_trace(go.Scatter(
-            x=train_sizes, y=train_scores_mean, mode='lines+markers', 
-            name='Training Scores',
-            showlegend=True
-        ))
-        # Plot training scores error fill
-        self._fig.add_trace(go.Scatter(
-            x=train_sizes,
-            y=(train_scores_mean-train_scores_std) + (train_scores_mean-train_scores_std),
-            fill='toself',
+        # Plot training scores line and ribbon
+        train_upper = go.Scatter(
+            x=train_sizes, y=train_scores_mean + train_scores_std,
+            mode='lines',
+            marker=dict(color='#5f6769'),
+            line=dict(width=0),
+            fillcolor="#5f6769",
+            fill='tonexty',
             showlegend=False
-        ))
-
-        # Plot validation scores line
-        self._fig.add_trace(go.Scatter(
-            x=train_sizes, y=test_scores_mean, mode='lines+markers', 
-            name='Cross-Validation Scores',
+        )
+        train = go.Scatter(
+            name='Training Scores',
+            x=train_sizes, y=train_scores_mean, 
+            mode='lines+markers',             
+            line=dict(color='#3c4245'),            
+            marker=dict(color='#3c4245'),
+            fillcolor="#5f6769",
+            fill='tonexty',            
             showlegend=True
-        ))
-        # Plot training scores error fill
-        self._fig.add_trace(go.Scatter(
-            x=train_sizes,
-            y=(test_scores_mean-test_scores_std) + (test_scores_mean-test_scores_std),
-            fill='toself',
-            showlegend=False            
-        ))
+        )
+        train_lower = go.Scatter(
+            x=train_sizes, y=train_scores_mean - train_scores_std,
+            mode='lines',
+            marker=dict(color='#5f6769'),
+            line=dict(width=0),
+            showlegend=False
+        )        
+
+        # Plot validation scores line and ribbon
+        val_upper = go.Scatter(
+            x=train_sizes, y=test_scores_mean + test_scores_std,
+            mode='lines',
+            marker=dict(color='#dfcdc3'),
+            line=dict(width=0),
+            fillcolor="#dfcdc3",
+            fill='tonexty',
+            showlegend=False
+        )
+        val = go.Scatter(
+            name='Cross-Validation Scores',
+            x=train_sizes, y=test_scores_mean,
+            mode='lines+markers',             
+            line=dict(color='#3c4245'), 
+            marker=dict(color='#3c4245'),           
+            fillcolor="#dfcdc3",
+            fill='tonexty',            
+            showlegend=True
+        )
+        val_lower = go.Scatter(
+            x=train_sizes, y=test_scores_mean - test_scores_std,
+            mode='lines',
+            marker=dict(color='#dfcdc3'),
+            line=dict(width=0),
+            showlegend=False
+        )                
+        # Load from bottom up
+        data = [val_lower, val, val_upper, train_lower, train, train_upper]
         # Update layout with designated template
-        self._fig.update_layout(template=self._template)
+        layout = go.Layout(
+            xaxis=dict(title='Training Samples'),
+            yaxis=dict(title='Scores'),
+            title=self._title,
+            template=self._template
+        )
+        self._fig = go.Figure(data=data, layout=layout)
 
         
                     
