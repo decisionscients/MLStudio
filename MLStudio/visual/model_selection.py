@@ -36,7 +36,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go 
 import plotly.express as px
-from sklearn.model_selection import ParameterGrid 
+from sklearn.model_selection import ParameterGrid, learning_curve 
 
 from .base import Visualatrix
 from mlstudio.utils.format import proper
@@ -76,6 +76,7 @@ class CostCurve(Visualatrix):
     def __init__(self, estimator, **kwargs):
         super(CostCurve, self).__init__(**kwargs)
         self._estimator = estimator
+        self._title = self._title or estimator.description
 
     def fit(self, X, y=None, param_grid=None, color=None, facet_col=None, 
             facet_col_wrap=2):
@@ -141,15 +142,15 @@ class CostCurve(Visualatrix):
 
                 self._estimator.fit(X,y)
                 
-                d['Epoch'] = np.arange(start=1, stop=self._estimator.history.total_epochs+1)
-                d['Cost'] = self._estimator.history.epoch_log['train_cost']
+                d['Epoch'] = np.arange(start=1, stop=self._estimator.history_.total_epochs+1)
+                d['Cost'] = self._estimator.history_.epoch_log['train_cost']
                 df = pd.DataFrame(d)
                 data = pd.concat([data, df], axis=0)  
         else:      
             self._estimator.fit(X,y)
             d = {}
-            d['Epoch'] = np.arange(start=1, stop=self._estimator.history.total_epochs+1)
-            d['Cost'] = self._estimator.history.epoch_log['train_cost']
+            d['Epoch'] = np.arange(start=1, stop=self._estimator.history_.total_epochs+1)
+            d['Cost'] = self._estimator.history_.epoch_log['train_cost']
             data = pd.DataFrame(d)
 
         return data
@@ -215,7 +216,8 @@ class LearningCurve(Visualatrix):
 
     def __init__(self, estimator, **kwargs):
         super(LearningCurve, self).__init__(**kwargs)
-        self._estimator = estimator        
+        self._estimator = estimator     
+        self._title = self._title or estimator.description   
 
     def fit(self, X, y, cv=None, n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
         """Generates the learning curve plot
@@ -266,14 +268,18 @@ class LearningCurve(Visualatrix):
 
         self._fig = go.Figure()
 
-        train_sizes, train_scores, test_scores, fit_times, _ = \
+        train_sizes, train_scores, test_scores = \
             learning_curve(self._estimator, X, y, cv=cv, n_jobs=n_jobs,
-                           train_sizes=train_sizes, return_times=True)
+                           train_sizes=train_sizes, return_times=False,
+                           verbose=10)
 
         train_scores_mean = np.mean(train_scores, axis=1)
         train_scores_std = np.std(train_scores, axis=1)
         test_scores_mean = np.mean(test_scores, axis=1)
         test_scores_std = np.std(test_scores, axis=1)
+
+        print(train_sizes)
+        print(train_scores)
 
         # Plot training scores line
         self._fig.add_trace(go.Scatter(
@@ -282,10 +288,11 @@ class LearningCurve(Visualatrix):
             showlegend=True
         ))
         # Plot training scores error fill
-        self._fig_add_trace(go.Scatter(
-            x=training_sizes,
+        self._fig.add_trace(go.Scatter(
+            x=train_sizes,
             y=(train_scores_mean-train_scores_std) + (train_scores_mean-train_scores_std),
-            fill='toself'
+            fill='toself',
+            showlegend=False
         ))
 
         # Plot validation scores line
@@ -295,11 +302,14 @@ class LearningCurve(Visualatrix):
             showlegend=True
         ))
         # Plot training scores error fill
-        self._fig_add_trace(go.Scatter(
-            x=training_sizes,
+        self._fig.add_trace(go.Scatter(
+            x=train_sizes,
             y=(test_scores_mean-test_scores_std) + (test_scores_mean-test_scores_std),
-            fill='toself'            
+            fill='toself',
+            showlegend=False            
         ))
+        # Update layout with designated template
+        self._fig.update_layout(template=self._template)
 
         
                     

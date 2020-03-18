@@ -1,25 +1,24 @@
-# =========================================================================== #
-#                                  METRICS MODULE                             #
-# =========================================================================== #
-# =========================================================================== #
-# Project: ML Studio                                                          #
-# Version: 0.1.14                                                             #
-# File: \metrics.py                                                           #
-# Python Version: 3.8.0                                                       #
-# ---------------                                                             #
-# Author: John James                                                          #
-# Company: Decision Scients                                                   #
-# Email: jjames@decisionscients.com                                           #
-# ---------------                                                             #
-# Create Date: Tuesday September 24th 2019, 3:16:03 am                        #
-# Last Modified: Saturday November 30th 2019, 10:37:08 am                     #
-# Modified By: John James (jjames@decisionscients.com)                        #
-# ---------------                                                             #
-# License: Modified BSD                                                       #
-# Copyright (c) 2019 Decision Scients                                         #
-# =========================================================================== #
-
-"""Classification and regression metrics classes."""
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+# ============================================================================ #
+# Project : MLStudio                                                           #
+# Version : 0.1.0                                                              #
+# File    : scorers.py                                                         #
+# Python  : 3.8.2                                                              #
+# ---------------------------------------------------------------------------- #
+# Author  : John James                                                         #
+# Company : DecisionScients                                                    #
+# Email   : jjames@decisionscients.com                                         #
+# URL     : https://github.com/decisionscients/MLStudio                        #
+# ---------------------------------------------------------------------------- #
+# Created       : Wednesday, March 18th 2020, 4:34:57 am                       #
+# Last Modified : Wednesday, March 18th 2020, 2:07:20 pm                       #
+# Modified By   : John James (jjames@decisionscients.com)                      #
+# ---------------------------------------------------------------------------- #
+# License : BSD                                                                #
+# Copyright (c) 2020 DecisionScients                                           #
+# ============================================================================ #
+"""Classification and regression scorer classes."""
 from abc import ABC, abstractmethod
 import math
 import numpy as np
@@ -39,7 +38,7 @@ class Metric(ABC):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
-class RegressionMetric(Metric):
+class RegressionScorer(Metric):
     """Base class for regression metrics."""
 
     @abstractmethod
@@ -52,7 +51,7 @@ class RegressionMetric(Metric):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
-class ClassificationMetric(Metric):
+class ClassificationScorer(Metric):
     """Base class for classification metrics."""
 
     @abstractmethod
@@ -68,7 +67,7 @@ class ClassificationMetric(Metric):
 # --------------------------------------------------------------------------- #
 #                           REGRESSION METRICS                                #
 # --------------------------------------------------------------------------- #
-class SSR(RegressionMetric):
+class SSR(RegressionScorer):
     """Computes sum squared residuals given"""
 
     def __init__(self):
@@ -86,7 +85,7 @@ class SSR(RegressionMetric):
         e = y - y_pred
         return np.sum(e**2)  
 
-class SST(RegressionMetric):
+class SST(RegressionScorer):
     """Computes total sum of squares"""
 
     def __init__(self):
@@ -105,7 +104,7 @@ class SST(RegressionMetric):
         e = y-y_avg                
         return np.sum(e**2)
 
-class R2(RegressionMetric):
+class R2(RegressionScorer):
     """Computes coefficient of determination."""
 
     def __init__(self):
@@ -125,7 +124,7 @@ class R2(RegressionMetric):
         r2 = 1 - (self._ssr(y, y_pred)/self._sst(y, y_pred))        
         return r2
 
-class VarExplained(RegressionMetric):
+class VarExplained(RegressionScorer):
     """Computes proportion of variance explained."""
 
     def __init__(self):
@@ -143,7 +142,7 @@ class VarExplained(RegressionMetric):
         var_explained = 1 - (np.var(y-y_pred) / np.var(y))
         return var_explained                   
 
-class MAE(RegressionMetric):
+class MAE(RegressionScorer):
     """Computes mean absolute error given data and parameters."""
 
     def __init__(self):
@@ -161,7 +160,7 @@ class MAE(RegressionMetric):
         return np.mean(e)
 
 
-class MSE(RegressionMetric):
+class MSE(RegressionScorer):
     """Computes mean squared error given data and parameters."""
 
     def __init__(self):
@@ -177,7 +176,7 @@ class MSE(RegressionMetric):
     def __call__(self, y, y_pred):        
         return np.mean(y-y_pred)**2
 
-class NMSE(RegressionMetric):
+class NMSE(RegressionScorer):
     """Computes negative mean squared error given data and parameters."""
 
     def __init__(self):
@@ -194,7 +193,7 @@ class NMSE(RegressionMetric):
     def __call__(self, y, y_pred):        
         return -np.mean(y-y_pred)**2
 
-class RMSE(RegressionMetric):
+class RMSE(RegressionScorer):
     """Computes root mean squared error given data and parameters."""
 
     def __init__(self):
@@ -211,7 +210,7 @@ class RMSE(RegressionMetric):
         e = y-y_pred
         return np.sqrt(np.mean(e**2)) 
 
-class NRMSE(RegressionMetric):
+class NRMSE(RegressionScorer):
     """Computes negative root mean squared error given data and parameters."""
 
     def __init__(self):
@@ -229,7 +228,7 @@ class NRMSE(RegressionMetric):
         e = y-y_pred
         return -np.sqrt(np.mean(e**2))
 
-class MSLE(RegressionMetric):
+class MSLE(RegressionScorer):
     """Computes mean squared log error given data and parameters."""
 
     def __init__(self):
@@ -246,7 +245,7 @@ class MSLE(RegressionMetric):
         e = np.log(y+1)-np.log(y_pred+1)
         return np.mean(e**2)  
 
-class RMSLE(RegressionMetric):
+class RMSLE(RegressionScorer):
     """Computes root mean squared log error given data and parameters."""
 
     def __init__(self):
@@ -263,7 +262,7 @@ class RMSLE(RegressionMetric):
         e = np.log(y+1)-np.log(y_pred+1)
         return np.sqrt(np.mean(e**2))
 
-class MEDAE(RegressionMetric):
+class MEDAE(RegressionScorer):
     """Computes median absolute error given data and parameters."""
 
     def __init__(self):
@@ -279,7 +278,7 @@ class MEDAE(RegressionMetric):
     def __call__(self, y, y_pred):        
         return np.median(np.abs(y_pred-y))
 
-class MAPE(RegressionMetric):
+class MAPE(RegressionScorer):
     """Computes mean absolute percentage given data and parameters."""
 
     def __init__(self):
@@ -311,12 +310,12 @@ class RegressionScorerFactory:
                       'rmsle': RMSLE(),
                       'medae': MEDAE(),
                       'mape': MAPE()}
-        return(dispatcher.get(metric,False))
+        return(dispatcher.get(metric))
 
 # --------------------------------------------------------------------------- #
 #                       CLASSIFICATION METRICS                                #
 # --------------------------------------------------------------------------- #
-class Accuracy(ClassificationMetric):
+class Accuracy(ClassificationScorer):
     """Computes accuracy."""
 
     def __init__(self):

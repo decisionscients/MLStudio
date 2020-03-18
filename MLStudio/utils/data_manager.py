@@ -24,6 +24,8 @@
 from itertools import combinations_with_replacement
 from math import ceil
 import numpy as np
+from numpy.random import RandomState
+
 import pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator
 
@@ -117,7 +119,7 @@ class StandardScaler(BaseEstimator, TransformerMixin):
 # --------------------------------------------------------------------------- #
 #                            SHUFFLE DATA                                     #
 # --------------------------------------------------------------------------- #
-def shuffle_data(X, y=None, seed=None):
+def shuffle_data(X, y=None):
     """ Random shuffle of the samples in X and y.
     
     Shuffles data
@@ -130,24 +132,21 @@ def shuffle_data(X, y=None, seed=None):
     y : array_like of shape (m,)
         Target data    
 
-    seed : int
-        Seed for reproducibility
-
     Returns
     -------
     Shuffled X, and y
     
     """    
-    if seed:
-        np.random.seed(seed)
     idx = np.arange(X.shape[0])
     np.random.shuffle(idx)
+    X = np.array(X)
+    y = np.array(y)
     return X[idx], y[idx]
 
 # --------------------------------------------------------------------------- #
 #                              SAMPLE                                         #
 # --------------------------------------------------------------------------- #    
-def sampler(X, y, size=1, replace=True, seed=None):
+def sampler(X, y, size=1, replace=True, random_state=None):
     """Generates a random sample of a given size from a data set.
 
         Parameters
@@ -164,8 +163,8 @@ def sampler(X, y, size=1, replace=True, seed=None):
     replace : Bool. 
         Whether to sample with or without replacement
 
-    seed : int
-        Seed for reproducibility
+    random_state : int
+        random_state for reproducibility
     
     Returns
     -------
@@ -181,7 +180,7 @@ def sampler(X, y, size=1, replace=True, seed=None):
 # --------------------------------------------------------------------------- #
 #                            SPLIT DATA                                       #
 # --------------------------------------------------------------------------- #
-def data_split(X, y, test_size=0.3, shuffle=True, stratify=False, seed=None):
+def data_split(X, y, test_size=0.3, shuffle=True, stratify=False, random_state=None):
     """ Split the data into train and test sets 
     
     Splits inputs X, and y into training and test sets of proportions
@@ -204,7 +203,7 @@ def data_split(X, y, test_size=0.3, shuffle=True, stratify=False, seed=None):
     stratify : bool, optional (default=False)
         If True, stratified sampling is performed. 
 
-    seed : int, optional (default=None)
+    random_state : int, optional (default=None)
         Random state variable
 
     Returns
@@ -227,7 +226,7 @@ def data_split(X, y, test_size=0.3, shuffle=True, stratify=False, seed=None):
                          " and y.shape[0] = %d." % (X.shape[0], y.shape[0]))
     if not stratify:
         if shuffle:
-            X, y = shuffle_data(X, y, seed)
+            X, y = shuffle_data(X, y, random_state)
         split_i = len(y) - int(len(y) // (1 / test_size))
         X_train, X_test = X[:split_i], X[split_i:]
         y_train, y_test = y[:split_i], y[split_i:]
@@ -244,8 +243,8 @@ def data_split(X, y, test_size=0.3, shuffle=True, stratify=False, seed=None):
             n_test_samples_k = n_samples_k - n_train_samples_k
             # Shuffle the data
             if shuffle:
-                if seed:
-                    np.random.seed(seed)
+                if random_state:
+                    np.random.random_state(random_state)
                 np.random.shuffle(idx_k)
             # Allocate corresponding indices to training and test set indices
             train_idx_k = idx_k[0:n_train_samples_k]

@@ -36,7 +36,7 @@ from mlstudio.supervised.regression import RidgeRegression
 from mlstudio.supervised.regression import ElasticNetRegression
 
 from mlstudio.supervised.estimator.cost import RegressionCostFactory
-from mlstudio.supervised.estimator.metrics import RegressionScorerFactory
+from mlstudio.supervised.estimator.scorers import RegressionScorerFactory
 
 # ============================================================================ #
 
@@ -170,8 +170,8 @@ def get_categorical_cost_gradient():
                                   'nrmse'])                                  
 def models_by_metric(request):
     model = LinearRegression(metric=request.param)
-    model.cost_function = RegressionCostFactory()(cost='quadratic')
-    model.scorer = RegressionScorerFactory()(metric=request.param)    
+    model.cost_function_ = RegressionCostFactory()(cost='quadratic')
+    model.scorer_ = RegressionScorerFactory()(metric=request.param)    
     return model 
 
 @fixture(scope='session', params=['train_cost',
@@ -189,8 +189,8 @@ def model_lower_is_better(request):
     model = LinearRegression(metric=request.param, early_stop=True,
                             val_size=0.3, precision=0.1,
                             patience=2)
-    model.cost_function = RegressionCostFactory()(cost='quadratic')
-    model.scorer = RegressionScorerFactory()(metric=request.param)                            
+    model.cost_function_ = RegressionCostFactory()(cost='quadratic')
+    model.scorer_ = RegressionScorerFactory()(metric=request.param)                            
     return model
 
 @fixture(scope='function', params=['r2',
@@ -201,8 +201,8 @@ def model_higher_is_better(request):
     model = LinearRegression(metric=request.param, early_stop=True,
                             val_size=0.3, precision=0.1,
                             patience=2)
-    model.cost_function = RegressionCostFactory()(cost='quadratic')
-    model.scorer = RegressionScorerFactory()(metric=request.param)                            
+    model.cost_function_ = RegressionCostFactory()(cost='quadratic')
+    model.scorer_ = RegressionScorerFactory()(metric=request.param)                            
     return model    
 
 # ============================================================================ #

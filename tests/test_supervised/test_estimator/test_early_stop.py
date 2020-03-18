@@ -29,7 +29,7 @@ import pytest
 from pytest import mark
 
 from mlstudio.supervised.estimator.early_stop import EarlyStop
-from mlstudio.supervised.estimator.metrics import RegressionScorerFactory
+from mlstudio.supervised.estimator.scorers import RegressionScorerFactory
 from mlstudio.supervised.regression import LinearRegression
 
 # --------------------------------------------------------------------------- #
@@ -44,7 +44,7 @@ class EarlyStopTests:
         assert stop.early_stop is True, "Early stop not correct"
         assert stop.precision == 0.01, "precision not correct"
         assert stop.monitor == 'val_score', "metric is initiated correctly"
-        assert stop.converged is False, "converged is not False on instantiation"
+        assert stop.converged_ is False, "converged is not False on instantiation"
         assert stop.best_weights_ is None, "best weights is not None on instantiation"
         
 
@@ -84,8 +84,8 @@ class EarlyStopTests:
         stop.on_train_begin()
         assert stop.monitor == early_stop_monitor, "metric not set correctly" 
         if 'score' in early_stop_monitor:
-            assert stop.best_performance_ == models_by_metric.scorer.worst, "metric best_performance not set correctly"
-            assert stop.precision == abs(stop.precision) * models_by_metric.scorer.precision_factor, "precision not set correctly"
+            assert stop.best_performance_ == models_by_metric.scorer_.worst, "metric best_performance not set correctly"
+            assert stop.precision == abs(stop.precision) * models_by_metric.scorer_.precision_factor, "precision not set correctly"
         else:
             assert stop.best_performance_ == np.Inf, "cost best_performance not set correctly"
             assert stop.precision < 0, "precision not set correctly"
@@ -100,7 +100,7 @@ class EarlyStopTests:
         converged = [False, False, False, False, True]
         for i in range(len(logs)):
             stop.on_epoch_end(epoch=i+1, logs=logs[i])
-            assert stop.converged == converged[i], "not converging correctly" 
+            assert stop.converged_ == converged[i], "not converging correctly" 
 
     @mark.early_stop
     def test_early_stop_improvement_on_epoch_end_val_cost(self):
@@ -112,7 +112,7 @@ class EarlyStopTests:
         converged = [False, False, False, False, True]
         for i in range(len(logs)):
             stop.on_epoch_end(epoch=i+1, logs=logs[i])
-            assert stop.converged == converged[i], "not converging correctly"
+            assert stop.converged_ == converged[i], "not converging correctly"
 
     @mark.early_stop
     def test_early_stop_improvement_on_epoch_end_train_scores_lower_is_better(self, 
@@ -125,7 +125,7 @@ class EarlyStopTests:
         converged = [False, False, False, False, True]
         for i in range(len(logs)):
             stop.on_epoch_end(epoch=i+1, logs=logs[i])
-            assert stop.converged == converged[i], "not converging correctly"             
+            assert stop.converged_ == converged[i], "not converging correctly"             
 
     @mark.early_stop
     def test_early_stop_improvement_on_epoch_end_train_scores_higher_is_better(self, 
@@ -138,7 +138,7 @@ class EarlyStopTests:
         converged = [False, False, False, False, True]
         for i in range(len(logs)):
             stop.on_epoch_end(epoch=i+1, logs=logs[i])
-            assert stop.converged == converged[i], "not converging correctly"                                  
+            assert stop.converged_ == converged[i], "not converging correctly"                                  
  
     @mark.early_stop
     def test_early_stop_improvement_on_epoch_end_val_scores_lower_is_better(self, 
@@ -151,7 +151,7 @@ class EarlyStopTests:
         converged = [False, False, False, False, True]
         for i in range(len(logs)):
             stop.on_epoch_end(epoch=i+1, logs=logs[i])
-            assert stop.converged == converged[i], "not converging correctly"             
+            assert stop.converged_ == converged[i], "not converging correctly"             
  
     @mark.early_stop
     def test_early_stop_improvement_on_epoch_end_val_scores_higher_is_better(self, 
@@ -164,5 +164,5 @@ class EarlyStopTests:
         converged = [False, False, False, False, True]
         for i in range(len(logs)):
             stop.on_epoch_end(epoch=i+1, logs=logs[i])            
-            assert stop.converged == converged[i], "not converging correctly"                      
+            assert stop.converged_ == converged[i], "not converging correctly"                      
          

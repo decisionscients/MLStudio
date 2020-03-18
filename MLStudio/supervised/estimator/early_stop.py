@@ -64,8 +64,8 @@ class EarlyStop(Callback):
         self.monitor = monitor
         self.precision = precision
         self.patience = patience
-        self._epochs_trained = 0
-        self.converged = False
+        self.n_iter_ = 0
+        self.converged_ = False
         self.best_weights_ = None        
         # Instance variables
         self._iter_no_improvement = 0
@@ -111,7 +111,7 @@ class EarlyStop(Callback):
             # factor for the metric and multiplies it by the precision for the 
             # improvement calculation.
             if 'score' in self.monitor:
-                scorer = self.model.scorer
+                scorer = self.model.scorer_
                 self._better = scorer.better
                 self.best_performance_ = scorer.worst
                 self.precision *= scorer.precision_factor
@@ -147,7 +147,7 @@ class EarlyStop(Callback):
                 self._iter_no_improvement = 0
                 self.best_performance_ = current
                 self.best_weights_ = logs.get('theta')
-                self.converged = False
+                self.converged_ = False
             # Evaluate performance
             elif self._better(current, 
                                 (self.best_performance_+self.best_performance_ \
@@ -155,14 +155,14 @@ class EarlyStop(Callback):
                 self._iter_no_improvement = 0
                 self.best_performance_ = current
                 self.best_weights_ = logs.get('theta')
-                self.converged=False
+                self.converged_=False
             else:
                 self._iter_no_improvement += 1
                 if self._iter_no_improvement == self.patience:
-                    self.converged = True            
-            self.model.converged = self.converged                     
+                    self.converged_ = True            
+            self.model.converged_ = self.converged_                     
         else:
-            self.model.converged = False
+            self.model.converged_ = False
 
 
 

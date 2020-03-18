@@ -26,7 +26,7 @@ from ml_studio.supervised_learning.training.cost import BinaryClassificationCost
 from ml_studio.supervised_learning.training.cost import BinaryClassificationCostFactory
 from ml_studio.supervised_learning.training.cost import MultinomialClassificationCostFunction
 from ml_studio.supervised_learning.training.cost import MultinomialClassificationCostFactory
-from ml_studio.supervised_learning.training.metrics import ClassificationMetric
+from ml_studio.supervised_learning.training.metrics import ClassificationScorer
 from ml_studio.supervised_learning.training.metrics import ClassificationScorerFactory
 from ml_studio.supervised_learning.training.estimator import Estimator
 from ml_studio.utils.data_manager import data_split, one_hot
@@ -104,8 +104,8 @@ class LogisticRegression(GradientDescent):
     name : None or str, optional (default=None)
         The name of the model used for plotting
 
-    seed : None or int, optional (default=None)
-        Random state seed        
+    random_state : None or int, optional (default=None)
+        Random state random_state        
 
     Attributes
     ----------
@@ -134,36 +134,36 @@ class LogisticRegression(GradientDescent):
     --------
     classification.MultinomialLogisticRegression : Multinomial Classification
     """    
-    DEFAULT_METRIC = 'accuracy'
+    _DEFAULT_METRIC = 'accuracy'
 
     def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None,
                  epochs=1000, cost='binary_cross_entropy',                 
                  metric='accuracy',  early_stop=False, 
                  val_size=0.3, patience=5, precision=0.001,
-                 verbose=False, checkpoint=100, name=None, seed=None):
+                 verbose=False, checkpoint=100, name=None, random_state=None):
         super(LogisticRegression,self).__init__(learning_rate=learning_rate, 
                  batch_size=batch_size, theta_init=theta_init, 
                  epochs=epochs, cost=cost, metric=metric,  
                  early_stop=early_stop, val_size=val_size, patience=patience, 
                  precision=precision, verbose=verbose, checkpoint=checkpoint, 
-                 name=name, seed=seed)                 
+                 name=name, random_state=random_state)                 
 
     def _sigmoid(self, z):
         """Computes the sigmoid for a scalar or vector z."""
         s = 1/(1+np.exp(-z))
         return s                 
 
-    def _set_name(self):
+    def set_name(self):
         """Set name of model for plotting purposes."""
-        self._set_algorithm_name()
+        self._get_algorithm_name()
         self.task = "Logistic Regression"
         self.name = self.name or self.task + ' with ' + self.algorithm
 
     def _get_cost_function(self):
         """Obtains the cost function associated with the cost parameter."""
-        cost_function = BinaryClassificationCostFactory()(cost=self._cost)
+        cost_function = BinaryClassificationCostFactory()(cost=self.cost)
         if not isinstance(cost_function, BinaryClassificationCostFunction):
-            msg = str(self._cost) + ' is not a supported binary classification cost function.'
+            msg = str(self.cost) + ' is not a supported binary classification cost function.'
             raise ValueError(msg)
         else:
             return cost_function
@@ -171,14 +171,14 @@ class LogisticRegression(GradientDescent):
 
     def _get_scorer(self):
         """Obtains the scoring function associated with the metric parameter."""
-        if self.metric is not None:
-            scorer = ClassificationScorerFactory()(metric=self.metric)
-            if not isinstance(scorer, ClassificationMetric):
+        
+        if self.metric:
+            try:
+                scorer = ClassificationScorerFactory()(metric=self.metric)
+            except ValueError:
                 msg = str(self.metric) + ' is not a supported classification metric.'
-                raise ValueError(msg)
-            else:
-                self.metric_name = scorer.label
-                return scorer
+                print(msg)
+            return scorer
 
 
     def score(self, X, y):
@@ -200,12 +200,12 @@ class LogisticRegression(GradientDescent):
         float
             Returns the score for the designated metric.
         """
-        self._validate_data(X, y)
+        check_X_y(X, y)
         y_pred = self.predict(X)
         if self.metric:
-            score = self.scorer(y=y, y_pred=y_pred)    
+            score = self.scorer_(y=y, y_pred=y_pred)    
         else:
-            score = ClassificationScorerFactory()(metric=self.DEFAULT_METRIC)(y=y, y_pred=y_pred)        
+            score = ClassificationScorerFactory()(metric=self._DEFAULT_METRIC)(y=y, y_pred=y_pred)        
         return score    
 
 

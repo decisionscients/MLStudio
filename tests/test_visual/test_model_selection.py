@@ -23,7 +23,7 @@ import numpy as np
 from pytest import mark
 
 from mlstudio.supervised.regression import LinearRegression
-from mlstudio.visual.model_selection import CostCurve
+from mlstudio.visual.model_selection import CostCurve, LearningCurve
 
 class CostCurveTests:
 
@@ -69,8 +69,7 @@ class LearningCurveTests:
     @mark.learning_curve   
     def test_learning_curve(self, get_regression_data):
         X, y = get_regression_data
-        est = LinearRegression()
-        title = "Learning Curve: " + est.name
-        lc = LearningCurve(est, title=title)
+        est = LinearRegression(epochs=10)
+        lc = LearningCurve(est)
         lc.fit(X,y)
         lc.show()

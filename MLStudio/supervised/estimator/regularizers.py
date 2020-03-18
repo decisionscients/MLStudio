@@ -24,7 +24,10 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 class Regularizer(ABC):
-    """Abstract base class for regularizers."""
+    """Abstract base class for regularizers.
+    
+    Also functions as default regularizer when no regularization is used.
+    """
 
     def __init__(self):
         self.callback = "Regularizer"
@@ -33,13 +36,13 @@ class Regularizer(ABC):
         assert isinstance(p, float), "Regularization hyperparameter must be numeric."
         assert p >= 0 and p <= 1, "Regularization parameter must be between zero and 1."
     
-    @abstractmethod
     def __call__(self, w):
-        pass
-
-    @abstractmethod
+        return 0.0
+    
     def gradient(self, w):
-        pass
+        return 0.0
+
+ 
 
 
 class L1(Regularizer):

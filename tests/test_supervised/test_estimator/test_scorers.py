@@ -1,26 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-# ============================================================================ #
-# Project : MLStudio                                                           #
-# Version : 0.1.0                                                              #
-# File    : test_metrics.py                                                    #
-# Python  : 3.8.2                                                              #
-# ---------------------------------------------------------------------------- #
-# Author  : John James                                                         #
-# Company : DecisionScients                                                    #
-# Email   : jjames@decisionscients.com                                         #
-# URL     : https://github.com/decisionscients/MLStudio                        #
-# ---------------------------------------------------------------------------- #
-# Created       : Monday, March 16th 2020, 12:13:19 am                         #
-# Last Modified : Monday, March 16th 2020, 12:13:19 am                         #
-# Modified By   : John James (jjames@decisionscients.com)                      #
-# ---------------------------------------------------------------------------- #
-# License : BSD                                                                #
-# Copyright (c) 2020 DecisionScients                                           #
-# ============================================================================ #
-# --------------------------------------------------------------------------- #
-#                              TEST METRICS                                   #
-# --------------------------------------------------------------------------- #
+# =========================================================================== #
+# Project : MLStudio                                                          #
+# Version : 0.1.0                                                             #
+# File    : test_scorers.py                                                   #
+# Python  : 3.8.2                                                             #
+# --------------------------------------------------------------------------  #
+# Author  : John James                                                        #
+# Company : DecisionScients                                                   #
+# Email   : jjames@decisionscients.com                                        #
+# URL     : https://github.com/decisionscients/MLStudio                       #
+# --------------------------------------------------------------------------  #
+# Created       : Monday, March 16th 2020, 12:13:19 am                        #
+# Last Modified : Wednesday, March 18th 2020, 2:22:39 pm                      #
+# Modified By   : John James (jjames@decisionscients.com)                     #
+# --------------------------------------------------------------------------  #
+# License : BSD                                                               #
+# Copyright (c) 2020 DecisionScients                                          #
+# =========================================================================== #
+"""Tests Scorer classes."""
 #%%
 import math
 import numpy as np
@@ -30,7 +28,7 @@ from sklearn.metrics import explained_variance_score, mean_absolute_error
 from sklearn.metrics import mean_squared_error, mean_squared_log_error
 from sklearn.metrics import median_absolute_error, r2_score
 
-from mlstudio.supervised.estimator import metrics 
+from mlstudio.supervised.estimator import scorers 
 
 class MetricsTests:
 

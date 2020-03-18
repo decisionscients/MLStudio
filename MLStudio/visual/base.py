@@ -36,8 +36,17 @@ class Visualatrix(ABC, BaseEstimator):
 
     Parameters
     ----------
-    name : str
-        A name for the plot object.
+    kwargs : dict
+        Keyword arguments including:
+
+        =========   ==========================================
+        Property    Description
+        --------    ------------------------------------------
+        height      specify the height of the figure
+        width       specify the width of the figure
+        title       specify the title of the figure
+        template    specify the template for the figure.
+        =========   ==========================================
 
     """
     PLOT_DEFAULT_HEIGHT = 450
@@ -122,4 +131,43 @@ class Visualatrix(ABC, BaseEstimator):
         self._fig.write_image(filepath)
 
 
+# --------------------------------------------------------------------------- #
+#                            MODEL VISUALATRIX                                #
+# --------------------------------------------------------------------------- #
 
+class ModelVisualatrix(Visualatrix):
+    """Abstact base class for model based visualizations.
+
+    Parameters
+    ----------
+    estimator : MLStudio estimator object.
+        The object that implements the 'fit' and 'predict' methods.
+    
+    kwargs : dict
+        Keyword arguments that are passed to the base class and influence
+        the visualization. Optional keyword arguments include:
+
+        =========   ==========================================
+        Property    Description
+        --------    ------------------------------------------
+        height      specify the height of the figure
+        width       specify the width of the figure
+        title       specify the title of the figure
+        template    specify the template for the figure.
+        =========   ==========================================
+
+    """
+    PLOT_DEFAULT_HEIGHT = 450
+    PLOT_DEFAULT_WIDTH  = 700   
+    PLOT_DEFAULT_TEMPLATE = "plotly_white"    
+    PLOT_AVAILABLE_TEMPLATES = ['ggplot2', 'seaborn', 'simple_white', 'plotly',
+         'plotly_white', 'plotly_dark', 'presentation', 'xgridoff',
+         'ygridoff', 'gridon', 'none']
+    
+    def __init__(self, estimator, **kwargs):        
+        self._fig = None
+        self._height = kwargs.pop('height', self.PLOT_DEFAULT_HEIGHT)
+        self._width = kwargs.pop('width', self.PLOT_DEFAULT_WIDTH)
+        self._title = kwargs.pop('title', None)
+        self._template = kwargs.pop('template', self.PLOT_DEFAULT_TEMPLATE)
+        self._estimator = estimator

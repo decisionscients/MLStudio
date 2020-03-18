@@ -28,6 +28,8 @@ import pandas as pd
 import pytest
 from pytest import mark
 import sklearn.linear_model as lm
+from sklearn.utils.estimator_checks import parametrize_with_checks
+from sklearn.utils.estimator_checks import check_estimator
 
 from mlstudio.supervised.regression import LinearRegression
 from mlstudio.supervised.regression import LassoRegression
@@ -38,8 +40,16 @@ from mlstudio.supervised.regression import ElasticNetRegression
 from mlstudio.supervised.estimator.callbacks import Callback
 from mlstudio.supervised.estimator.cost import Cost, Quadratic, BinaryCrossEntropy
 from mlstudio.supervised.estimator.cost import CategoricalCrossEntropy
-from mlstudio.supervised.estimator.metrics import Metric
+from mlstudio.supervised.estimator.scorers import Metric
 from mlstudio.supervised.estimator.early_stop import EarlyStop
+
+@mark.regression
+@mark.regression_sklearn
+@parametrize_with_checks([LinearRegression(metric='r2')])
+def test_sklearn_compatible_estimator(estimator, check):
+    check(estimator)
+
+
 class RegressionTests:
 
     @mark.regression
@@ -84,7 +94,7 @@ class RegressionTests:
             est = regression(epochs=10,checkpoint='x')
             est.fit(X, y)  
         with pytest.raises(TypeError):
-            est = regression(epochs=10,seed='k')                                
+            est = regression(epochs=10,random_state='k')                                
             est.fit(X, y)
                        
 
@@ -94,7 +104,7 @@ class RegressionTests:
         est = regression(learning_rate=0.01, theta_init=np.array([2,2,2]),
                              epochs=10, cost='quadratic', 
                              verbose=False, checkpoint=100, 
-                             name=None, seed=50)
+                             name=None, random_state=50)
         params = est.get_params()
         assert params['learning_rate'] == 0.01, "learning rate is invalid" 
         assert all(np.equal(params['theta_init'], np.array([2,2,2]))) , "theta_init is invalid"
@@ -153,8 +163,8 @@ class RegressionTests:
         est = regression(learning_rate = 0.1, epochs=10)
         est.fit(X,y)
         assert est.learning_rate == 0.1, "learning rate not initialized correctly"
-        assert est.history.epoch_log['learning_rate'][0]==\
-            est.history.epoch_log['learning_rate'][-1], "learning rate not constant in history"
+        assert est.history_.epoch_log['learning_rate'][0]==\
+            est.history_.epoch_log['learning_rate'][-1], "learning rate not constant in history"
 
     @mark.regression
     @mark.regression_batch_size
@@ -164,13 +174,13 @@ class RegressionTests:
         y = y[0:33]       
         est = regression(batch_size=32, epochs=10, val_size=0)
         est.fit(X,y)                
-        assert est.history.total_epochs == 10, "total epochs in history not correct"
-        assert est.history.total_batches == 20, "total batches in history not correct"
-        assert est.history.total_epochs != est.history.total_batches, "batches and epochs are equal"
-        assert est.history.batch_log['batch_size'][0]==32, "batch size not correct in history"
-        assert est.history.batch_log['batch_size'][1]!=32, "batch size not correct in history"
-        assert len(est.history.batch_log['batch_size']) ==20, "length of batch log incorrect"
-        assert len(est.history.epoch_log['learning_rate'])==10, "length of epoch log incorrect"
+        assert est.history_.total_epochs == 10, "total epochs in history not correct"
+        assert est.history_.total_batches == 20, "total batches in history not correct"
+        assert est.history_.total_epochs != est.history_.total_batches, "batches and epochs are equal"
+        assert est.history_.batch_log['batch_size'][0]==32, "batch size not correct in history"
+        assert est.history_.batch_log['batch_size'][1]!=32, "batch size not correct in history"
+        assert len(est.history_.batch_log['batch_size']) ==20, "length of batch log incorrect"
+        assert len(est.history_.epoch_log['learning_rate'])==10, "length of epoch log incorrect"
 
 
     @mark.regression
@@ -180,8 +190,8 @@ class RegressionTests:
         est = regression(epochs=10)
         est.fit(X,y)
         assert est.epochs == 10, "regression epochs invalid"
-        assert est.history.total_epochs == 10, "total epochs in history not valid"
-        assert len(est.history.epoch_log['learning_rate']) == 10, "epoch log not equal to epochs"
+        assert est.history_.total_epochs == 10, "total epochs in history not valid"
+        assert len(est.history_.epoch_log['learning_rate']) == 10, "epoch log not equal to epochs"
 
     
     @mark.regression
@@ -191,8 +201,8 @@ class RegressionTests:
         X, y = get_regression_data                
         est = regression(learning_rate=0.5, epochs=5000, early_stop=True, val_size=0.3)
         est.fit(X,y)
-        assert est.history.total_epochs < 5000, "didn't stop early"
-        assert len(est.history.epoch_log['learning_rate']) < 5000, "epoch log too long for early stop"        
+        assert est.history_.total_epochs < 5000, "didn't stop early"
+        assert len(est.history_.epoch_log['learning_rate']) < 5000, "epoch log too long for early stop"        
 
     @mark.regression
     @mark.regression_early_stop
@@ -201,8 +211,8 @@ class RegressionTests:
         X, y = get_regression_data                
         est = regression(learning_rate=0.5, epochs=5000, early_stop=True, val_size=0.3, metric=None)
         est.fit(X,y)
-        assert est.history.total_epochs < 5000, "didn't stop early"
-        assert len(est.history.epoch_log['learning_rate']) < 5000, "epoch log too long for early stop"        
+        assert est.history_.total_epochs < 5000, "didn't stop early"
+        assert len(est.history_.epoch_log['learning_rate']) < 5000, "epoch log too long for early stop"        
 
 
     @mark.regression
@@ -212,19 +222,19 @@ class RegressionTests:
         est = regression(epochs=10, metric=None, val_size=0)
         est.fit(X, y)        
         # Test epoch history
-        assert est.history.total_epochs == len(est.history.epoch_log.get('epoch')), "number of epochs in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('learning_rate')), "number of learning rates in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('theta')), "number of thetas in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('train_cost')), "number of train costs in log doesn't match epochs"        
-        assert est.history.epoch_log.get('train_cost')[0] > est.history.epoch_log.get('train_cost')[-1], "train_cost does not decrease"
-        assert est.history.epoch_log.get("train_score", None) is None, "train score without metric is not None"
-        assert est.history.epoch_log.get("val_cost", None) is None, "val cost without early stopping is not None"
-        assert est.history.epoch_log.get("val_score", None) is None, "val score without early stopping is not None"
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('epoch')), "number of epochs in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('learning_rate')), "number of learning rates in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('theta')), "number of thetas in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('train_cost')), "number of train costs in log doesn't match epochs"        
+        assert est.history_.epoch_log.get('train_cost')[0] > est.history_.epoch_log.get('train_cost')[-1], "train_cost does not decrease"
+        assert est.history_.epoch_log.get("train_score", None) is None, "train score without metric is not None"
+        assert est.history_.epoch_log.get("val_cost", None) is None, "val cost without early stopping is not None"
+        assert est.history_.epoch_log.get("val_score", None) is None, "val score without early stopping is not None"
         # Test batch history
-        assert est.history.total_batches == len(est.history.batch_log.get('batch')), "number of batches in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('batch_size')), "number of batch sizes in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('batch')), "number of batches in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('batch_size')), "number of batch sizes in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
 
     @mark.regression
     @mark.regression_history
@@ -235,19 +245,19 @@ class RegressionTests:
                          early_stop=stop, metric='nrmse')
         est.fit(X, y)        
         # Test epoch history
-        assert est.history.total_epochs == len(est.history.epoch_log.get('epoch')), "number of epochs in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('learning_rate')), "number of learning rates in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('theta')), "number of thetas in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('train_cost')), "number of train costs in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('val_cost')), "number of val costs in log doesn't match epochs"        
-        assert est.history.epoch_log.get('train_cost')[0] > est.history.epoch_log.get('train_cost')[-1], "train_cost does not decrease"
-        assert est.history.epoch_log.get('train_score')[0] < est.history.epoch_log.get('train_score')[-1], "train_score did not improve"
-        assert est.history.epoch_log.get('val_score')[0] < est.history.epoch_log.get('val_score')[-1], "val_score did not improve"
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('epoch')), "number of epochs in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('learning_rate')), "number of learning rates in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('theta')), "number of thetas in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('train_cost')), "number of train costs in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('val_cost')), "number of val costs in log doesn't match epochs"        
+        assert est.history_.epoch_log.get('train_cost')[0] > est.history_.epoch_log.get('train_cost')[-1], "train_cost does not decrease"
+        assert est.history_.epoch_log.get('train_score')[0] < est.history_.epoch_log.get('train_score')[-1], "train_score did not improve"
+        assert est.history_.epoch_log.get('val_score')[0] < est.history_.epoch_log.get('val_score')[-1], "val_score did not improve"
         # Test batch history
-        assert est.history.total_batches == len(est.history.batch_log.get('batch')), "number of batches in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('batch_size')), "number of batch sizes in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('batch')), "number of batches in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('batch_size')), "number of batch sizes in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
 
     @mark.regression
     @mark.regression_history
@@ -256,20 +266,20 @@ class RegressionTests:
         est = regression(epochs=10, metric='mse', val_size=0)
         est.fit(X, y)        
         # Test epoch history
-        assert est.history.total_epochs == len(est.history.epoch_log.get('epoch')), "number of epochs in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('learning_rate')), "number of learning rates in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('theta')), "number of thetas in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('train_cost')), "number of train costs in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('train_score')), "number of train scores in log doesn't match epochs"        
-        assert est.history.epoch_log.get('train_cost')[0] > est.history.epoch_log.get('train_cost')[-1], "train_cost does not decrease"
-        assert est.history.epoch_log.get('train_score')[0] > est.history.epoch_log.get('train_score')[-1], "train_score does not decrease"
-        assert est.history.epoch_log.get("val_cost", None) is None, "val cost without early stopping is not None"
-        assert est.history.epoch_log.get("val_score", None) is None, "val score without early stopping is not None"
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('epoch')), "number of epochs in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('learning_rate')), "number of learning rates in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('theta')), "number of thetas in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('train_cost')), "number of train costs in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('train_score')), "number of train scores in log doesn't match epochs"        
+        assert est.history_.epoch_log.get('train_cost')[0] > est.history_.epoch_log.get('train_cost')[-1], "train_cost does not decrease"
+        assert est.history_.epoch_log.get('train_score')[0] > est.history_.epoch_log.get('train_score')[-1], "train_score does not decrease"
+        assert est.history_.epoch_log.get("val_cost", None) is None, "val cost without early stopping is not None"
+        assert est.history_.epoch_log.get("val_score", None) is None, "val score without early stopping is not None"
         # Test batch history
-        assert est.history.total_batches == len(est.history.batch_log.get('batch')), "number of batches in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('batch_size')), "number of batch sizes in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('batch')), "number of batches in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('batch_size')), "number of batch sizes in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
 
     @mark.regression
     @mark.regression_history
@@ -279,22 +289,22 @@ class RegressionTests:
         est = regression(epochs=10, learning_rate=0.001, val_size=0.3, metric='mse', early_stop=stop)
         est.fit(X, y)        
         # Test epoch history
-        assert est.history.total_epochs == len(est.history.epoch_log.get('epoch')), "number of epochs in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('learning_rate')), "number of learning rates in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('theta')), "number of thetas in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('train_cost')), "number of train costs in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('val_cost')), "number of val costs in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('train_score')), "number of train score in log doesn't match epochs"        
-        assert est.history.total_epochs == len(est.history.epoch_log.get('val_score')), "number of val score in log doesn't match epochs"        
-        assert est.history.epoch_log.get('train_cost')[0] > est.history.epoch_log.get('train_cost')[-1], "train_cost does not decrease"
-        assert est.history.epoch_log.get('train_score')[0] > est.history.epoch_log.get('train_score')[-1], "train_score does not decrease"
-        assert est.history.epoch_log.get('val_cost')[0] > est.history.epoch_log.get('val_cost')[-1], "val_cost does not decrease"
-        assert est.history.epoch_log.get('val_score')[0] > est.history.epoch_log.get('val_score')[-1], "val_score does not decrease"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('epoch')), "number of epochs in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('learning_rate')), "number of learning rates in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('theta')), "number of thetas in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('train_cost')), "number of train costs in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('val_cost')), "number of val costs in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('train_score')), "number of train score in log doesn't match epochs"        
+        assert est.history_.total_epochs == len(est.history_.epoch_log.get('val_score')), "number of val score in log doesn't match epochs"        
+        assert est.history_.epoch_log.get('train_cost')[0] > est.history_.epoch_log.get('train_cost')[-1], "train_cost does not decrease"
+        assert est.history_.epoch_log.get('train_score')[0] > est.history_.epoch_log.get('train_score')[-1], "train_score does not decrease"
+        assert est.history_.epoch_log.get('val_cost')[0] > est.history_.epoch_log.get('val_cost')[-1], "val_cost does not decrease"
+        assert est.history_.epoch_log.get('val_score')[0] > est.history_.epoch_log.get('val_score')[-1], "val_score does not decrease"        
         # Test batch history
-        assert est.history.total_batches == len(est.history.batch_log.get('batch')), "number of batches in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('batch_size')), "number of batch sizes in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
-        assert est.history.total_batches == len(est.history.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('batch')), "number of batches in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('batch_size')), "number of batch sizes in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
+        assert est.history_.total_batches == len(est.history_.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
 
     @mark.regression
     @mark.linear_regression
@@ -302,7 +312,7 @@ class RegressionTests:
         X, y = get_regression_data
         est = LinearRegression()
         est.fit(X,y)
-        assert est.name == "Linear Regression with Batch Gradient Descent", "incorrect name"
+        assert est.description == "Linear Regression with Batch Gradient Descent", "incorrect name"
 
     @mark.regression
     @mark.linear_regression
@@ -361,7 +371,7 @@ class RegressionTests:
         X, y = get_regression_data     
         est = LassoRegression()
         est.fit(X,y)
-        assert est.name == "Lasso Regression with Batch Gradient Descent", "incorrect name"
+        assert est.description == "Lasso Regression with Batch Gradient Descent", "incorrect name"
 
     @mark.regression
     @mark.ridge_regression
@@ -369,7 +379,7 @@ class RegressionTests:
         X, y = get_regression_data       
         est = RidgeRegression()
         est.fit(X,y)
-        assert est.name == "Ridge Regression with Batch Gradient Descent", "incorrect name"        
+        assert est.description == "Ridge Regression with Batch Gradient Descent", "incorrect name"        
 
     @mark.regression
     @mark.elasticnet_regression
@@ -377,4 +387,4 @@ class RegressionTests:
         X, y = get_regression_data      
         est = ElasticNetRegression()
         est.fit(X,y)
-        assert est.name == "ElasticNet Regression with Batch Gradient Descent", "incorrect name"        
+        assert est.description == "Elastic Net Regression with Batch Gradient Descent", "incorrect name"        

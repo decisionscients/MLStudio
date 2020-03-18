@@ -22,10 +22,11 @@
 from abc import abstractmethod
 import numpy as np
 from numpy.linalg import inv, svd
+from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 
 from mlstudio.supervised.estimator.regularizers import L1, L2, ElasticNet
 from mlstudio.supervised.estimator.gradient import GradientDescent
-from mlstudio.supervised.estimator.metrics import RegressionScorerFactory
+from mlstudio.supervised.estimator.scorers import RegressionScorerFactory
 from mlstudio.supervised.estimator.cost import RegressionCostFactory
 
 import warnings
@@ -37,11 +38,13 @@ import warnings
 class Regression(GradientDescent):
     """Base class for all regression classes."""
 
-    DEFAULT_METRIC = 'mse'
+    _DEFAULT_METRIC = 'mse'
+    _TASK = "Regression"
+
     def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None, 
                  epochs=1000, cost='quadratic', metric='mse', 
                  early_stop=False, val_size=0.0, patience=5, precision=0.001,
-                 verbose=False, checkpoint=100, name=None, seed=None):
+                 verbose=False, checkpoint=100, name=None, random_state=None):
         super(Regression, self).__init__(learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
@@ -52,35 +55,29 @@ class Regression(GradientDescent):
                                          patience=patience, 
                                          precision=precision,
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         name=name, seed=seed)     
- 
-    @abstractmethod
-    def _set_name(self):
-        pass    
+                                         name=name, random_state=random_state)     
 
     def _get_cost_function(self):
         """Obtains the cost function associated with the cost parameter."""
-        cost_function = RegressionCostFactory()(cost=self._cost)
+        cost_function = RegressionCostFactory()(cost=self.cost)
         if not cost_function:
-            msg = str(self._cost) + ' is not a supported regression cost function.'
+            msg = str(self.cost) + ' is not a supported regression cost function.'
             raise ValueError(msg)
         else:
             return cost_function
 
     def _get_scorer(self):
         """Obtains the scoring function associated with the metric parameter."""
-        if self.metric is not None:
-            scorer = RegressionScorerFactory()(metric=self.metric)
-            if not scorer:
+        if self.metric:
+            try:
+                scorer = RegressionScorerFactory()(metric=self.metric)
+            except ValueError:
                 msg = str(self.metric) + ' is not a supported regression metric.'
-                raise ValueError(msg)
-            else:
-                self.metric_name = scorer.label
-                return scorer
+                print(msg)
+            return scorer
         
     def _predict(self, X):
-        """Computes predictions during training with current weights."""
-        self._validate_data(X)
+        """Computes predictions during training with current weights."""        
         y_pred = self._linear_prediction(X)
         return y_pred.ravel()
 
@@ -100,6 +97,9 @@ class Regression(GradientDescent):
         array, shape(n_samples,)
             Returns the linear regression prediction.        
         """
+        check_is_fitted(self)
+        X = np.array(X)
+        check_array(X)
         return self._predict(X)
 
     def score(self, X, y):
@@ -121,12 +121,12 @@ class Regression(GradientDescent):
         float
             Returns the score for the designated metric.
         """
-        self._validate_data(X, y)
+        check_X_y(X, y)
         y_pred = self.predict(X)
         if self.metric:
-            score = self.scorer(y=y, y_pred=y_pred)    
+            score = self.scorer_(y=y, y_pred=y_pred)    
         else:
-            score = RegressionScorerFactory()(metric=self.DEFAULT_METRIC)(y=y, y_pred=y_pred)        
+            score = RegressionScorerFactory()(metric=self._DEFAULT_METRIC)(y=y, y_pred=y_pred)        
         return score
 
 # --------------------------------------------------------------------------- #
@@ -215,8 +215,8 @@ class LinearRegression(Regression):
     name : None or str, optional (default=None)
         The name of the model used for plotting
 
-    seed : None or int, optional (default=None)
-        Random state seed        
+    random_state : None or int, optional (default=None)
+        Random state random_state        
 
     Attributes
     ----------
@@ -226,8 +226,24 @@ class LinearRegression(Regression):
     intercept_ : array-like, shape(1,) or (n_classes,) 
         Intercept (a.k.a. bias) added to the decision function. 
 
+    converged_ : boolean
+        If True, the estimator has converged
+
+    is_fitted_ : boolean
+        If True, the estimator has been fitted and parameters estimated. 
+
     epochs_ : int
         Total number of epochs executed.
+
+    history_ : History object
+        Object containing training history data. 
+
+    scorer_ : Scorer object.
+        Class that calculates scores. There is a Scorer object for each
+        metric supported.
+
+    cost_function_ : Cost object.
+        Class that computes regression and classification costs for gradient descent.
 
     Methods
     -------
@@ -243,12 +259,13 @@ class LinearRegression(Regression):
     regression.ElasticNetRegression : ElasticNet Regression
     """    
 
-
+    _DEFAULT_METRIC = 'mse'
+    _TASK = "Linear Regression"
     
     def __init__(self, gradient_descent=True, learning_rate=0.01, batch_size=None, 
                  theta_init=None, epochs=1000, cost='quadratic', metric='mse', 
                  early_stop=False, val_size=0.0, patience=5, precision=0.001,
-                 verbose=False, checkpoint=100, name=None, seed=None):
+                 verbose=False, checkpoint=100, name=None, random_state=None):
         super(LinearRegression, self).__init__(learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
@@ -259,16 +276,18 @@ class LinearRegression(Regression):
                                          patience=patience, 
                                          precision=precision,
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         name=name, seed=seed)     
-        self._gradient_descent = gradient_descent
- 
-    def _set_name(self):
-        self._set_algorithm_name()
-        self.task = "Linear Regression"
-        if self._gradient_descent:
-            self.name = self.name or self.task + ' with ' + self._algorithm  
+                                         name=name, random_state=random_state)   
+
+        self.gradient_descent=gradient_descent  
+            
+    @property
+    def description(self):
+        """Returns the estimator description."""
+        if self.gradient_descent:
+            description = str(self._TASK + ' with ' + self.algorithm)      
         else:
-            self.name = self.name or self.task + ' using Ordinary Least Squares'
+            description = str(self._TASK + ' by Ordinary Least Squares')
+        return description
 
     def fit(self, X, y):
         """Fits the model to the data.
@@ -289,7 +308,7 @@ class LinearRegression(Regression):
         -------
         self : returns instance of self._
         """
-        if self._gradient_descent:
+        if self.gradient_descent:
             super(LinearRegression, self).fit(X, y)
 
         else:
@@ -392,8 +411,8 @@ class LassoRegression(Regression):
     name : None or str, optional (default=None)
         The name of the model used for plotting
 
-    seed : None or int, optional (default=None)
-        Random state seed        
+    random_state : None or int, optional (default=None)
+        Random state random_state        
 
     Attributes
     ----------
@@ -405,6 +424,22 @@ class LassoRegression(Regression):
 
     epochs_ : int
         Total number of epochs executed.
+
+    converged_ : boolean
+        If True, the estimator has converged
+
+    is_fitted_ : boolean
+        If True, the estimator has been fitted and parameters estimated.        
+
+    history_ : History object
+        Object containing training history data. 
+
+    scorer_ : Scorer object.
+        Class that calculates scores. There is a Scorer object for each
+        metric supported.
+
+    cost_function_ : Cost object.
+        Class that computes regression and classification costs for gradient descent.
 
     Methods
     -------
@@ -420,29 +455,28 @@ class LassoRegression(Regression):
     regression.ElasticNetRegression : ElasticNet Regression
     """    
 
-    def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None, 
-                 alpha=0.0001, epochs=1000, cost='quadratic', 
-                 metric='mse',  early_stop=False, 
-                 val_size=0.0, patience=5, precision=0.001,
-                 verbose=False, checkpoint=100, name=None, seed=None):
-        super(LassoRegression, self).__init__(learning_rate=learning_rate, 
+    _DEFAULT_METRIC = 'mse'
+    _TASK = "Linear Regression"
+
+    def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
+                 theta_init=None,  epochs=1000, regularizer=L1(alpha=0.0001),
+                 early_stop=False, patience=5,  precision=0.001, 
+                 cost='quadratic', metric='mse',  val_size=0.0, 
+                 verbose=False, checkpoint=100, random_state=None):
+        super(LassoRegression, self).__init__(name=name,
+                                         learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
-                                         epochs=epochs, cost=cost, 
-                                         metric=metric, 
+                                         epochs=epochs, 
+                                         regularizer=regularizer,
                                          early_stop=early_stop, 
-                                         val_size=val_size, 
                                          patience=patience, 
                                          precision=precision,
+                                         cost=cost, 
+                                         metric=metric,                                          
+                                         val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         name=name, seed=seed)    
-        self.alpha = alpha
-        self.regularizer = L1(alpha=alpha)
-
-    def _set_name(self):
-        self._set_algorithm_name()
-        self.task = "Lasso Regression"
-        self.name = self.name or self.task + ' with ' + self._algorithm
+                                         random_state=random_state)    
 
 # --------------------------------------------------------------------------- #
 #                         RIDGE REGRESSION CLASS                              #
@@ -465,7 +499,7 @@ class RidgeRegression(Regression):
         Constant that multiplies the regularization term.
 
     epochs : int, optional (default=1000)
-        The number of epochs to execute during training
+        The number of epochs to execute during training        
 
     cost : str, (default='quadratic')
         The string name for the cost function
@@ -528,8 +562,8 @@ class RidgeRegression(Regression):
     name : None or str, optional (default=None)
         The name of the model used for plotting
 
-    seed : None or int, optional (default=None)
-        Random state seed        
+    random_state : None or int, optional (default=None)
+        Random state random_state        
 
     Attributes
     ----------
@@ -541,6 +575,22 @@ class RidgeRegression(Regression):
 
     epochs_ : int
         Total number of epochs executed.
+
+    converged_ : boolean
+        If True, the estimator has converged
+
+    is_fitted_ : boolean
+        If True, the estimator has been fitted and parameters estimated.        
+
+    history_ : History object
+        Object containing training history data. 
+
+    scorer_ : Scorer object.
+        Class that calculates scores. There is a Scorer object for each
+        metric supported.
+
+    cost_function_ : Cost object.
+        Class that computes regression and classification costs for gradient descent.
 
     Methods
     -------
@@ -554,32 +604,31 @@ class RidgeRegression(Regression):
     regression.LinearRegression : Linear Regression
     regression.LassoRegression : Lasso Regression
     regression.ElasticNetRegression : ElasticNet Regression
-    """    
+    """  
 
-    def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None, 
-                 alpha=0.0001, epochs=1000, cost='quadratic', 
-                 metric='mse',  early_stop=False, 
-                 val_size=0.0, patience=5, precision=0.001,
-                 verbose=False, checkpoint=100, name=None, seed=None):
-        super(RidgeRegression, self).__init__(learning_rate=learning_rate, 
+    _DEFAULT_METRIC = 'mse'
+    _TASK = "Linear Regression"      
+
+    def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
+                 theta_init=None,  epochs=1000, regularizer=L2(alpha=0.0001),
+                 early_stop=False, patience=5,  precision=0.001, 
+                 cost='quadratic', metric='mse',  val_size=0.0, 
+                 verbose=False, checkpoint=100, random_state=None):
+        super(RidgeRegression, self).__init__(name=name,
+                                         learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
-                                         epochs=epochs, cost=cost, 
-                                         metric=metric, 
+                                         epochs=epochs, 
+                                         regularizer=regularizer,
                                          early_stop=early_stop, 
-                                         val_size=val_size, 
                                          patience=patience, 
                                          precision=precision,
+                                         cost=cost, 
+                                         metric=metric,                                          
+                                         val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         name=name, seed=seed)     
-        self.alpha = alpha
-        self.regularizer = L2(alpha=alpha)
-
-    def _set_name(self):
-        """Sets name of model for plotting purposes."""
-        self._set_algorithm_name()
-        self.task = "Ridge Regression"
-        self.name = self.name or self.task + ' with ' + self._algorithm
+                                         random_state=random_state)    
+                                  
 
 # --------------------------------------------------------------------------- #
 #                        ELASTICNET REGRESSION CLASS                          #
@@ -672,8 +721,8 @@ class ElasticNetRegression(Regression):
     name : None or str, optional (default=None)
         The name of the model used for plotting
 
-    seed : None or int, optional (default=None)
-        Random state seed        
+    random_state : None or int, optional (default=None)
+        Random state random_state        
 
     Attributes
     ----------
@@ -685,6 +734,22 @@ class ElasticNetRegression(Regression):
 
     epochs_ : int
         Total number of epochs executed.
+
+    converged_ : boolean
+        If True, the estimator has converged
+
+    is_fitted_ : boolean
+        If True, the estimator has been fitted and parameters estimated.        
+
+    history_ : History object
+        Object containing training history data. 
+
+    scorer_ : Scorer object.
+        Class that calculates scores. There is a Scorer object for each
+        metric supported.
+
+    cost_function_ : Cost object.
+        Class that computes regression and classification costs for gradient descent.
 
     Methods
     -------
@@ -700,28 +765,27 @@ class ElasticNetRegression(Regression):
     regression.LassoRegression : Lasso Regression
     """    
 
-    def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None, 
-                 alpha=0.0001, ratio=0.15, epochs=1000, cost='quadratic', 
-                 metric='mse',  early_stop=False, 
-                 val_size=0.0, patience=5, precision=0.001,
-                 verbose=False, checkpoint=100, name=None, seed=None):
-        super(ElasticNetRegression, self).__init__(learning_rate=learning_rate, 
+    _DEFAULT_METRIC = 'mse'
+    _TASK = "Linear Regression"
+
+    def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
+                 theta_init=None,  epochs=1000, 
+                 regularizer=ElasticNet(alpha=0.0001, ratio=0.15),
+                 early_stop=False, patience=5,  precision=0.001, 
+                 cost='quadratic', metric='mse',  val_size=0.0, 
+                 verbose=False, checkpoint=100, random_state=None):
+        super(LassoRegression, self).__init__(name=name,
+                                         learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
-                                         epochs=epochs, cost=cost, 
-                                         metric=metric, 
+                                         epochs=epochs, 
+                                         regularizer=regularizer,
                                          early_stop=early_stop, 
-                                         val_size=val_size, 
                                          patience=patience, 
                                          precision=precision,
+                                         cost=cost, 
+                                         metric=metric,                                          
+                                         val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         name=name, seed=seed)    
-        self.alpha = alpha
-        self.ratio = ratio
-        self.regularizer = ElasticNet(alpha=alpha, ratio=ratio)    
+                                         random_state=random_state)    
         
-    def _set_name(self):
-        """Sets name of model for plotting purposes."""
-        self._set_algorithm_name()
-        self.task = "ElasticNet Regression"
-        self.name = self.name or self.task + ' with ' + self._algorithm
