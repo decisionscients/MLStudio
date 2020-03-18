@@ -186,10 +186,122 @@ class CostCurve(Visualatrix):
                         height=self._height,
                         width=self._width)                    
         return fig
-        
+
+# ---------------------------------------------------------------------------- #
+#                              LEARNING CURVE                                  #
+# ---------------------------------------------------------------------------- #        
+class LearningCurve(Visualatrix):        
+    """Plots training and cross-validation scores by training sample size.
+
+    Parameters
+    ----------
+    estimator : MLStudio estimator object.
+        The object that implements the 'fit' and 'predict' methods.
     
+    kwargs : dict
+        Keyword arguments that are passed to the base class and influence
+        the visualization. Optional keyword arguments include:
+
+        =========   ==========================================
+        Property    Description
+        --------    ------------------------------------------
+        height      specify the height of the figure
+        width       specify the width of the figure
+        title       specify the title of the figure
+        template    specify the template for the figure.
+        =========   ==========================================    
+    
+    """
+
+    def __init__(self, estimator, **kwargs):
+        super(LearningCurve, self).__init__(**kwargs)
+        self._estimator = estimator        
+
+    def fit(self, X, y, cv=None, n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
+        """Generates the learning curve plot
+
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Training vector, where n_samples is the number of samples and
+            n_features is the number of features.
+
+        y : array-like, shape (n_samples) or (n_samples, n_features), optional
+            Target relative to X for classification or regression;
+            None for unsupervised learning.
+
+        cv : int, cross-validation generator or an iterable, optional
+            Determines the cross-validation splitting strategy.
+            Possible inputs for cv are:
+            - None, to use the default 5-fold cross-validation,
+            - integer, to specify the number of folds.
+            - :term:`CV splitter`,
+            - An iterable yielding (train, test) splits as arrays of indices.
+
+            For integer/None inputs, if ``y`` is binary or multiclass,
+            :class:`StratifiedKFold` used. If the estimator is not a classifier
+            or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
+
+            Refer :ref:`User Guide <cross_validation>` for the various
+            cross-validators that can be used here.
+    
+        n_jobs : int or None, optional (default=None)
+            Number of jobs to run in parallel.
+            ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+            ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+            for more details.
 
 
+        train_sizes : array-like, shape (n_ticks,), dtype float or int
+            Relative or absolute numbers of training examples that will be used to
+            generate the learning curve. If the dtype is float, it is regarded as a
+            fraction of the maximum size of the training set (that is determined
+            by the selected validation method), i.e. it has to be within (0, 1].
+            Otherwise it is interpreted as absolute sizes of the training sets.
+            Note that for classification the number of samples usually have to
+            be big enough to contain at least one sample from each class.
+            (default: np.linspace(0.1, 1.0, 5))
+
+        """
+
+        self._fig = go.Figure()
+
+        train_sizes, train_scores, test_scores, fit_times, _ = \
+            learning_curve(self._estimator, X, y, cv=cv, n_jobs=n_jobs,
+                           train_sizes=train_sizes, return_times=True)
+
+        train_scores_mean = np.mean(train_scores, axis=1)
+        train_scores_std = np.std(train_scores, axis=1)
+        test_scores_mean = np.mean(test_scores, axis=1)
+        test_scores_std = np.std(test_scores, axis=1)
+
+        # Plot training scores line
+        self._fig.add_trace(go.Scatter(
+            x=train_sizes, y=train_scores_mean, mode='lines+markers', 
+            name='Training Scores',
+            showlegend=True
+        ))
+        # Plot training scores error fill
+        self._fig_add_trace(go.Scatter(
+            x=training_sizes,
+            y=(train_scores_mean-train_scores_std) + (train_scores_mean-train_scores_std),
+            fill='toself'
+        ))
+
+        # Plot validation scores line
+        self._fig.add_trace(go.Scatter(
+            x=train_sizes, y=test_scores_mean, mode='lines+markers', 
+            name='Cross-Validation Scores',
+            showlegend=True
+        ))
+        # Plot training scores error fill
+        self._fig_add_trace(go.Scatter(
+            x=training_sizes,
+            y=(test_scores_mean-test_scores_std) + (test_scores_mean-test_scores_std),
+            fill='toself'            
+        ))
+
+        
                     
 
                 

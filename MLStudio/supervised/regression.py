@@ -138,11 +138,9 @@ class LinearRegression(Regression):
     
     Parameters
     ----------
-    method : str (Default = 'gradient-descent')
-        Model parameters may be estimated using one of three methods:
-            'gradient_descent' : numerical approximation
-            'ols' : ordinary least squares approximation
-            'pinv' : Moore-Penrose pseudoinverse estimation
+    gradient_descent : bool (Default = True)
+        If True, parameters are estimated using gradient descent. Otherwise,
+        parameters are computed using ordinary least squares (OLS).
 
     learning_rate : float or LearningRateSchedule instance, optional (default=0.01)
         Learning rate or learning rate schedule.
@@ -247,7 +245,7 @@ class LinearRegression(Regression):
 
 
     
-    def __init__(self, method='gradient_descent', learning_rate=0.01, batch_size=None, 
+    def __init__(self, gradient_descent=True, learning_rate=0.01, batch_size=None, 
                  theta_init=None, epochs=1000, cost='quadratic', metric='mse', 
                  early_stop=False, val_size=0.0, patience=5, precision=0.001,
                  verbose=False, checkpoint=100, name=None, seed=None):
@@ -262,24 +260,15 @@ class LinearRegression(Regression):
                                          precision=precision,
                                          verbose=verbose, checkpoint=checkpoint, 
                                          name=name, seed=seed)     
-        self._method = method
+        self._gradient_descent = gradient_descent
  
     def _set_name(self):
         self._set_algorithm_name()
         self.task = "Linear Regression"
-        if self._method == 'gradient_descent':
+        if self._gradient_descent:
             self.name = self.name or self.task + ' with ' + self._algorithm  
-        elif self._method == 'ols':
-            self.name = self.name or self.task + ' using Ordinary Least Squares'
         else:
-            self.name = self.name or self.task + ' using Moore-Penrose pseudoinverse'
-
-    def _validate_params(self):
-        super(LinearRegression, self)._validate_params()
-        methods = ['gradient_descent', 'ols', 'pinv']
-        if self._method not in methods:
-            raise ValueError("method must be either 'gradient_descent', 'ols',\
-                or 'pinv'.")
+            self.name = self.name or self.task + ' using Ordinary Least Squares'
 
     def fit(self, X, y):
         """Fits the model to the data.
@@ -300,7 +289,7 @@ class LinearRegression(Regression):
         -------
         self : returns instance of self._
         """
-        if self._method == 'gradient_descent':
+        if self._gradient_descent:
             super(LinearRegression, self).fit(X, y)
 
         else:
@@ -309,17 +298,9 @@ class LinearRegression(Regression):
             log['y'] = y
 
             self._begin_training(log)
-
-            # Compute OLS or Moore-Penrose pseudoinverse
-            if self._method == 'ols':
-                # Calculate coefficients using closed-form solution
-                self._theta = inv(self._X_design.transpose().dot(self._X_design)).dot(self._X_design.transpose()).dot(self._y)
-            else:
-                # Use Moore-Penrose pseudoinverse 
-                U, S, V = np.linalg.svd(self._X_design.T.dot(self._X_design))                 
-                S = np.diag(S)
-                X_inv = V.dot(np.linalg.pinv(S)).dot(U.T)
-                self._theta = X_inv.dot(self._X_design.T).dot(self._y)     
+                
+            # Calculate coefficients using closed-form solution
+            self._theta = inv(self._X_design.transpose().dot(self._X_design)).dot(self._X_design.transpose()).dot(self._y)
 
             self._end_training()
         return self

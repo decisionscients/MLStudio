@@ -123,33 +123,27 @@ class RegressionTests:
             est.fit(X,y)
 
     @mark.regression
-    @mark.regression_analytical
-    def test_regression_analytical(self, split_regression_data):
+    @mark.regression_results
+    def test_regression_results(self, split_regression_data):
         X, X_test, y, y_test = split_regression_data
-        with pytest.raises(ValueError):
-            est = LinearRegression(method='x')
-            est.fit(X,y)
-        est = LinearRegression(method='ols')            
+        est = LinearRegression(gradient_descent=False)            
         est.fit(X,y)
         score1 = est.score(X_test, y_test)
         print("----------------------------")
         print(score1)
-        est = LinearRegression(method='pinv')            
-        est.fit(X,y)
-        score2 = est.score(X_test, y_test)
-        print("----------------------------")
-        print(score2)        
-        est = LinearRegression(epochs=1000)            
+        est = LinearRegression(epochs=5000)            
         est.fit(X,y)        
-        score3 = est.score(X_test, y_test)        
+        score2 = est.score(X_test, y_test)        
         print("----------------------------")
-        print(score3)    
+        print(score2)    
         est = lm.LinearRegression()            
         est.fit(X,y)
         y_pred = est.predict(X_test)
-        score4 = np.mean(y_test - y_pred)**2
+        score3 = np.mean(y_test - y_pred)**2
         print("----------------------------")
-        print(score4)  
+        print(score3)        
+        assert abs(score1-score2)/score2 < 0.05, "Scores 1 and 2 are not close"  
+        assert abs(score2-score3)/score3 < 0.05, "Scores 1 and 2 are not close"  
 
 
     @mark.regression
