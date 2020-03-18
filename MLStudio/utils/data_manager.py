@@ -226,7 +226,7 @@ def data_split(X, y, test_size=0.3, shuffle=True, stratify=False, random_state=N
                          " and y.shape[0] = %d." % (X.shape[0], y.shape[0]))
     if not stratify:
         if shuffle:
-            X, y = shuffle_data(X, y, random_state)
+            X, y = shuffle_data(X, y)
         split_i = len(y) - int(len(y) // (1 / test_size))
         X_train, X_test = X[:split_i], X[split_i:]
         y_train, y_test = y[:split_i], y[split_i:]

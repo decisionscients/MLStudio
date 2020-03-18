@@ -27,8 +27,8 @@ import pandas as pd
 import pickle
 from sklearn.base import BaseEstimator
 from sklearn.base import RegressorMixin, ClassifierMixin
-from sklearn.utils.validation import check_is_fitted, check_X_y, check_array
-from sklearn.utils.validation import check_random_state
+from sklearn.utils.validation import check_random_state, check_array
+from sklearn.utils.validation import check_X_y, check_is_fitted
 import sys
 import time
 import uuid
@@ -206,12 +206,8 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
     def _init_weights(self):
         """Initializes weights"""        
         if self.theta_init is not None:
-            if self.theta_init.shape[0] != self._X_design.shape[1]:
-                raise ValueError("theta_init shape mispatch. Expected shape %s,"
-                                 " but theta_init.shape = %s." % ((self._X_design.shape[1],1),
-                                 self.theta_init.shape))
-            else:
-                self._theta = np.atleast_2d(self.theta_init).reshape(-1,1)
+            check_array(self.theta_init)
+            self._theta = np.atleast_2d(self.theta_init).reshape(-1,1)
         else:
             self.n_features_ = self._X_design.shape[1]
             self.random_state_ = check_random_state(self.random_state)            
@@ -224,7 +220,7 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
         self.converged_ = False
         self.is_fitted_ = False
         self._validate_params()
-        check_X_y(log.get('X'), log.get('y'))        
+        check_X_y(log.get('X'), log.get('y'))
         self._prepare_data(log.get('X'), log.get('y'))
         self._init_weights()   
         self._compile()

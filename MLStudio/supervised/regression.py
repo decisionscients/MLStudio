@@ -22,12 +22,13 @@
 from abc import abstractmethod
 import numpy as np
 from numpy.linalg import inv, svd
-from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
+from sklearn.utils.validation import check_X_y, check_is_fitted, check_array
 
-from mlstudio.supervised.estimator.regularizers import L1, L2, ElasticNet
-from mlstudio.supervised.estimator.gradient import GradientDescent
-from mlstudio.supervised.estimator.scorers import RegressionScorerFactory
 from mlstudio.supervised.estimator.cost import RegressionCostFactory
+from mlstudio.supervised.estimator.gradient import GradientDescent
+from mlstudio.supervised.estimator.regularizers import L1, L2, ElasticNet
+from mlstudio.supervised.estimator.regularizers import Regularizer
+from mlstudio.supervised.estimator.scorers import RegressionScorerFactory
 
 import warnings
 
@@ -41,21 +42,25 @@ class Regression(GradientDescent):
     _DEFAULT_METRIC = 'mse'
     _TASK = "Regression"
 
-    def __init__(self, learning_rate=0.01, batch_size=None, theta_init=None, 
-                 epochs=1000, cost='quadratic', metric='mse', 
-                 early_stop=False, val_size=0.0, patience=5, precision=0.001,
-                 verbose=False, checkpoint=100, name=None, random_state=None):
-        super(Regression, self).__init__(learning_rate=learning_rate, 
+    def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
+                 theta_init=None,  epochs=1000, regularizer=Regularizer(),
+                 early_stop=False, patience=5,  precision=0.001, 
+                 cost='quadratic', metric='mse',  val_size=0.0, 
+                 verbose=False, checkpoint=100, random_state=None):
+        super(Regression, self).__init__(name=name,
+                                         learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
-                                         epochs=epochs, cost=cost, 
-                                         metric=metric, 
+                                         epochs=epochs, 
+                                         regularizer=regularizer,
                                          early_stop=early_stop, 
-                                         val_size=val_size, 
                                          patience=patience, 
                                          precision=precision,
+                                         cost=cost, 
+                                         metric=metric,                                          
+                                         val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         name=name, random_state=random_state)     
+                                         random_state=random_state)    
 
     def _get_cost_function(self):
         """Obtains the cost function associated with the cost parameter."""
@@ -69,11 +74,10 @@ class Regression(GradientDescent):
     def _get_scorer(self):
         """Obtains the scoring function associated with the metric parameter."""
         if self.metric:
-            try:
-                scorer = RegressionScorerFactory()(metric=self.metric)
-            except ValueError:
+            scorer = RegressionScorerFactory()(metric=self.metric)
+            if not scorer:
                 msg = str(self.metric) + ' is not a supported regression metric.'
-                print(msg)
+                raise ValueError(msg)
             return scorer
         
     def _predict(self, X):
@@ -121,7 +125,7 @@ class Regression(GradientDescent):
         float
             Returns the score for the designated metric.
         """
-        check_X_y(X, y)
+        check_X_y(X,y)
         y_pred = self.predict(X)
         if self.metric:
             score = self.scorer_(y=y, y_pred=y_pred)    
@@ -262,21 +266,26 @@ class LinearRegression(Regression):
     _DEFAULT_METRIC = 'mse'
     _TASK = "Linear Regression"
     
-    def __init__(self, gradient_descent=True, learning_rate=0.01, batch_size=None, 
-                 theta_init=None, epochs=1000, cost='quadratic', metric='mse', 
-                 early_stop=False, val_size=0.0, patience=5, precision=0.001,
-                 verbose=False, checkpoint=100, name=None, random_state=None):
-        super(LinearRegression, self).__init__(learning_rate=learning_rate, 
+    def __init__(self, name=None, gradient_descent=True, learning_rate=0.01, 
+                 batch_size=None, theta_init=None,  epochs=1000, 
+                 regularizer=Regularizer(),early_stop=False, patience=5,  
+                 precision=0.001, cost='quadratic', metric='mse',  
+                 val_size=0.0, verbose=False, checkpoint=100, 
+                 random_state=None):
+        super(LinearRegression, self).__init__(name=name,
+                                         learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
-                                         epochs=epochs, cost=cost, 
-                                         metric=metric, 
+                                         epochs=epochs, 
+                                         regularizer=regularizer,
                                          early_stop=early_stop, 
-                                         val_size=val_size, 
                                          patience=patience, 
                                          precision=precision,
+                                         cost=cost, 
+                                         metric=metric,                                          
+                                         val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         name=name, random_state=random_state)   
+                                         random_state=random_state)  
 
         self.gradient_descent=gradient_descent  
             
@@ -456,7 +465,7 @@ class LassoRegression(Regression):
     """    
 
     _DEFAULT_METRIC = 'mse'
-    _TASK = "Linear Regression"
+    _TASK = "Lasso Regression"
 
     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
                  theta_init=None,  epochs=1000, regularizer=L1(alpha=0.0001),
@@ -607,7 +616,7 @@ class RidgeRegression(Regression):
     """  
 
     _DEFAULT_METRIC = 'mse'
-    _TASK = "Linear Regression"      
+    _TASK = "Ridge Regression"      
 
     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
                  theta_init=None,  epochs=1000, regularizer=L2(alpha=0.0001),
@@ -766,7 +775,7 @@ class ElasticNetRegression(Regression):
     """    
 
     _DEFAULT_METRIC = 'mse'
-    _TASK = "Linear Regression"
+    _TASK = "Elastic Net Regression"
 
     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
                  theta_init=None,  epochs=1000, 
@@ -774,7 +783,7 @@ class ElasticNetRegression(Regression):
                  early_stop=False, patience=5,  precision=0.001, 
                  cost='quadratic', metric='mse',  val_size=0.0, 
                  verbose=False, checkpoint=100, random_state=None):
-        super(LassoRegression, self).__init__(name=name,
+        super(ElasticNetRegression, self).__init__(name=name,
                                          learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 

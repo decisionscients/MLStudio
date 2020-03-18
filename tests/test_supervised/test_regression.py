@@ -45,7 +45,10 @@ from mlstudio.supervised.estimator.early_stop import EarlyStop
 
 @mark.regression
 @mark.regression_sklearn
-@parametrize_with_checks([LinearRegression(metric='r2')])
+@parametrize_with_checks([LinearRegression(metric='r2'),
+                          LassoRegression(metric='r2'),
+                          RidgeRegression(metric='r2'),
+                          ElasticNetRegression(metric='r2')])
 def test_sklearn_compatible_estimator(estimator, check):
     check(estimator)
 
@@ -116,9 +119,9 @@ class RegressionTests:
     def test_regression_validate_data(self, regression, get_regression_data):
         est = regression(epochs=10)
         X, y = get_regression_data        
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             est.fit([1,2,3], y)
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             est.fit(X, [1,2,3])            
         with pytest.raises(ValueError):
             est.fit(X, y[0:5])            
@@ -334,7 +337,7 @@ class RegressionTests:
         est = regression(learning_rate = 0.1, epochs=1000)
         with pytest.raises(Exception): # Tests predict w/o first fitting model
             y_pred = est.predict(X)        
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             est.fit(X,y)
             y_pred = est.predict([1,2,3])
         with pytest.raises(Exception):            
@@ -344,8 +347,7 @@ class RegressionTests:
         assert all(np.equal(y.shape, y_pred.shape)), "y and y_pred have different shapes"  
 
     @mark.regression
-    @mark.linear_regression
-    @mark.linear_regression_score
+    @mark.regression_score
     def test_regression_score(self, regression, get_regression_data_w_validation, 
                                     regression_metric):
         X, X_test, y, y_test = get_regression_data_w_validation                
@@ -353,9 +355,7 @@ class RegressionTests:
         with pytest.raises(Exception):
             score = est.score(X, y)
         est.fit(X, y)
-        with pytest.raises(TypeError):
-            score = est.score("X", y)
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             score = est.score(X, [1,2,3])        
         with pytest.raises(ValueError):
             score = est.score(X, np.array([1,2,3]))        
