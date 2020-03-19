@@ -684,11 +684,11 @@ class LearningCurves(Visualatrix):
         self._fig = plotly.tools.make_subplots(rows=rows, cols=cols,
                                                subplot_titles=subtitles,
                                                horizontal_spacing=0.25/cols,
-                                               vertical_spacing = 0.25/rows)
+                                               vertical_spacing = 0.3/rows)
 
         # Update font size for subplot titles.
         for i in self._fig['layout']['annotations']:
-            i['font']['size'] = 12
+            i['font']['size'] = 14
         
         # Populate cells of subplot
         for i, estimator in enumerate(self._estimators):
@@ -724,13 +724,148 @@ class LearningCurves(Visualatrix):
             self._fig.update_yaxes(title_text="Fit Times", row=i+1, col=2)
             self._fig.update_yaxes(title_text=estimator.get_scorer().label, row=i+1, col=3)
 
-
-        #  Add title to layout.
+        #  Add title and template to layout.
         self._fig.update_layout(title_text="Learning Curve Analysis",
-        title_x=0.5)
+                                template=self._template,
+                                height=rows*400, width=1200,
+                                title_x=0.5)
+
+        # Set subplot axes title font sizes
+
 
         plotly.offline.plot(self._fig)    
                 
 
+# ---------------------------------------------------------------------------- #
+#                            VALIDATION CURVE                                  #
+# ---------------------------------------------------------------------------- #        
+class ValidationCurve(Visualatrix):        
+    """Plots training and cross-validation scores by hyperparameter.
+
+    Parameters
+    ----------
+    estimator : MLStudio estimator object.
+        The object that implements the 'fit' and 'predict' methods.
+    
+    kwargs : dict
+        Keyword arguments that are passed to the base class and influence
+        the visualization. Optional keyword arguments include:
+
+        =========   ==========================================
+        Property    Description
+        --------    ------------------------------------------
+        height      specify the height of the figure
+        width       specify the width of the figure
+        title       specify the title of the figure
+        template    specify the template for the figure.
+        =========   ==========================================    
+    
+    """
+
+    def __init__(self, estimator, **kwargs):
+        super(LearningCurve, self).__init__(**kwargs)
+        self._estimator = estimator     
+        self._title = self._title or str(estimator.description + "<br>Validation Curve")
+
+    def fit(self, X, y, param, param_range, cv=None, n_jobs=None, scoring="r2"):
+        """Generates the validation curve plot
+
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Training vector, where n_samples is the number of samples and
+            n_features is the number of features.
+
+        y : array-like, shape (n_samples) or (n_samples, n_features), optional
+            Target relative to X for classification or regression;
+            None for unsupervised learning.
+
+        param_name : str
+            The parameter being evaluated
+
+        param_range : array-like
+            The range of the parameter being evaluated.
+    
+        n_jobs : int or None, optional (default=None)
+            Number of jobs to run in parallel.
+            ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+            ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+            for more details.
+
+        scoring : str
+            The metric used to evaluate performance.  
+
+        """
+        train_scores, test_scores = \
+            validation_curve(self._estimator, X, y, param_name=param_name,
+             param_range=param_range, scoring=scoring, n_jobs=n_jobs)
+
+        train_scores_mean = np.mean(train_scores, axis=1)
+        train_scores_std = np.std(train_scores, axis=1)
+        test_scores_mean = np.mean(test_scores, axis=1)
+        test_scores_std = np.std(test_scores, axis=1)
+
+        # Plot training scores line and ribbon
+        train_upper = go.Scatter(
+            x=train_sizes, y=train_scores_mean + train_scores_std,
+            mode='lines',
+            marker=dict(color="#b3cde0"),            
+            fillcolor="#b3cde0",
+            fill='tonexty',
+            showlegend=False
+        )
+        train = go.Scatter(
+            name='Training Scores',
+            x=train_sizes, y=train_scores_mean, 
+            mode='lines+markers',  
+            line=dict(color='#005b96'),            
+            marker=dict(color='#005b96'),
+            fillcolor="#b3cde0",
+            fill='tonexty',            
+            showlegend=False
+        )
+        train_lower = go.Scatter(
+            x=train_sizes, y=train_scores_mean - train_scores_std,
+            mode='lines',
+            line=dict(color='#b3cde0'),            
+            showlegend=False
+        )        
+
+        # Plot validation scores line and ribbon
+        val_upper = go.Scatter(
+            x=train_sizes, y=test_scores_mean + test_scores_std,
+            mode='lines',
+            marker=dict(color='rgba(179,226,205, 0.5)'),
+            line=dict(width=0),
+            fillcolor="rgba(179,226,205, 0.5)",
+            fill='tonexty',
+            showlegend=False
+        )
+        val = go.Scatter(
+            name='Cross-Validation Scores',
+            x=train_sizes, y=test_scores_mean,
+            mode='lines+markers',             
+            line=dict(color='rgb(27,158,119)'), 
+            marker=dict(color='rgb(27,158,119)'),           
+            fillcolor="rgba(179,226,205, 0.5)",
+            fill='tonexty',            
+            showlegend=False
+        )
+        val_lower = go.Scatter(
+            x=train_sizes, y=test_scores_mean - test_scores_std,
+            mode='lines',
+            line=dict(color="rgba(179,226,205, 0.5)"),
+            showlegend=False
+        )                
+        # Load from bottom up
+        data = [val_lower, val, val_upper, train_lower, train, train_upper]
+        # Update layout with designated template
+        layout = go.Layout(
+            xaxis=dict(title=param_name),
+            yaxis=dict(title=self._estimator.get_scorer().label),
+            title=self._title,title_x=0.5,
+            template=self._template
+        )
+        self._fig = go.Figure(data=data, layout=layout)
 
             
