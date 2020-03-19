@@ -214,13 +214,47 @@ class CostCurve(ModelVisualatrix):
 # ---------------------------------------------------------------------------- #
 #                              LEARNING CURVE                                  #
 # ---------------------------------------------------------------------------- #        
-class LearningCurve(Visualatrix):        
+class LearningCurve(ModelVisualatrix):        
     """Plots training and cross-validation scores by training sample size.
 
     Parameters
     ----------
+    fig : Plotly Figure or FigureWidget object.
+        The object being analyzed 
+
     estimator : MLStudio estimator object.
         The object that implements the 'fit' and 'predict' methods.
+
+    cv : int, cross-validation generator or an iterable, optional
+        Determines the cross-validation splitting strategy.
+        Possible inputs for cv are:
+        - None, to use the default 5-fold cross-validation,
+        - integer, to specify the number of folds.
+        - :term:`CV splitter`,
+        - An iterable yielding (train, test) splits as arrays of indices.
+
+        For integer/None inputs, if ``y`` is binary or multiclass,
+        :class:`StratifiedKFold` used. If the estimator is not a classifier
+        or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
+
+        Refer :ref:`User Guide <cross_validation>` for the various
+        cross-validators that can be used here.
+
+    n_jobs : int or None, optional (default=None)
+        Number of jobs to run in parallel.
+        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+        ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+        for more details.
+
+    train_sizes : array-like, shape (n_ticks,), dtype float or int
+        Relative or absolute numbers of training examples that will be used to
+        generate the learning curve. If the dtype is float, it is regarded as a
+        fraction of the maximum size of the training set (that is determined
+        by the selected validation method), i.e. it has to be within (0, 1].
+        Otherwise it is interpreted as absolute sizes of the training sets.
+        Note that for classification the number of samples usually have to
+        be big enough to contain at least one sample from each class.
+        (default: np.linspace(0.1, 1.0, 5))
     
     kwargs : dict
         Keyword arguments that are passed to the base class and influence
@@ -237,12 +271,16 @@ class LearningCurve(Visualatrix):
     
     """
 
-    def __init__(self, estimator, **kwargs):
-        super(LearningCurve, self).__init__(**kwargs)
-        self.estimator = estimator     
+    def __init__(self, estimator, fig=None, cv=None, n_jobs=None, 
+                 train_sizes=np.linspace(.1, 1.0, 5), **kwargs):
+        super(LearningCurve, self).__init__(estimator=estimator, fig=fig, **kwargs)        
+
+        self.cv = cv
+        self.n_jobs = n_jobs
+        self.train_sizes = train_sizes
         self.title = self.title or str(estimator.description + "<br>Learning Curve Plot")
 
-    def fit(self, X, y, cv=None, n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
+    def fit(self, X, y):
         """Generates the learning curve plot
 
         Parameters
@@ -255,42 +293,10 @@ class LearningCurve(Visualatrix):
             Target relative to X for classification or regression;
             None for unsupervised learning.
 
-        cv : int, cross-validation generator or an iterable, optional
-            Determines the cross-validation splitting strategy.
-            Possible inputs for cv are:
-            - None, to use the default 5-fold cross-validation,
-            - integer, to specify the number of folds.
-            - :term:`CV splitter`,
-            - An iterable yielding (train, test) splits as arrays of indices.
-
-            For integer/None inputs, if ``y`` is binary or multiclass,
-            :class:`StratifiedKFold` used. If the estimator is not a classifier
-            or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
-
-            Refer :ref:`User Guide <cross_validation>` for the various
-            cross-validators that can be used here.
-    
-        n_jobs : int or None, optional (default=None)
-            Number of jobs to run in parallel.
-            ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
-            ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
-            for more details.
-
-
-        train_sizes : array-like, shape (n_ticks,), dtype float or int
-            Relative or absolute numbers of training examples that will be used to
-            generate the learning curve. If the dtype is float, it is regarded as a
-            fraction of the maximum size of the training set (that is determined
-            by the selected validation method), i.e. it has to be within (0, 1].
-            Otherwise it is interpreted as absolute sizes of the training sets.
-            Note that for classification the number of samples usually have to
-            be big enough to contain at least one sample from each class.
-            (default: np.linspace(0.1, 1.0, 5))
-
         """
         train_sizes, train_scores, test_scores = \
-            learning_curve(self.estimator, X, y, cv=cv, n_jobs=n_jobs,
-                           train_sizes=train_sizes, return_times=False)
+            learning_curve(self.estimator, X, y, cv=self.cv, n_jobs=self.n_jobs,
+                           train_sizes=self.train_sizes, return_times=False)
 
         # Extract statistics
         train_scores_mean = np.mean(train_scores, axis=1)

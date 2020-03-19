@@ -71,7 +71,7 @@ class LearningCurveTests:
     @mark.learning_curve   
     def test_learning_curve(self, get_regression_data):
         X, y = get_regression_data
-        est = LinearRegression(learning_rate=0.1, epochs=1000, metric='r2')
+        est = LinearRegression(learning_rate=0.1, epochs=1000, metric='nrmse')
         lc = LearningCurve(est)
         lc.fit(X,y)
         lc.show()
