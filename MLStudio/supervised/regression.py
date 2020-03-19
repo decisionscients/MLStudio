@@ -60,9 +60,9 @@ class Regression(GradientDescent):
                                          metric=metric,                                          
                                          val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         random_state=random_state)    
+                                         random_state=random_state)   
 
-    def _get_cost_function(self):
+    def get_cost_function(self):
         """Obtains the cost function associated with the cost parameter."""
         cost_function = RegressionCostFactory()(cost=self.cost)
         if not cost_function:
@@ -71,7 +71,7 @@ class Regression(GradientDescent):
         else:
             return cost_function
 
-    def _get_scorer(self):
+    def get_scorer(self):
         """Obtains the scoring function associated with the metric parameter."""
         if self.metric:
             scorer = RegressionScorerFactory()(metric=self.metric)

@@ -54,7 +54,7 @@ class Visualatrix(ABC, BaseEstimator):
     PLOT_DEFAULT_TEMPLATE = "plotly_white"    
     PLOT_AVAILABLE_TEMPLATES = ['ggplot2', 'seaborn', 'simple_white', 'plotly',
          'plotly_white', 'plotly_dark', 'presentation', 'xgridoff',
-         'ygridoff', 'gridon', 'none']
+         'ygridoff', 'gridon', 'none']    
     
     def __init__(self, **kwargs):        
         self._fig = None

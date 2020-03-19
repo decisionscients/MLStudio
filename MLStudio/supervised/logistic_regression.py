@@ -159,7 +159,7 @@ class LogisticRegression(GradientDescent):
         self.task = "Logistic Regression"
         self.name = self.name or self.task + ' with ' + self.algorithm
 
-    def _get_cost_function(self):
+    def get_cost_function(self):
         """Obtains the cost function associated with the cost parameter."""
         cost_function = BinaryClassificationCostFactory()(cost=self.cost)
         if not isinstance(cost_function, BinaryClassificationCostFunction):
@@ -169,7 +169,7 @@ class LogisticRegression(GradientDescent):
             return cost_function
 
 
-    def _get_scorer(self):
+    def get_scorer(self):
         """Obtains the scoring function associated with the metric parameter."""
         
         if self.metric:

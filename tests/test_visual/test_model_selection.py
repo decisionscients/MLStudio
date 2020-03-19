@@ -24,8 +24,12 @@ from pytest import mark
 import shutil
 from sklearn.model_selection import ShuffleSplit
 
-from mlstudio.supervised.regression import LinearRegression
+from mlstudio.supervised.regression import LinearRegression, LassoRegression
+from mlstudio.supervised.regression import RidgeRegression, ElasticNetRegression
 from mlstudio.visual.model_selection import CostCurve, LearningCurve
+from mlstudio.visual.model_selection import ModelScalability
+from mlstudio.visual.model_selection import ModelLearningPerformance
+from mlstudio.visual.model_selection import LearningCurves
 
 class CostCurveTests:
 
@@ -34,11 +38,9 @@ class CostCurveTests:
         path = "./tests/test_visual/figures/basic_cost_curve.png"
         X, y = get_regression_data
         est = LinearRegression()
-        cc = CostCurve(est, title='Basic Cost Curve')
+        cc = CostCurve(est)
         cc.fit(X, y)
         cc.show()
-        cc.save(filepath=path)
-        assert os.path.exists(path), "Figure not saved."
 
     @mark.cost_curve
     def test_cost_curve_color(self, get_regression_data):
@@ -46,11 +48,9 @@ class CostCurveTests:
         param_grid = {'learning_rate' : np.logspace(-3,-1, num=10).tolist()}
         X, y = get_regression_data
         est = LinearRegression()
-        cc = CostCurve(est, title='Learning Rate Cost Curve')
+        cc = CostCurve(est)
         cc.fit(X, y, param_grid=param_grid, color='learning_rate')
         cc.show()
-        cc.save(filepath=path)
-        assert os.path.exists(path), "Figure not saved."        
 
     @mark.cost_curve
     def test_cost_curve_color_facets(self, get_regression_data):
@@ -59,13 +59,10 @@ class CostCurveTests:
                       'batch_size': [32,64,128,256,512]}
         X, y = get_regression_data
         est = LinearRegression()
-        cc = CostCurve(est, title='Learning Rate Cost Curve by Batch Size')
+        cc = CostCurve(est)
         cc.fit(X, y, param_grid=param_grid, color='learning_rate',
                facet_col='batch_size')
         cc.show()
-        cc.save(filepath=path)
-        assert os.path.exists(path), "Figure not saved." 
-        shutil.rmtree(os.path.dirname(path))
 
 
 
@@ -74,8 +71,34 @@ class LearningCurveTests:
     @mark.learning_curve   
     def test_learning_curve(self, get_regression_data):
         X, y = get_regression_data
-        cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
-        est = LinearRegression(epochs=1000)
+        est = LinearRegression(epochs=10, metric='r2')
         lc = LearningCurve(est)
-        lc.fit(X,y, cv=cv)
+        lc.fit(X,y)
         lc.show()
+
+    @mark.model_scalability   
+    def test_model_scalability_plot(self, get_regression_data):
+        X, y = get_regression_data        
+        est = LassoRegression(epochs=10, metric='r2')
+        ms = ModelScalability(est)
+        ms.fit(X,y)
+        ms.show()        
+
+    @mark.model_learning_performance   
+    def test_model_learning_performance_plot(self, get_regression_data):
+        X, y = get_regression_data        
+        est = RidgeRegression(epochs=10)
+        ms = ModelLearningPerformance(est)
+        ms.fit(X,y)
+        ms.show()        
+
+    @mark.learning_curves
+    def test_multiple_learning_curve_plots(self, get_regression_data):
+        X, y = get_regression_data        
+        est1 = LinearRegression(epochs=100)
+        est2 = ElasticNetRegression(epochs=100)
+        cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
+        est = [est1, est2]
+        lcp = LearningCurves(est)
+        lcp.fit(X,y,cv=cv)
+

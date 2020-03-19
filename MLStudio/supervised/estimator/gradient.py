@@ -156,13 +156,13 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
 
 
     @abstractmethod
-    def _get_cost_function(self):
+    def get_cost_function(self):
         """Obtains the cost function for the cost parameter."""
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
     @abstractmethod        
-    def _get_scorer(self):
+    def get_scorer(self):
         """Obtains the scoring function for the metric parameter."""
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
@@ -184,8 +184,8 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
 
     def _compile(self):
         """Obtains external objects and add key functions to the log."""
-        self.cost_function_ = self._get_cost_function()
-        self.scorer_ = self._get_scorer()        
+        self.cost_function_ = self.get_cost_function()
+        self.scorer_ = self.get_scorer()        
         self._convergence_monitor = self._get_convergence_monitor()
 
     def _init_callbacks(self):
