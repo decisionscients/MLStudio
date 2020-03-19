@@ -374,13 +374,48 @@ class LearningCurve(ModelVisualatrix):
 # ---------------------------------------------------------------------------- #
 #                           MODEL SCALABILITY PLOT                             #
 # ---------------------------------------------------------------------------- #        
-class ModelScalability(Visualatrix):        
+class ModelScalability(ModelVisualatrix):        
     """Plots fit times against training samples.
 
     Parameters
     ----------
+    fig : Plotly Figure or FigureWidget object.
+        The object being analyzed 
+
     estimator : MLStudio estimator object.
         The object that implements the 'fit' and 'predict' methods.
+
+    cv : int, cross-validation generator or an iterable, optional
+        Determines the cross-validation splitting strategy.
+        Possible inputs for cv are:
+        - None, to use the default 5-fold cross-validation,
+        - integer, to specify the number of folds.
+        - :term:`CV splitter`,
+        - An iterable yielding (train, test) splits as arrays of indices.
+
+        For integer/None inputs, if ``y`` is binary or multiclass,
+        :class:`StratifiedKFold` used. If the estimator is not a classifier
+        or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
+
+        Refer :ref:`User Guide <cross_validation>` for the various
+        cross-validators that can be used here.
+
+    n_jobs : int or None, optional (default=None)
+        Number of jobs to run in parallel.
+        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+        ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+        for more details.
+
+
+    train_sizes : array-like, shape (n_ticks,), dtype float or int
+        Relative or absolute numbers of training examples that will be used to
+        generate the learning curve. If the dtype is float, it is regarded as a
+        fraction of the maximum size of the training set (that is determined
+        by the selected validation method), i.e. it has to be within (0, 1].
+        Otherwise it is interpreted as absolute sizes of the training sets.
+        Note that for classification the number of samples usually have to
+        be big enough to contain at least one sample from each class.
+        (default: np.linspace(0.1, 1.0, 5))        
     
     kwargs : dict
         Keyword arguments that are passed to the base class and influence
@@ -397,12 +432,16 @@ class ModelScalability(Visualatrix):
     
     """
 
-    def __init__(self, estimator, **kwargs):
-        super(ModelScalability, self).__init__(**kwargs)
-        self.estimator = estimator     
+    def __init__(self, estimator, fig=None, cv=None, n_jobs=None, 
+                 train_sizes=np.linspace(.1, 1.0, 5), **kwargs):
+        super(ModelScalability, self).__init__(estimator=estimator, fig=fig, **kwargs)
+        
+        self.cv = cv
+        self.n_jobs = n_jobs
+        self.train_sizes = train_sizes
         self.title = self.title or str(estimator.description + "<br>Model Scalability Plot")
 
-    def fit(self, X, y, cv=None, n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
+    def fit(self, X, y):
         """Generates the model scalability plot
 
         Parameters
@@ -415,42 +454,10 @@ class ModelScalability(Visualatrix):
             Target relative to X for classification or regression;
             None for unsupervised learning.
 
-        cv : int, cross-validation generator or an iterable, optional
-            Determines the cross-validation splitting strategy.
-            Possible inputs for cv are:
-            - None, to use the default 5-fold cross-validation,
-            - integer, to specify the number of folds.
-            - :term:`CV splitter`,
-            - An iterable yielding (train, test) splits as arrays of indices.
-
-            For integer/None inputs, if ``y`` is binary or multiclass,
-            :class:`StratifiedKFold` used. If the estimator is not a classifier
-            or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
-
-            Refer :ref:`User Guide <cross_validation>` for the various
-            cross-validators that can be used here.
-    
-        n_jobs : int or None, optional (default=None)
-            Number of jobs to run in parallel.
-            ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
-            ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
-            for more details.
-
-
-        train_sizes : array-like, shape (n_ticks,), dtype float or int
-            Relative or absolute numbers of training examples that will be used to
-            generate the learning curve. If the dtype is float, it is regarded as a
-            fraction of the maximum size of the training set (that is determined
-            by the selected validation method), i.e. it has to be within (0, 1].
-            Otherwise it is interpreted as absolute sizes of the training sets.
-            Note that for classification the number of samples usually have to
-            be big enough to contain at least one sample from each class.
-            (default: np.linspace(0.1, 1.0, 5))
-
         """
         train_sizes, train_scores, test_scores, fit_times, _ = \
-            learning_curve(self.estimator, X, y, cv=cv, n_jobs=n_jobs,
-                           train_sizes=train_sizes, return_times=True)
+            learning_curve(self.estimator, X, y, cv=self.cv, n_jobs=self.n_jobs,
+                           train_sizes=self.train_sizes, return_times=True)
 
         fit_times_mean = np.mean(fit_times, axis=1)
         fit_times_std = np.std(fit_times, axis=1)
@@ -493,15 +500,50 @@ class ModelScalability(Visualatrix):
         self.fig = go.Figure(data=data, layout=layout)
                     
 # ---------------------------------------------------------------------------- #
-#                           MODEL SCALABILITY PLOT                             #
+#                        MODEL LEARNING PERFORMANCE                            #
 # ---------------------------------------------------------------------------- #        
-class ModelLearningPerformance(Visualatrix):        
+class ModelLearningPerformance(ModelVisualatrix):        
     """Plots scores against fit times.
 
     Parameters
     ----------
+    fig : Plotly Figure or FigureWidget object.
+        The object being analyzed 
+
     estimator : MLStudio estimator object.
         The object that implements the 'fit' and 'predict' methods.
+
+    cv : int, cross-validation generator or an iterable, optional
+        Determines the cross-validation splitting strategy.
+        Possible inputs for cv are:
+        - None, to use the default 5-fold cross-validation,
+        - integer, to specify the number of folds.
+        - :term:`CV splitter`,
+        - An iterable yielding (train, test) splits as arrays of indices.
+
+        For integer/None inputs, if ``y`` is binary or multiclass,
+        :class:`StratifiedKFold` used. If the estimator is not a classifier
+        or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
+
+        Refer :ref:`User Guide <cross_validation>` for the various
+        cross-validators that can be used here.
+
+    n_jobs : int or None, optional (default=None)
+        Number of jobs to run in parallel.
+        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+        ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+        for more details.
+
+
+    train_sizes : array-like, shape (n_ticks,), dtype float or int
+        Relative or absolute numbers of training examples that will be used to
+        generate the learning curve. If the dtype is float, it is regarded as a
+        fraction of the maximum size of the training set (that is determined
+        by the selected validation method), i.e. it has to be within (0, 1].
+        Otherwise it is interpreted as absolute sizes of the training sets.
+        Note that for classification the number of samples usually have to
+        be big enough to contain at least one sample from each class.
+        (default: np.linspace(0.1, 1.0, 5))        
     
     kwargs : dict
         Keyword arguments that are passed to the base class and influence
@@ -518,12 +560,17 @@ class ModelLearningPerformance(Visualatrix):
     
     """
 
-    def __init__(self, estimator, **kwargs):
-        super(ModelLearningPerformance, self).__init__(**kwargs)
-        self.estimator = estimator     
+    def __init__(self, estimator, fig=None, cv=None, n_jobs=None, 
+                 train_sizes=np.linspace(.1, 1.0, 5), **kwargs):
+        super(ModelLearningPerformance, self).__init__(estimator=estimator,
+                                                       fig=fig, **kwargs)
+
+        self.cv = cv
+        self.n_jobs = n_jobs
+        self.train_sizes = train_sizes                                                       
         self.title = self.title or str(estimator.description + "<br>Model Learning Performance Plot")
 
-    def fit(self, X, y, cv=None, n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
+    def fit(self, X, y):
         """Generates the model scalability plot
 
         Parameters
@@ -536,42 +583,10 @@ class ModelLearningPerformance(Visualatrix):
             Target relative to X for classification or regression;
             None for unsupervised learning.
 
-        cv : int, cross-validation generator or an iterable, optional
-            Determines the cross-validation splitting strategy.
-            Possible inputs for cv are:
-            - None, to use the default 5-fold cross-validation,
-            - integer, to specify the number of folds.
-            - :term:`CV splitter`,
-            - An iterable yielding (train, test) splits as arrays of indices.
-
-            For integer/None inputs, if ``y`` is binary or multiclass,
-            :class:`StratifiedKFold` used. If the estimator is not a classifier
-            or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
-
-            Refer :ref:`User Guide <cross_validation>` for the various
-            cross-validators that can be used here.
-    
-        n_jobs : int or None, optional (default=None)
-            Number of jobs to run in parallel.
-            ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
-            ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
-            for more details.
-
-
-        train_sizes : array-like, shape (n_ticks,), dtype float or int
-            Relative or absolute numbers of training examples that will be used to
-            generate the learning curve. If the dtype is float, it is regarded as a
-            fraction of the maximum size of the training set (that is determined
-            by the selected validation method), i.e. it has to be within (0, 1].
-            Otherwise it is interpreted as absolute sizes of the training sets.
-            Note that for classification the number of samples usually have to
-            be big enough to contain at least one sample from each class.
-            (default: np.linspace(0.1, 1.0, 5))
-
         """
         train_sizes, train_scores, test_scores, fit_times, _ = \
-            learning_curve(self.estimator, X, y, cv=cv, n_jobs=n_jobs,
-                           train_sizes=train_sizes, return_times=True)
+            learning_curve(self.estimator, X, y, cv=self.cv, n_jobs=self.n_jobs,
+                           train_sizes=self.train_sizes, return_times=True)
 
         fit_times_mean = np.mean(fit_times, axis=1)
         test_scores_mean = np.mean(test_scores, axis=1)
@@ -617,7 +632,7 @@ class ModelLearningPerformance(Visualatrix):
 # ---------------------------------------------------------------------------- #
 #                             LEARNING CURVES                                  #
 # ---------------------------------------------------------------------------- #        
-class LearningCurves(Visualatrix):        
+class LearningCurves(ModelVisualatrix):        
     """Plots all learning curve plots for a series of models.
     
     This class renders the set of learning curve plots for a designated
@@ -629,8 +644,43 @@ class LearningCurves(Visualatrix):
 
     Parameters
     ----------
+    fig : Plotly Figure or FigureWidget object
+        The object being analyzed 
+
     estimators : a list of MLStudio estimator objects.
         The objects that implement the 'fit' and 'predict' methods.
+
+    cv : int, cross-validation generator or an iterable, optional
+        Determines the cross-validation splitting strategy.
+        Possible inputs for cv are:
+        - None, to use the default 5-fold cross-validation,
+        - integer, to specify the number of folds.
+        - :term:`CV splitter`,
+        - An iterable yielding (train, test) splits as arrays of indices.
+
+        For integer/None inputs, if ``y`` is binary or multiclass,
+        :class:`StratifiedKFold` used. If the estimator is not a classifier
+        or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
+
+        Refer :ref:`User Guide <cross_validation>` for the various
+        cross-validators that can be used here.
+
+    n_jobs : int or None, optional (default=None)
+        Number of jobs to run in parallel.
+        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+        ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+        for more details.
+
+
+    train_sizes : array-like, shape (n_ticks,), dtype float or int
+        Relative or absolute numbers of training examples that will be used to
+        generate the learning curve. If the dtype is float, it is regarded as a
+        fraction of the maximum size of the training set (that is determined
+        by the selected validation method), i.e. it has to be within (0, 1].
+        Otherwise it is interpreted as absolute sizes of the training sets.
+        Note that for classification the number of samples usually have to
+        be big enough to contain at least one sample from each class.
+        (default: np.linspace(0.1, 1.0, 5))        
     
     kwargs : dict
         Keyword arguments that are passed to the base class and influence
@@ -646,12 +696,17 @@ class LearningCurves(Visualatrix):
         =========   ========================================== 
     """
 
-    def __init__(self, estimators, **kwargs):
-        super(LearningCurves, self).__init__(**kwargs)
-        self.estimators = estimators     
+    def __init__(self, estimators, fig=None, cv=None, n_jobs=None, 
+                 train_sizes=np.linspace(.1, 1.0, 5), **kwargs):
+        super(LearningCurves, self).__init__(estimator=None, fig=fig, **kwargs)
+        
+        self.estimators = estimators
+        self.cv = cv
+        self.n_jobs = n_jobs
+        self.train_sizes = train_sizes     
         self.title = self.title or "Learning Curve Analysis"
 
-    def fit(self, X, y, cv=None, n_jobs=None, train_sizes=np.linspace(.1, 1.0, 5)):
+    def fit(self, X, y):
         """Generates the learning curve analysis plot
 
         Parameters
@@ -663,38 +718,6 @@ class LearningCurves(Visualatrix):
         y : array-like, shape (n_samples) or (n_samples, n_features), optional
             Target relative to X for classification or regression;
             None for unsupervised learning.
-
-        cv : int, cross-validation generator or an iterable, optional
-            Determines the cross-validation splitting strategy.
-            Possible inputs for cv are:
-            - None, to use the default 5-fold cross-validation,
-            - integer, to specify the number of folds.
-            - :term:`CV splitter`,
-            - An iterable yielding (train, test) splits as arrays of indices.
-
-            For integer/None inputs, if ``y`` is binary or multiclass,
-            :class:`StratifiedKFold` used. If the estimator is not a classifier
-            or if ``y`` is neither binary nor multiclass, :class:`KFold` is used.
-
-            Refer :ref:`User Guide <cross_validation>` for the various
-            cross-validators that can be used here.
-    
-        n_jobs : int or None, optional (default=None)
-            Number of jobs to run in parallel.
-            ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
-            ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
-            for more details.
-
-
-        train_sizes : array-like, shape (n_ticks,), dtype float or int
-            Relative or absolute numbers of training examples that will be used to
-            generate the learning curve. If the dtype is float, it is regarded as a
-            fraction of the maximum size of the training set (that is determined
-            by the selected validation method), i.e. it has to be within (0, 1].
-            Otherwise it is interpreted as absolute sizes of the training sets.
-            Note that for classification the number of samples usually have to
-            be big enough to contain at least one sample from each class.
-            (default: np.linspace(0.1, 1.0, 5))
 
         """
         # Designate shape of subplots
@@ -710,7 +733,7 @@ class LearningCurves(Visualatrix):
 
         # Create subplots
         self.fig = plotly.tools.make_subplots(rows=rows, cols=cols,
-                                               subplottitles=subtitles,
+                                               subplot_titles=subtitles,
                                                horizontal_spacing=0.25/cols,
                                                vertical_spacing = 0.3/rows)
 
@@ -720,20 +743,25 @@ class LearningCurves(Visualatrix):
         
         # Populate cells of subplot
         for i, estimator in enumerate(self.estimators):
-            lc = LearningCurve(estimator)
-            ms = ModelScalability(estimator)
-            mp = ModelLearningPerformance(estimator)
+            lc = LearningCurve(estimator, cv=self.cv, n_jobs=self.n_jobs, \
+                train_sizes=self.train_sizes)
+            ms = ModelScalability(estimator, cv=self.cv, n_jobs=self.n_jobs, \
+                train_sizes=self.train_sizes)
+            mp = ModelLearningPerformance(estimator, cv=self.cv, \
+                n_jobs=self.n_jobs, train_sizes=self.train_sizes)
         
             # Fit the models
-            lc.fit(X,y, cv, n_jobs, train_sizes)
-            ms.fit(X,y, cv, n_jobs, train_sizes)
-            mp.fit(X,y, cv, n_jobs, train_sizes)
+            lc.fit(X,y)
+            ms.fit(X,y)
+            mp.fit(X,y)
         
             # Extract traces from figures and append to subplots
             traces = lc.fig.data
             for j, trace in enumerate(traces):
-                if i == 1 and j in [1,4]:
-                    trace.showlegend = True                
+                if i == 1 and j in [2,3]:
+                    trace.showlegend = True 
+                else:
+                    trace.showlegend = False               
                 self.fig.append_trace(trace, i+1, 1)
             traces = ms.fig.data
             for trace in traces:
@@ -760,13 +788,31 @@ class LearningCurves(Visualatrix):
 # ---------------------------------------------------------------------------- #
 #                            VALIDATION CURVE                                  #
 # ---------------------------------------------------------------------------- #        
-class ValidationCurve(Visualatrix):        
+class ValidationCurve(ModelVisualatrix):        
     """Plots training and cross-validation scores by hyperparameter.
 
     Parameters
     ----------
+    fig : Plotly Figure or FigureWidget object
+        The object being analyzed
+
     estimator : MLStudio estimator object.
         The object that implements the 'fit' and 'predict' methods.
+
+    param_name : str
+        The parameter being evaluated
+
+    param_range : array-like
+        The range of the parameter being evaluated.
+
+    n_jobs : int or None, optional (default=None)
+        Number of jobs to run in parallel.
+        ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
+        ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
+        for more details.
+
+    scoring : str
+        The metric used to evaluate performance.         
     
     kwargs : dict
         Keyword arguments that are passed to the base class and influence
@@ -783,12 +829,19 @@ class ValidationCurve(Visualatrix):
     
     """
 
-    def __init__(self, estimator, **kwargs):
-        super(ValidationCurve, self).__init__(**kwargs)
-        self.estimator = estimator     
+    def __init__(self, estimator, param_name, param_range, fig=None, 
+                 cv=None, n_jobs=None, scoring="r2", **kwargs):
+        super(ValidationCurve, self).__init__(estimator=estimator, 
+                                              fig=fig, **kwargs)
+        
+        self.param_name = param_name
+        self.param_range = param_range
+        self.cv = cv
+        self.n_jobs = n_jobs
+        self.scoring = scoring                
         self.title = self.title or str(estimator.description + "<br>Validation Curve")
 
-    def fit(self, X, y, param_name, param_range, cv=None, n_jobs=None, scoring="r2"):
+    def fit(self, X, y):
         """Generates the validation curve plot
 
         Parameters
@@ -801,92 +854,78 @@ class ValidationCurve(Visualatrix):
             Target relative to X for classification or regression;
             None for unsupervised learning.
 
-        param_name : str
-            The parameter being evaluated
-
-        param_range : array-like
-            The range of the parameter being evaluated.
-    
-        n_jobs : int or None, optional (default=None)
-            Number of jobs to run in parallel.
-            ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context.
-            ``-1`` means using all processors. See :term:`Glossary <n_jobs>`
-            for more details.
-
-        scoring : str
-            The metric used to evaluate performance.  
-
         """
         train_scores, test_scores = \
-            validation_curve(self.estimator, X, y, param_name=param_name,
-             param_range=param_range, scoring=scoring, n_jobs=n_jobs)
+            validation_curve(self.estimator, X, y, 
+            param_name=self.param_name,
+            param_range=self.param_range, scoring=self.scoring, 
+            n_jobs=self.n_jobs)
 
         train_scores_mean = np.mean(train_scores, axis=1)
         train_scores_std = np.std(train_scores, axis=1)
         test_scores_mean = np.mean(test_scores, axis=1)
         test_scores_std = np.std(test_scores, axis=1)
 
-        # Plot training scores line and ribbon
-        train_upper = go.Scatter(
-            x=param_range, y=train_scores_mean + train_scores_std,
-            mode='lines',
-            marker=dict(color="#b3cde0"),            
-            fillcolor="#b3cde0",
-            fill='tonexty',
+        # Training Data
+        train_upper = train_scores_mean + train_scores_std
+        train_lower = train_scores_mean - train_scores_std
+        train_lower = train_lower[::-1]
+
+        # Validation Data
+        test_upper = test_scores_mean + test_scores_std
+        test_lower = test_scores_mean - test_scores_std
+        test_lower = test_lower[::-1]        
+
+        self.fig = go.Figure()
+
+        x = self.param_range
+        x_rev = x[::-1]
+
+        # Plot training scores confidence bank
+        self.fig.add_trace(go.Scatter(
+            name='train_band',     
+            mode='lines',       
+            x=np.concatenate((x, x_rev), axis=0),
+            y=np.concatenate((train_upper,train_lower), axis=0),
+            fillcolor='#005b96',
+            line_color='rgba(255,255,255,0)',
+            fill='toself',
+            opacity=0.15,
             showlegend=False
-        )
-        train = go.Scatter(
+        ))
+
+        self.fig.add_trace(go.Scatter(
+            name='test_band',
+            mode='lines',
+            x=np.concatenate((x, x_rev), axis=0),
+            y=np.concatenate((test_upper,test_lower), axis=0),
+            fillcolor='rgb(27,158,119)',
+            line_color='rgba(255,255,255,0)',
+            fill='toself',
+            opacity=0.15,
+            showlegend=False
+        ))
+
+        # Plot training and validation lines
+        self.fig.add_trace(go.Scatter(
             name='Training Scores',
-            x=param_range, y=train_scores_mean, 
-            mode='lines+markers',  
+            mode='lines+markers',
+            x=x, y=train_scores_mean,
             line=dict(color='#005b96'),            
-            marker=dict(color='#005b96'),
-            fillcolor="#b3cde0",
-            fill='tonexty',            
             showlegend=True
-        )
-        train_lower = go.Scatter(
-            x=param_range, y=train_scores_mean - train_scores_std,
-            mode='lines',
-            line=dict(color='#b3cde0'),            
-            showlegend=False
-        )        
+        ))
 
-        # Plot validation scores line and ribbon
-        val_upper = go.Scatter(
-            x=param_range, y=test_scores_mean + test_scores_std,
-            mode='lines',
-            marker=dict(color='rgba(179,226,205, 0.5)'),
-            line=dict(width=0),
-            fillcolor="rgba(179,226,205, 0.5)",
-            fill='tonexty',
-            showlegend=False
-        )
-        val = go.Scatter(
+        self.fig.add_trace(go.Scatter(
             name='Cross-Validation Scores',
-            x=param_range, y=test_scores_mean,
-            mode='lines+markers',             
-            line=dict(color='rgb(27,158,119)'), 
-            marker=dict(color='rgb(27,158,119)'),           
-            fillcolor="rgba(179,226,205, 0.5)",
-            fill='tonexty',            
+            mode='lines+markers',
+            x=x, y=test_scores_mean,
+            line=dict(color='rgb(27,158,119)'),             
             showlegend=True
-        )
-        val_lower = go.Scatter(
-            x=param_range, y=test_scores_mean - test_scores_std,
-            mode='lines',
-            line=dict(color="rgba(179,226,205, 0.5)"),
-            showlegend=False
-        )                
-        # Load from bottom up
-        data = [val_lower, val, val_upper, train_lower, train, train_upper]
-        # Update layout with designated template
-        layout = go.Layout(
-            xaxis=dict(title=proper(param_name)),
-            yaxis=dict(title=self.estimator.get_scorer().label),
-            title=self.title,title_x=0.5,
-            template=self.template
-        )
-        self.fig = go.Figure(data=data, layout=layout)
+        ))
 
-            
+        self.fig.update_layout(
+            title=self.title,
+            xaxis=dict(title=proper(self.param_name)),
+            yaxis=dict(title=proper(self.scoring)),
+            title_x=0.5,
+            template=self.template)

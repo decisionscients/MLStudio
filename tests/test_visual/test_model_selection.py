@@ -95,12 +95,12 @@ class LearningCurveTests:
     @mark.learning_curves
     def test_multiple_learning_curve_plots(self, get_regression_data):
         X, y = get_regression_data        
-        est1 = LinearRegression(epochs=1000)
-        est2 = ElasticNetRegression(epochs=1000)
+        est1 = LinearRegression(epochs=500)
+        est2 = ElasticNetRegression(epochs=500)
         cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
         est = [est1, est2]
-        lcp = LearningCurves(est)
-        lcp.fit(X,y,cv=cv)
+        lcp = LearningCurves(est, cv=cv)
+        lcp.fit(X,y)
         lcp.show()
 
 class ValidationCurveTests:
@@ -111,7 +111,7 @@ class ValidationCurveTests:
         est = ElasticNetRegression(epochs=1000)
         param_name = 'learning_rate'
         param_range = np.logspace(-3,-1, 10)
-        vc = ValidationCurve(est)
         cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
-        vc.fit(X,y, param_name=param_name, param_range=param_range, cv=cv)
+        vc = ValidationCurve(est, param_name=param_name, param_range=param_range, cv=cv)        
+        vc.fit(X,y)
         vc.show()

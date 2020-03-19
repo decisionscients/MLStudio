@@ -29,14 +29,14 @@ import plotly.offline as py
 from sklearn.model_selection import ParameterGrid, learning_curve 
 from sklearn.model_selection import validation_curve
 
-from .base import Visualatrix
+from .base import ModelVisualatrix
 from mlstudio.supervised.regression import LinearRegression
 from mlstudio.utils.format import proper
 
 # ---------------------------------------------------------------------------- #
 #                             PREDICTION ERROR                                 #
 # ---------------------------------------------------------------------------- #        
-class PredictionError(Visualatrix):        
+class PredictionError(ModelVisualatrix):        
     """Plots actual target values against predicted values.
 
     Parameters
@@ -59,10 +59,10 @@ class PredictionError(Visualatrix):
     
     """
 
-    def __init__(self, estimator, **kwargs):
-        super(PredictionError, self).__init__(**kwargs)
-        self._estimator = estimator     
-        self._title = self._title or str(estimator.description + "<br>Prediction Error")
+    def __init__(self, estimator, fig=None, **kwargs):
+        super(PredictionError, self).__init__(estimator=estimator, 
+                                              fig=fig, **kwargs)
+        self.title = self.title or str(estimator.description + "<br>Prediction Error")
 
     def fit(self, X, y):
         """Generates the prediction error plot.
@@ -79,8 +79,8 @@ class PredictionError(Visualatrix):
 
         """
         # Compute predicted vs actual.
-        self._estimator.fit(X,y)
-        y_pred = self._estimator.predict(X)
+        self.estimator.fit(X,y)
+        y_pred = self.estimator.predict(X)
 
         # Compute best fit line predicted vs actual
         y = y.reshape(-1,1)
@@ -126,8 +126,8 @@ class PredictionError(Visualatrix):
         layout = go.Layout(
             xaxis=dict(title='y'),
             yaxis=dict(title=r'$\hat{y}$'),
-            title=self._title,title_x=0.5,
-            template=self._template
+            title=self.title,title_x=0.5,
+            template=self.template
         )
         self.fig = go.Figure(data=data, layout=layout)
 
