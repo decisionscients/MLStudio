@@ -22,8 +22,10 @@
 import os
 from abc import ABC, abstractmethod
 
+import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.base import BaseEstimator
+from sklearn.utils.validation import check_X_y, check_array
 # --------------------------------------------------------------------------- #
 #                            VISUALATRIX                                      #
 # --------------------------------------------------------------------------- #
@@ -31,8 +33,8 @@ from sklearn.base import BaseEstimator
 class Visualatrix(ABC, BaseEstimator):
     """Abstact base class at the top of the visualator object hierarchy
     
-    This base class defines how MLStudio creates, stores, and renders 
-    visualizations using Plotly.
+    This base class defines how the interface and common behaviors for and
+    among the visualizations classes.  
 
     Parameters
     ----------
@@ -42,10 +44,11 @@ class Visualatrix(ABC, BaseEstimator):
         =========   ==========================================
         Property    Description
         --------    ------------------------------------------
+        fig         Plotly Figure or FigureWidget object
         height      specify the height of the figure
         width       specify the width of the figure
-        title       specify the title of the figure
         template    specify the template for the figure.
+        title       specify the title for the figure.
         =========   ==========================================
 
     """
@@ -56,17 +59,12 @@ class Visualatrix(ABC, BaseEstimator):
          'plotly_white', 'plotly_dark', 'presentation', 'xgridoff',
          'ygridoff', 'gridon', 'none']    
     
-    def __init__(self, **kwargs):        
-        self._fig = None
-        self._height = kwargs.pop('height', self.PLOT_DEFAULT_HEIGHT)
-        self._width = kwargs.pop('width', self.PLOT_DEFAULT_WIDTH)
-        self._title = kwargs.pop('title', None)
-        self._template = kwargs.pop('template', self.PLOT_DEFAULT_TEMPLATE)
-
-    @property
-    def fig(self):
-        """The plotly figure object."""
-        return self._fig
+    def __init__(self, fig=None, **kwargs):        
+        self.fig = fig
+        self.height = kwargs.pop('height', self.PLOT_DEFAULT_HEIGHT)
+        self.width = kwargs.pop('width', self.PLOT_DEFAULT_WIDTH)
+        self.template = kwargs.pop('template', self.PLOT_DEFAULT_TEMPLATE)
+        self.title = kwargs.pop('title', None)
 
     @property
     def height(self):
@@ -89,16 +87,6 @@ class Visualatrix(ABC, BaseEstimator):
         self._width = value        
 
     @property
-    def title(self):
-        """Returns the title of the figure."""
-        return self._title
-
-    @title.setter
-    def title(self, value):
-        """Sets the title of the figure."""
-        self._title = value
-
-    @property
     def template(self):
         """Returns the template of the figure."""
         return self._template
@@ -112,10 +100,28 @@ class Visualatrix(ABC, BaseEstimator):
     def fit(self, X, y=None, **kwargs):
         """Fits the visualator to the data."""
         pass    
+
+    def _validate(self, X, y=None, **kwargs):
+        """Validates arguments passed to the fit method.
+        
+        Parameters
+        ----------
+        X : array-like of shape (m samples, n features)
+            Object containing typically feature data.
+
+        y : array-like of shape (m samples) (Optional)
+            The target variable.
+        """
+        if y is not None:
+            check_X_y(X, y)
+        else:
+            check_array(X)
+        
+
     
     def show(self, **kwargs):
         """Renders the visualization"""
-        self._fig.show()
+        self.fig.show()
 
     def save(self, filepath):
         """Saves image to filepath
@@ -128,46 +134,45 @@ class Visualatrix(ABC, BaseEstimator):
         directory = os.path.basename(filepath)
         if not os.path.exists(directory):
             os.mkdir(directory)
-        self._fig.write_image(filepath)
+        self.fig.write_image(filepath)
 
 
 # --------------------------------------------------------------------------- #
-#                            MODEL VISUALATRIX                                #
+#                            ModelVisualatrix                                 #
 # --------------------------------------------------------------------------- #
 
 class ModelVisualatrix(Visualatrix):
-    """Abstact base class for model based visualizations.
+    """Base class for model visualization classes."""
 
-    Parameters
-    ----------
-    estimator : MLStudio estimator object.
-        The object that implements the 'fit' and 'predict' methods.
-    
-    kwargs : dict
-        Keyword arguments that are passed to the base class and influence
-        the visualization. Optional keyword arguments include:
+    def __init__(self, estimator, fig=None, **kwargs):
+        super(ModelVisualatrix, self).__init__(fig=fig)
+        self.estimator = estimator
 
-        =========   ==========================================
-        Property    Description
-        --------    ------------------------------------------
-        height      specify the height of the figure
-        width       specify the width of the figure
-        title       specify the title of the figure
-        template    specify the template for the figure.
-        =========   ==========================================
+    def _validate(self, X, y=None, **kwargs):
+        """Validates parameters and arguments sent to the fit method.
+        
+        Parameters
+        ----------
+        X : array-like of shape (m samples, n features)
+            Object containing typically feature data.
 
-    """
-    PLOT_DEFAULT_HEIGHT = 450
-    PLOT_DEFAULT_WIDTH  = 700   
-    PLOT_DEFAULT_TEMPLATE = "plotly_white"    
-    PLOT_AVAILABLE_TEMPLATES = ['ggplot2', 'seaborn', 'simple_white', 'plotly',
-         'plotly_white', 'plotly_dark', 'presentation', 'xgridoff',
-         'ygridoff', 'gridon', 'none']
-    
-    def __init__(self, estimator, **kwargs):        
-        self._fig = None
-        self._height = kwargs.pop('height', self.PLOT_DEFAULT_HEIGHT)
-        self._width = kwargs.pop('width', self.PLOT_DEFAULT_WIDTH)
-        self._title = kwargs.pop('title', None)
-        self._template = kwargs.pop('template', self.PLOT_DEFAULT_TEMPLATE)
-        self._estimator = estimator
+        y : array-like of shape (m samples) (Optional)
+            The target variable.
+
+        Raises
+        ------
+        ValueError : estimator has no 'fit' or 'predict' method.
+
+        """
+        super(ModelVisualatrix, self)._validate(X, y)
+
+        # Confirm the estimator has fit and predict methods.
+        if getattr(self.estimator, 'fit', None) and \
+        getattr(self.estimator, 'predict', None):
+            pass
+        else:
+            raise ValueError("The estimator object must have a 'fit' and \
+                a 'predict' method.")
+
+        
+               

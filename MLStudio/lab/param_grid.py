@@ -20,14 +20,25 @@
 # ============================================================================ #
 #%%
 from sklearn.model_selection import ParameterGrid
+x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+x_rev = x[::-1]
+print(x)
+print(x_rev)
+print(x+x_rev)
 
-param_grid = {'a': [1, 2], 'b': [True, False]}
-grid = ParameterGrid(param_grid)
-for params in grid:
-    print("============")
-    for param, value in params.items():
-        print("----------")
-        print(param)
-        print(value)
+y1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+y1_upper = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+y1_lower = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+y1_lower = y1_lower[::-1]
+print(y1_upper+y1_lower)
+
+# param_grid = {'a': [1, 2], 'b': [True, False]}
+# grid = ParameterGrid(param_grid)
+# for params in grid:
+#     print("============")
+#     for param, value in params.items():
+#         print("----------")
+#         print(param)
+#         print(value)
 
 # %%

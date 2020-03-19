@@ -29,7 +29,7 @@ from mlstudio.supervised.regression import RidgeRegression, ElasticNetRegression
 from mlstudio.visual.model_selection import CostCurve, LearningCurve
 from mlstudio.visual.model_selection import ModelScalability
 from mlstudio.visual.model_selection import ModelLearningPerformance
-from mlstudio.visual.model_selection import LearningCurves
+from mlstudio.visual.model_selection import LearningCurves, ValidationCurve
 
 class CostCurveTests:
 
@@ -48,8 +48,8 @@ class CostCurveTests:
         param_grid = {'learning_rate' : np.logspace(-3,-1, num=10).tolist()}
         X, y = get_regression_data
         est = LinearRegression()
-        cc = CostCurve(est)
-        cc.fit(X, y, param_grid=param_grid, color='learning_rate')
+        cc = CostCurve(est, param_grid=param_grid, factor='learning_rate')
+        cc.fit(X, y)
         cc.show()
 
     @mark.cost_curve
@@ -59,9 +59,9 @@ class CostCurveTests:
                       'batch_size': [32,64,128,256,512]}
         X, y = get_regression_data
         est = LinearRegression()
-        cc = CostCurve(est)
-        cc.fit(X, y, param_grid=param_grid, color='learning_rate',
+        cc = CostCurve(est, param_grid=param_grid, factor='learning_rate',
                facet_col='batch_size')
+        cc.fit(X, y)
         cc.show()
 
 
@@ -71,7 +71,7 @@ class LearningCurveTests:
     @mark.learning_curve   
     def test_learning_curve(self, get_regression_data):
         X, y = get_regression_data
-        est = LinearRegression(epochs=10, metric='r2')
+        est = LinearRegression(learning_rate=0.1, epochs=1000, metric='r2')
         lc = LearningCurve(est)
         lc.fit(X,y)
         lc.show()
@@ -79,7 +79,7 @@ class LearningCurveTests:
     @mark.model_scalability   
     def test_model_scalability_plot(self, get_regression_data):
         X, y = get_regression_data        
-        est = LassoRegression(epochs=10, metric='r2')
+        est = LassoRegression(epochs=1000, metric='r2')
         ms = ModelScalability(est)
         ms.fit(X,y)
         ms.show()        
@@ -87,7 +87,7 @@ class LearningCurveTests:
     @mark.model_learning_performance   
     def test_model_learning_performance_plot(self, get_regression_data):
         X, y = get_regression_data        
-        est = RidgeRegression(epochs=10)
+        est = RidgeRegression(epochs=1000)
         ms = ModelLearningPerformance(est)
         ms.fit(X,y)
         ms.show()        
@@ -95,10 +95,23 @@ class LearningCurveTests:
     @mark.learning_curves
     def test_multiple_learning_curve_plots(self, get_regression_data):
         X, y = get_regression_data        
-        est1 = LinearRegression(epochs=100)
-        est2 = ElasticNetRegression(epochs=100)
+        est1 = LinearRegression(epochs=1000)
+        est2 = ElasticNetRegression(epochs=1000)
         cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
         est = [est1, est2]
         lcp = LearningCurves(est)
         lcp.fit(X,y,cv=cv)
+        lcp.show()
 
+class ValidationCurveTests:
+
+    @mark.validation_curve   
+    def test_validation_curve(self, get_regression_data):
+        X, y = get_regression_data
+        est = ElasticNetRegression(epochs=1000)
+        param_name = 'learning_rate'
+        param_range = np.logspace(-3,-1, 10)
+        vc = ValidationCurve(est)
+        cv = ShuffleSplit(n_splits=10, test_size=0.2, random_state=0)
+        vc.fit(X,y, param_name=param_name, param_range=param_range, cv=cv)
+        vc.show()
