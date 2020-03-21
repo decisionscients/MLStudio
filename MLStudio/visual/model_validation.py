@@ -774,14 +774,9 @@ class ResidualsLeverage(ModelVisualatrix):
 
         return leverage_range, std_resid         
 
-    def _get_influence_points(self, cooks, distance, sign):
+    def _get_influence_points(self, cooks, distance):
         """Gets indices for influential points."""
-        # Establish evaluator
-        better = {1:np.greater, -1:np.less}
-        # Compute threshold based upon sign of 1 (upper threshold) or -1 (lower threshold) 
-        threshold = distance * sign
-        # Grab influential points
-        points = np.argwhere(better[sign](cooks,threshold)).ravel()
+        points = np.argwhere(np.greater(cooks,distance)).ravel()
         return points
 
     def fit(self, X, y):
@@ -829,11 +824,9 @@ class ResidualsLeverage(ModelVisualatrix):
 
         # Grab influential points
         influential_points = []
-        distances = [self.inner_threshold,self.inner_threshold,
-                     self.outer_threshold,self.outer_threshold]
-        signs = [1,-1,1,-1]
-        for distance, sign in zip(distances, signs):
-            influential_points.extend(self._get_influence_points(cooks, distance, sign))
+        distances = [self.inner_threshold, self.outer_threshold]
+        for distance in distances:
+            influential_points.extend(self._get_influence_points(cooks, distance))
         non_influential_points = [point for point in np.arange(len(residuals)) if \
             point not in influential_points]
 
@@ -903,9 +896,7 @@ class ResidualsLeverage(ModelVisualatrix):
                         xaxis_title="Leverage",
                         yaxis_title="Standardized Residuals",
                         xaxis=dict(zeroline=False, range=[xmin, xmax]),
-                        yaxis=dict(zeroline=False, range=[ymin, ymax]),
-                        # xaxis2=dict(domain=[0.85,1], zeroline=False),
-                        # yaxis2=dict(domain=[0.85,1], zeroline=False),                        
+                        yaxis=dict(zeroline=False, range=[ymin, ymax]),                       
                         showlegend=True,
                         legend=dict(bgcolor='white'),
                         template=self.template)
@@ -913,3 +904,127 @@ class ResidualsLeverage(ModelVisualatrix):
         # Create figure object
         self.fig = go.Figure(data=data, layout=layout)  
                                 
+# --------------------------------------------------------------------------  #
+#                             COOKS DISTANCE                                  #
+# --------------------------------------------------------------------------  #
+class CooksDistance(ModelVisualatrix):        
+    """Cooks Distance.
+
+    Cook's distance" is a measure of the influence of each observation on the 
+    regression coefficients. The Cook's distance statistic is a measure, 
+    for each observation in turn, of the extent of change in model 
+    estimates when that particular observation is omitted. Any observation 
+    for which the Cook's distance is close to 0.5 or more, or that is 
+    substantially larger than other Cook's distances 
+    (highly influential data points), requires investigation.
+
+    Parameters
+    ----------
+    fig : Plotly Figure or FigureWidget
+        The plotting object. 
+
+    estimator : MLStudio estimator object.
+        The object that implements the 'fit' and 'predict' methods.
+
+    threshold : float (Default - 0.5)
+        The Cooks Distance threshold value for the threshold line.  
+
+    kwargs : dict
+        Keyword arguments that are passed to the base class and influence
+        the visualization. Optional keyword arguments include:
+
+        =========   ==========================================
+        Property    Description
+        --------    ------------------------------------------
+        height      specify the height of the figure
+        width       specify the width of the figure
+        title       specify the title of the figure
+        template    specify the template for the figure.
+        =========   ==========================================    
+    
+    """
+
+    def __init__(self, estimator, fig=None, threshold=0.5, **kwargs):
+        super(CooksDistance, self).__init__(estimator=estimator,
+                                        fig=fig, **kwargs)
+
+        self.threshold = threshold
+        self.title = self.title or estimator.description + \
+            "<br>Cooks Distance" + "<br> Threshold = " + str(threshold)
+
+    def fit(self, X, y):
+        """Generates the plot.
+
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Training vector, where n_samples is the number of samples and
+            n_features is the number of features.
+
+        y : array-like, shape (n_samples) or (n_samples, n_features), optional
+            Target relative to X for classification or regression;
+            None for unsupervised learning.
+
+        """
+        # Compute predictions
+        self.estimator.fit(X,y)
+        y_pred = self.estimator.predict(X)
+
+        # Flatten arrays (just in case)
+        y = y.ravel()
+        y_pred = y_pred.ravel()
+
+        # Compute Cooks Distance
+        cooks = cooks_distance(X, y, y_pred)
+
+        # Grab influential points above threshold
+        points = np.argwhere(np.greater(cooks,self.threshold)).ravel()        
+
+        # Create scatterplot traces
+        data = [
+            go.Scattergl(x=np.arange(len(cooks)), 
+                        y=[round(x,4) for x in cooks],
+                        mode='lines',
+                        marker=dict(color=COLORS['blue']),
+                        name="Cooks Distance",                                                
+                        showlegend=False)                                                                                                                        
+       ]
+        # Designate Layout
+        layout = go.Layout(title=self.title, 
+                        title_x=0.5,
+                        height=self.height,
+                        width=self.width,
+                        xaxis_title="Observation",
+                        yaxis_title="Cooks Distance",
+                        showlegend=False,
+                        template=self.template)
+
+        # Create figure object
+        self.fig = go.Figure(data=data, layout=layout)  
+
+        # Add horizontal line if any appoach Cooks Distance of 0.5
+        if len(cooks[cooks > self.threshold]) > 0:
+           self.fig.add_shape(
+               go.layout.Shape(
+                   type="line",
+                   x0=0,
+                   y0=self.threshold,
+                   x1=len(cooks),
+                   y1=self.threshold,
+                   line=dict(
+                       color="darkgrey",
+                       width=2
+                   )
+               )
+           )
+           self.fig.add_trace(
+               go.Scatter(
+                   x=points,
+                   y=cooks[points],
+                   mode='markers+text',
+                   marker=dict(color=COLORS['blue']),
+                   name='Influential Points',
+                   text=points,
+                   textposition='top center'
+               )
+           )                               

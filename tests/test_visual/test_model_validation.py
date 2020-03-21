@@ -30,7 +30,7 @@ from mlstudio.supervised.regression import RidgeRegression, ElasticNetRegression
 from mlstudio.visual.model_validation import Residuals, StandardizedResiduals
 from mlstudio.visual.model_validation import StudentizedResiduals, QQPlot
 from mlstudio.visual.model_validation import ResidualsLeverage
-from mlstudio.visual.model_validation import ScaleLocation
+from mlstudio.visual.model_validation import ScaleLocation, CooksDistance
 
 
 class ResidualPlotTests:
@@ -88,7 +88,6 @@ class ResidualPlotTests:
         res.fit(X,y)
         res.show()         
 
-    @mark.residuals
     def test_residuals_leverage(self, get_regression_data):
         X, y = get_regression_data
         est = ElasticNetRegression(epochs=1000, batch_size=32)
@@ -96,10 +95,25 @@ class ResidualPlotTests:
         res.fit(X,y)
         res.show()           
 
-    @mark.residuals
     def test_residuals_leverage_change_threshold(self, get_regression_data):
         X, y = get_regression_data
         est = ElasticNetRegression(epochs=1000, batch_size=32)
         res = ResidualsLeverage(est, width=1200, inner_threshold=0.05, outer_threshold=0.1)
         res.fit(X,y)
-        res.show()                   
+        res.show()           
+
+    @mark.residuals
+    def test_cooks_distance(self, get_regression_data):
+        X, y = get_regression_data
+        est = ElasticNetRegression(epochs=1000, batch_size=32)
+        res = CooksDistance(est)
+        res.fit(X,y)
+        res.show()             
+
+    @mark.residuals
+    def test_cooks_distance_threshold(self, get_regression_data):
+        X, y = get_regression_data
+        est = ElasticNetRegression(epochs=1000, batch_size=32)
+        res = CooksDistance(est, threshold= 0.01)
+        res.fit(X,y)
+        res.show()                     
