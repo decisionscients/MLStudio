@@ -52,18 +52,18 @@ class Visualatrix(ABC, BaseEstimator):
         =========   ==========================================
 
     """
-    PLOT_DEFAULT_HEIGHT = 450
-    PLOT_DEFAULT_WIDTH  = 700   
-    PLOT_DEFAULT_TEMPLATE = "plotly_white"    
-    PLOT_AVAILABLE_TEMPLATES = ['ggplot2', 'seaborn', 'simple_white', 'plotly',
+    _PLOT_DEFAULT_HEIGHT = 450
+    _PLOT_DEFAULT_WIDTH  = 900   
+    _PLOT_DEFAULT_TEMPLATE = "plotly_white"    
+    _PLOT_AVAILABLE_TEMPLATES = ['ggplot2', 'seaborn', 'simple_white', 'plotly',
          'plotly_white', 'plotly_dark', 'presentation', 'xgridoff',
          'ygridoff', 'gridon', 'none']    
     
     def __init__(self, fig=None, **kwargs):        
         self.fig = fig
-        self.height = kwargs.pop('height', self.PLOT_DEFAULT_HEIGHT)
-        self.width = kwargs.pop('width', self.PLOT_DEFAULT_WIDTH)
-        self.template = kwargs.pop('template', self.PLOT_DEFAULT_TEMPLATE)
+        self.height = kwargs.pop('height', self._PLOT_DEFAULT_HEIGHT)
+        self.width = kwargs.pop('width', self._PLOT_DEFAULT_WIDTH)
+        self.template = kwargs.pop('template', self._PLOT_DEFAULT_TEMPLATE)
         self.title = kwargs.pop('title', None)
 
     @property
@@ -145,7 +145,7 @@ class ModelVisualatrix(Visualatrix):
     """Base class for model visualization classes."""
 
     def __init__(self, estimator, fig=None, **kwargs):
-        super(ModelVisualatrix, self).__init__(fig=fig)
+        super(ModelVisualatrix, self).__init__(fig=fig, **kwargs)
         self.estimator = estimator
 
     def _validate(self, X, y=None, **kwargs):

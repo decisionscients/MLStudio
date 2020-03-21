@@ -41,6 +41,9 @@ class PredictionError(ModelVisualatrix):
 
     Parameters
     ----------
+    fig : Plotly Figure or FigureWidget
+        The plotting object. 
+        
     estimator : MLStudio estimator object.
         The object that implements the 'fit' and 'predict' methods.
     

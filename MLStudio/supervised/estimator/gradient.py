@@ -21,10 +21,8 @@
 """Gradient Descent base class, from which regression and classification inherit."""
 from abc import ABC, abstractmethod, ABCMeta
 import datetime
-import dill
 import numpy as np
 import pandas as pd
-import pickle
 from sklearn.base import BaseEstimator
 from sklearn.base import RegressorMixin, ClassifierMixin
 from sklearn.utils.validation import check_random_state, check_array
