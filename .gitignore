@@ -29,6 +29,9 @@ wheels/
 tests/test_data/
 tests/test_visual/figures/
 
+# Lab and internal folders
+mlstudio/lab/
+
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
