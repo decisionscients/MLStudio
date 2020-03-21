@@ -727,6 +727,12 @@ class ResidualsLeverage(ModelVisualatrix):
     estimator : MLStudio estimator object.
         The object that implements the 'fit' and 'predict' methods.
 
+    inner_threshold : float (Default = 0.5)
+        The threshold for the cooks distance inner contour line
+
+    outer_threshold : float (Default = 1.0)
+        The threshold for the cooks distance outer contour line        
+
     kwargs : dict
         Keyword arguments that are passed to the base class and influence
         the visualization. Optional keyword arguments include:
@@ -742,14 +748,17 @@ class ResidualsLeverage(ModelVisualatrix):
     
     """
 
-    def __init__(self, estimator, fig=None, hist=True, **kwargs):
+    def __init__(self, estimator, fig=None, inner_threshold=0.5, outer_threshold=1.0,
+                **kwargs):
         super(ResidualsLeverage, self).__init__(estimator=estimator,
                                         fig=fig, **kwargs)
 
+        self.inner_threshold = inner_threshold
+        self.outer_threshold = outer_threshold
         self.title = self.title or str(estimator.description + \
             "<br>Residuals vs Leverage")
 
-    def _cooks_contour(self, X, leverage, residuals, distance=0.5, sign=1):
+    def _cooks_contour(self, X, leverage, distance, sign):
         """Computes the leverage v standardized residuals, given Cooks Distance."""        
         # Compute F-distribution degrees of freedom
         n = X.shape[0]
@@ -763,13 +772,17 @@ class ResidualsLeverage(ModelVisualatrix):
         # Compute standard residuals
         std_resid = sign * np.sqrt(distance * ((1-leverage_range)/leverage_range) * (p+1))        
 
+        return leverage_range, std_resid         
+
+    def _get_influence_points(self, cooks, distance, sign):
+        """Gets indices for influential points."""
         # Establish evaluator
         better = {1:np.greater, -1:np.less}
-
-        # Find outliers better than threshold
-        threshold = sign * np.sqrt(distance * (leverage/leverage) * (p+1))        
-        outliers = np.argwhere(better[sign](residuals,threshold))
-        return leverage_range, std_resid, outliers            
+        # Compute threshold based upon sign of 1 (upper threshold) or -1 (lower threshold) 
+        threshold = distance * sign
+        # Grab influential points
+        points = np.argwhere(better[sign](cooks,threshold)).ravel()
+        return points
 
     def fit(self, X, y):
         """Generates the plot.
@@ -804,65 +817,54 @@ class ResidualsLeverage(ModelVisualatrix):
         z1 = lowess(residuals, lev, frac=1./3, it=0, is_sorted=False, 
                     return_sorted=True)
 
-        # Grab the outliers         
-        outliers = []
-        l1u_leverage, l1u_residual, outlier = \
-            self._cooks_contour(X, lev, residuals, distance=0.5, sign=1)
-        if len(outlier) > 0:
-            outliers.append(outlier)
-        
-        l1l_leverage, l1l_residual, outlier = \
-            self._cooks_contour(X, lev, residuals, distance=0.5, sign=-1)
-        if len(outlier) > 0:
-            outliers.append(outlier)
+        # Draw Cooks Distance contour lines 
+        l1u_leverage, l1u_residual = \
+            self._cooks_contour(X, lev, distance=self.inner_threshold, sign=1)
+        l1l_leverage, l1l_residual = \
+            self._cooks_contour(X, lev, distance=self.inner_threshold, sign=-1)
+        l2u_leverage, l2u_residual = \
+            self._cooks_contour(X, lev, distance=self.outer_threshold, sign=1)
+        l2l_leverage, l2l_residual = \
+            self._cooks_contour(X, lev, distance=self.outer_threshold, sign=-1)
 
-        l2u_leverage, l2u_residual, outlier = \
-            self._cooks_contour(X, lev, residuals, distance=1, sign=1)
-        if len(outlier) > 0:
-            outliers.append(outlier)
+        # Grab influential points
+        influential_points = []
+        distances = [self.inner_threshold,self.inner_threshold,
+                     self.outer_threshold,self.outer_threshold]
+        signs = [1,-1,1,-1]
+        for distance, sign in zip(distances, signs):
+            influential_points.extend(self._get_influence_points(cooks, distance, sign))
+        non_influential_points = [point for point in np.arange(len(residuals)) if \
+            point not in influential_points]
 
-        l2l_leverage, l2l_residual, outlier = \
-            self._cooks_contour(X, lev, residuals, distance=1, sign=-1)
-        if len(outlier) > 0:
-            outliers.append(outlier)
-
-        # Format the annotations
-        annotations = np.arange(len(residuals))
-        annotations = annotations.astype(object)
-        # TODO; Fix ambiguous truth error. need masking 
-        notoutlier = np.array([i for i in np.arange(len(residuals)) if i not in outliers])
-        annotations[notoutlier] = " "
-        
         # Create scatterplot traces
         data = [
-            go.Scatter(x=lev, y=residuals,
+            go.Scatter(x=lev[non_influential_points], 
+                        y=residuals[non_influential_points],
                         mode='markers+text',
-                        marker=dict(color=self.train_color),
+                        marker=dict(color=COLORS['blue']),
                         name="Residual vs Leverage",
-                        text=annotations,
                         textposition="top center",
-                        showlegend=False,
-                        opacity=self.train_alpha),
-            go.Scattergl(x=l1u_leverage[outliers], 
-                        y=l1u_residual[outliers], 
-                        mode='markers',
-                        marker=dict(color='red'),
-                        name="Bad Points",
-                        opacity=self.train_alpha,
-                        showlegend=True),                        
+                        showlegend=False),
+            go.Scattergl(x=lev[influential_points], 
+                        y=residuals[influential_points], 
+                        mode='markers+text',
+                        marker=dict(color='red'),                        
+                        text=influential_points,
+                        name="High Influence Points",
+                        textposition='top center',
+                        showlegend=True),  
             go.Scattergl(x=z1[:,0], y=z1[:,1],
                         mode='lines',
                         marker=dict(color='red'),
                         name="Training Set Lowess",
-                        opacity=self.train_alpha,
                         showlegend=False),
             go.Scatter(x=l1u_leverage,
                        y=l1u_residual,
                        mode='lines',
                        line=dict(dash='dash'),
                        marker=dict(color='red'),
-                       name="Cooks' D = 0.5",
-                       opacity=self.train_alpha,
+                       name="Cooks' D = " + str(self.inner_threshold),
                        showlegend=True),
             go.Scatter(x=l1l_leverage,
                        y=l1l_residual,
@@ -870,15 +872,13 @@ class ResidualsLeverage(ModelVisualatrix):
                        line=dict(dash='dash'),
                        marker=dict(color='red'),
                        name="Cooks' D = 0.5 (Lower)",
-                       opacity=self.train_alpha,
                        showlegend=False),
             go.Scatter(x=l2u_leverage,
                        y=l2u_residual,
                        mode='lines',
                        line=dict(dash='dot'),
                        marker=dict(color='red'),
-                       name="Cooks' D = 1.0",
-                       opacity=self.train_alpha,
+                       name="Cooks' D = " + str(self.outer_threshold),
                        showlegend=True),
             go.Scatter(x=l2l_leverage,
                        y=l2l_residual,
@@ -886,7 +886,6 @@ class ResidualsLeverage(ModelVisualatrix):
                        line=dict(dash='dot'),
                        marker=dict(color='red'),
                        name="Cooks' D = 1 (Lower)",
-                       opacity=self.train_alpha,
                        showlegend=False)                                                                                                                                   
        ]
 
@@ -898,19 +897,17 @@ class ResidualsLeverage(ModelVisualatrix):
 
         # Designate Layout
         layout = go.Layout(title=self.title, 
+                        title_x=0.5,
                         height=self.height,
                         width=self.width,
-                        margin=self.margin,
                         xaxis_title="Leverage",
                         yaxis_title="Standardized Residuals",
-                        xaxis=dict(domain=[0,0.85],  zeroline=False, 
-                                    range=[xmin, xmax]),
-                        yaxis=dict(domain=[0,0.85],  zeroline=False, 
-                                    range=[ymin, ymax]),
-                        xaxis2=dict(domain=[0.85,1], zeroline=False),
-                        yaxis2=dict(domain=[0.85,1], zeroline=False),                        
+                        xaxis=dict(zeroline=False, range=[xmin, xmax]),
+                        yaxis=dict(zeroline=False, range=[ymin, ymax]),
+                        # xaxis2=dict(domain=[0.85,1], zeroline=False),
+                        # yaxis2=dict(domain=[0.85,1], zeroline=False),                        
                         showlegend=True,
-                        legend=dict(x=0, bgcolor='white'),
+                        legend=dict(bgcolor='white'),
                         template=self.template)
 
         # Create figure object

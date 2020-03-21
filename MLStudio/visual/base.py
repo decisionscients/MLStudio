@@ -61,40 +61,10 @@ class Visualatrix(ABC, BaseEstimator):
     
     def __init__(self, fig=None, **kwargs):        
         self.fig = fig
-        self.height = kwargs.pop('height', self._PLOT_DEFAULT_HEIGHT)
-        self.width = kwargs.pop('width', self._PLOT_DEFAULT_WIDTH)
-        self.template = kwargs.pop('template', self._PLOT_DEFAULT_TEMPLATE)
-        self.title = kwargs.pop('title', None)
-
-    @property
-    def height(self):
-        """Returns the height of the figure."""
-        return self._height
-
-    @height.setter
-    def height(self, value):
-        """Sets the height of the figure."""
-        self._height = value
-
-    @property
-    def width(self):
-        """Returns the width of the figure."""
-        return self._width
-
-    @height.setter
-    def width(self, value):
-        """Sets the width of the figure."""
-        self._width = value        
-
-    @property
-    def template(self):
-        """Returns the template of the figure."""
-        return self._template
-
-    @template.setter
-    def template(self, value):
-        """Sets the template of the figure."""
-        self._template = value
+        self.height = kwargs.get('height', self._PLOT_DEFAULT_HEIGHT)
+        self.width = kwargs.get('width', self._PLOT_DEFAULT_WIDTH)
+        self.template = kwargs.get('template', self._PLOT_DEFAULT_TEMPLATE)
+        self.title = kwargs.get('title', None)
 
     @abstractmethod
     def fit(self, X, y=None, **kwargs):

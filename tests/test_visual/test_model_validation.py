@@ -91,7 +91,15 @@ class ResidualPlotTests:
     @mark.residuals
     def test_residuals_leverage(self, get_regression_data):
         X, y = get_regression_data
-        est = LinearRegression(epochs=500)
-        res = ResidualsLeverage(est)
+        est = ElasticNetRegression(epochs=1000, batch_size=32)
+        res = ResidualsLeverage(est, width=1200)
         res.fit(X,y)
         res.show()           
+
+    @mark.residuals
+    def test_residuals_leverage_change_threshold(self, get_regression_data):
+        X, y = get_regression_data
+        est = ElasticNetRegression(epochs=1000, batch_size=32)
+        res = ResidualsLeverage(est, width=1200, inner_threshold=0.05, outer_threshold=0.1)
+        res.fit(X,y)
+        res.show()                   
