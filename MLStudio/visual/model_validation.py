@@ -34,6 +34,7 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 from .base import ModelVisualatrix
 from mlstudio.analysis.model_validation import standardized_residuals
 from mlstudio.analysis.model_validation import studentized_residuals, quantile
+from mlstudio.analysis.model_validation import leverage, cooks_distance
 from mlstudio.visual import COLORS
 from mlstudio.supervised.regression import LinearRegression
 from mlstudio.utils.format import proper        
@@ -81,7 +82,7 @@ class Residuals(ModelVisualatrix):
         self.title = self.title or str(estimator.description + "<br>Residuals vs. Predicted")
 
     def fit(self, X, y):
-        """Generates the prediction error plot.
+        """Generates the plot.
 
         Parameters
         ----------
@@ -221,7 +222,7 @@ class StandardizedResiduals(ModelVisualatrix):
             "<br>Standardized Residuals vs. Predicted")
 
     def fit(self, X, y):
-        """Generates the prediction error plot.
+        """Generates the plot.
 
         Parameters
         ----------
@@ -363,7 +364,7 @@ class StudentizedResiduals(ModelVisualatrix):
             "<br>Studentized Residuals vs. Predicted")
 
     def fit(self, X, y):
-        """Generates the prediction error plot.
+        """Generates the plot.
 
         Parameters
         ----------
@@ -505,7 +506,7 @@ class ScaleLocation(ModelVisualatrix):
             "<br>Scale Location")
 
     def fit(self, X, y):
-        """Generates the prediction error plot.
+        """Generates the plot.
 
         Parameters
         ----------
@@ -648,7 +649,7 @@ class QQPlot(ModelVisualatrix):
             "<br>Normal Q-Q")
 
     def fit(self, X, y):
-        """Generates the prediction error plot.
+        """Generates the plot.
 
         Parameters
         ----------
@@ -707,4 +708,211 @@ class QQPlot(ModelVisualatrix):
         self.fig = go.Figure(data=data, layout=layout)        
 
 
+# --------------------------------------------------------------------------  #
+#                         RESIDUALS VS LEVERAGE                               #
+# --------------------------------------------------------------------------  #
+class ResidualsLeverage(ModelVisualatrix):        
+    """Residuals vs Leverage Plot.
+
+    The Residuals vs Leverage plot helps to illuminate data points that may
+    be influential. Observations that lie in the upper and lower right 
+    corners of the plot may be outside of the Cook's distance line, and 
+    would require further investigation.
+
+    Parameters
+    ----------
+    fig : Plotly Figure or FigureWidget
+        The plotting object. 
+
+    estimator : MLStudio estimator object.
+        The object that implements the 'fit' and 'predict' methods.
+
+    kwargs : dict
+        Keyword arguments that are passed to the base class and influence
+        the visualization. Optional keyword arguments include:
+
+        =========   ==========================================
+        Property    Description
+        --------    ------------------------------------------
+        height      specify the height of the figure
+        width       specify the width of the figure
+        title       specify the title of the figure
+        template    specify the template for the figure.
+        =========   ==========================================    
+    
+    """
+
+    def __init__(self, estimator, fig=None, hist=True, **kwargs):
+        super(ResidualsLeverage, self).__init__(estimator=estimator,
+                                        fig=fig, **kwargs)
+
+        self.title = self.title or str(estimator.description + \
+            "<br>Residuals vs Leverage")
+
+    def _cooks_contour(self, X, leverage, residuals, distance=0.5, sign=1):
+        """Computes the leverage v standardized residuals, given Cooks Distance."""        
+        # Compute F-distribution degrees of freedom
+        n = X.shape[0]
+        p = X.shape[1]
+
+        # Designate the leverage range being plotted
+        min_leverage = np.min(leverage)
+        max_leverage = np.max(leverage)
+        leverage_range = np.linspace(start=min_leverage, stop=max_leverage, num=n)
+
+        # Compute standard residuals
+        std_resid = sign * np.sqrt(distance * ((1-leverage_range)/leverage_range) * (p+1))        
+
+        # Establish evaluator
+        better = {1:np.greater, -1:np.less}
+
+        # Find outliers better than threshold
+        threshold = sign * np.sqrt(distance * (leverage/leverage) * (p+1))        
+        outliers = np.argwhere(better[sign](residuals,threshold))
+        return leverage_range, std_resid, outliers            
+
+    def fit(self, X, y):
+        """Generates the plot.
+
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Training vector, where n_samples is the number of samples and
+            n_features is the number of features.
+
+        y : array-like, shape (n_samples) or (n_samples, n_features), optional
+            Target relative to X for classification or regression;
+            None for unsupervised learning.
+
+        """
+        # Compute standardized residuals
+        self.estimator.fit(X,y)
+        y_pred = self.estimator.predict(X)
+        residuals = y - y_pred        
+        residuals = standardized_residuals(X, y, y_pred)
+
+        # Flatten arrays (just in case)
+        y = y.ravel()
+        y_pred = y_pred.ravel()
+        residuals = residuals.ravel()
+
+        # Compute Leverage and cooks distances
+        lev = leverage(X) 
+        cooks = cooks_distance(X, y, y_pred)
+
+        # Create lowess smoothing line
+        z1 = lowess(residuals, lev, frac=1./3, it=0, is_sorted=False, 
+                    return_sorted=True)
+
+        # Grab the outliers         
+        outliers = []
+        l1u_leverage, l1u_residual, outlier = \
+            self._cooks_contour(X, lev, residuals, distance=0.5, sign=1)
+        if len(outlier) > 0:
+            outliers.append(outlier)
         
+        l1l_leverage, l1l_residual, outlier = \
+            self._cooks_contour(X, lev, residuals, distance=0.5, sign=-1)
+        if len(outlier) > 0:
+            outliers.append(outlier)
+
+        l2u_leverage, l2u_residual, outlier = \
+            self._cooks_contour(X, lev, residuals, distance=1, sign=1)
+        if len(outlier) > 0:
+            outliers.append(outlier)
+
+        l2l_leverage, l2l_residual, outlier = \
+            self._cooks_contour(X, lev, residuals, distance=1, sign=-1)
+        if len(outlier) > 0:
+            outliers.append(outlier)
+
+        # Format the annotations
+        annotations = np.arange(len(residuals))
+        annotations = annotations.astype(object)
+        # TODO; Fix ambiguous truth error. need masking 
+        notoutlier = np.array([i for i in np.arange(len(residuals)) if i not in outliers])
+        annotations[notoutlier] = " "
+        
+        # Create scatterplot traces
+        data = [
+            go.Scatter(x=lev, y=residuals,
+                        mode='markers+text',
+                        marker=dict(color=self.train_color),
+                        name="Residual vs Leverage",
+                        text=annotations,
+                        textposition="top center",
+                        showlegend=False,
+                        opacity=self.train_alpha),
+            go.Scattergl(x=l1u_leverage[outliers], 
+                        y=l1u_residual[outliers], 
+                        mode='markers',
+                        marker=dict(color='red'),
+                        name="Bad Points",
+                        opacity=self.train_alpha,
+                        showlegend=True),                        
+            go.Scattergl(x=z1[:,0], y=z1[:,1],
+                        mode='lines',
+                        marker=dict(color='red'),
+                        name="Training Set Lowess",
+                        opacity=self.train_alpha,
+                        showlegend=False),
+            go.Scatter(x=l1u_leverage,
+                       y=l1u_residual,
+                       mode='lines',
+                       line=dict(dash='dash'),
+                       marker=dict(color='red'),
+                       name="Cooks' D = 0.5",
+                       opacity=self.train_alpha,
+                       showlegend=True),
+            go.Scatter(x=l1l_leverage,
+                       y=l1l_residual,
+                       mode='lines',
+                       line=dict(dash='dash'),
+                       marker=dict(color='red'),
+                       name="Cooks' D = 0.5 (Lower)",
+                       opacity=self.train_alpha,
+                       showlegend=False),
+            go.Scatter(x=l2u_leverage,
+                       y=l2u_residual,
+                       mode='lines',
+                       line=dict(dash='dot'),
+                       marker=dict(color='red'),
+                       name="Cooks' D = 1.0",
+                       opacity=self.train_alpha,
+                       showlegend=True),
+            go.Scatter(x=l2l_leverage,
+                       y=l2l_residual,
+                       mode='lines',
+                       line=dict(dash='dot'),
+                       marker=dict(color='red'),
+                       name="Cooks' D = 1 (Lower)",
+                       opacity=self.train_alpha,
+                       showlegend=False)                                                                                                                                   
+       ]
+
+        # Compute x and y axis limits based 110% of the data range
+        xmin = np.min(lev) + (0.1 * np.min(lev))
+        xmax = np.max(lev) + (0.1 * np.max(lev)) 
+        ymin = np.min(residuals) + (0.1 * np.min(residuals))
+        ymax = np.max(residuals) + (0.1 * np.max(residuals))
+
+        # Designate Layout
+        layout = go.Layout(title=self.title, 
+                        height=self.height,
+                        width=self.width,
+                        margin=self.margin,
+                        xaxis_title="Leverage",
+                        yaxis_title="Standardized Residuals",
+                        xaxis=dict(domain=[0,0.85],  zeroline=False, 
+                                    range=[xmin, xmax]),
+                        yaxis=dict(domain=[0,0.85],  zeroline=False, 
+                                    range=[ymin, ymax]),
+                        xaxis2=dict(domain=[0.85,1], zeroline=False),
+                        yaxis2=dict(domain=[0.85,1], zeroline=False),                        
+                        showlegend=True,
+                        legend=dict(x=0, bgcolor='white'),
+                        template=self.template)
+
+        # Create figure object
+        self.fig = go.Figure(data=data, layout=layout)  
+                                

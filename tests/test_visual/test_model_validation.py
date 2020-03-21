@@ -29,6 +29,7 @@ from mlstudio.supervised.regression import LinearRegression, LassoRegression
 from mlstudio.supervised.regression import RidgeRegression, ElasticNetRegression
 from mlstudio.visual.model_validation import Residuals, StandardizedResiduals
 from mlstudio.visual.model_validation import StudentizedResiduals, QQPlot
+from mlstudio.visual.model_validation import ResidualsLeverage
 from mlstudio.visual.model_validation import ScaleLocation
 
 
@@ -80,10 +81,17 @@ class ResidualPlotTests:
         res.fit(X,y)
         res.show()            
 
-    @mark.residuals
     def test_normal_qq(self, get_regression_data):
         X, y = get_regression_data
         est = LinearRegression(epochs=500)
         res = QQPlot(est)
         res.fit(X,y)
         res.show()         
+
+    @mark.residuals
+    def test_residuals_leverage(self, get_regression_data):
+        X, y = get_regression_data
+        est = LinearRegression(epochs=500)
+        res = ResidualsLeverage(est)
+        res.fit(X,y)
+        res.show()           
