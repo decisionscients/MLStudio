@@ -27,14 +27,63 @@ from sklearn.model_selection import ShuffleSplit
 
 from mlstudio.supervised.regression import LinearRegression, LassoRegression
 from mlstudio.supervised.regression import RidgeRegression, ElasticNetRegression
-from mlstudio.visual.model_validation import Residuals
+from mlstudio.visual.model_validation import Residuals, StandardizedResiduals
+from mlstudio.visual.model_validation import StudentizedResiduals, QQPlot
+from mlstudio.visual.model_validation import ScaleLocation
+
 
 class ResidualPlotTests:
 
-    @mark.residuals
+    
     def test_residuals(self, get_regression_data):
         X, y = get_regression_data
-        est = ElasticNetRegression(epochs=1000)
+        est = ElasticNetRegression(epochs=500)
         res = Residuals(est)
         res.fit(X,y)
         res.show()
+
+    
+    def test_residuals_wo_histogram(self, get_regression_data):
+        X, y = get_regression_data
+        est = ElasticNetRegression(epochs=500)
+        res = Residuals(est, hist=False)
+        res.fit(X,y)
+        res.show()        
+
+    
+    def test_residuals_w_density(self, get_regression_data):
+        X, y = get_regression_data
+        est = ElasticNetRegression(epochs=500)
+        res = Residuals(est, hist='density')
+        res.fit(X,y)
+        res.show()        
+   
+    def test_standardized_residuals(self, get_regression_data):
+        X, y = get_regression_data
+        est = RidgeRegression(epochs=500)
+        res = StandardizedResiduals(est)
+        res.fit(X,y)
+        res.show()        
+
+    
+    def test_studentized_residuals(self, get_regression_data):
+        X, y = get_regression_data
+        est = LassoRegression(epochs=500)
+        res = StudentizedResiduals(est)
+        res.fit(X,y)
+        res.show()          
+
+    def test_scale_location(self, get_regression_data):
+        X, y = get_regression_data
+        est = LassoRegression(epochs=500)
+        res = ScaleLocation(est)
+        res.fit(X,y)
+        res.show()            
+
+    @mark.residuals
+    def test_normal_qq(self, get_regression_data):
+        X, y = get_regression_data
+        est = LinearRegression(epochs=500)
+        res = QQPlot(est)
+        res.fit(X,y)
+        res.show()         
