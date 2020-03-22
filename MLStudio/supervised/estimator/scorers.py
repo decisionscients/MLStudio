@@ -294,23 +294,6 @@ class MAPE(RegressionScorer):
     def __call__(self, y, y_pred):        
         return 100*np.mean(np.abs((y-y_pred)/y))
 
-class RegressionScorerFactory:
-    """Returns the requested score class."""
-
-    def __call__(self, metric='mse'):
-
-        dispatcher = {'r2': R2(),
-                      'var_explained': VarExplained(),
-                      'mae': MAE(),
-                      'mse': MSE(),                      
-                      'nmse': NMSE(),
-                      'rmse': RMSE(),
-                      'nrmse': NRMSE(),
-                      'msle': MSLE(),
-                      'rmsle': RMSLE(),
-                      'medae': MEDAE(),
-                      'mape': MAPE()}
-        return(dispatcher.get(metric))
 
 # --------------------------------------------------------------------------- #
 #                       CLASSIFICATION METRICS                                #
@@ -337,11 +320,3 @@ class Accuracy(ClassificationScorer):
         if len(y_pred.shape) > 1:
             y_pred = decode(y_pred)
         return np.sum(np.equal(y,y_pred)) / y.shape[0]
-
-class ClassificationScorerFactory:
-    """Returns the requested score class."""
-
-    def __call__(self, metric='accuracy'):
-
-        dispatcher = {'accuracy': Accuracy()}
-        return(dispatcher.get(metric,False))

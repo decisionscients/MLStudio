@@ -20,17 +20,16 @@
 # =========================================================================== #
 
 """Classes for L1, L2, and Elasticnet Regularization"""
-from abc import ABC, abstractmethod
 import numpy as np
 
-class Regularizer(ABC):
+class NullRegularizer(ABC):
     """Abstract base class for regularizers.
     
     Also functions as default regularizer when no regularization is used.
     """
 
     def __init__(self):
-        self.callback = "Regularizer"
+        self.callback = "Null Regularizer"
 
     def _validate_hyperparam(self, p):
         assert isinstance(p, float), "Regularization hyperparameter must be numeric."
@@ -45,7 +44,7 @@ class Regularizer(ABC):
  
 
 
-class L1(Regularizer):
+class L1:
     """ Regularization for Lasso Regression """
     def __init__(self, alpha):
         super(L1,self).__init__()
@@ -61,7 +60,7 @@ class L1(Regularizer):
         return self._alpha * np.sign(w)
 
 
-class L2(Regularizer):
+class L2:
     """ Regularization for Ridge Regression """
     def __init__(self, alpha):
         super(L2,self).__init__()
@@ -77,7 +76,7 @@ class L2(Regularizer):
         return self._alpha * 2.0 * w
 
 
-class ElasticNet(Regularizer):
+class ElasticNet:
     """ Regularization for Elastic Net Regression """
     def __init__(self, alpha=1.0, ratio=0.5):
         super(ElasticNet,self).__init__()

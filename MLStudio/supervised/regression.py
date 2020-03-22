@@ -43,47 +43,23 @@ class Regression(GradientDescent):
     _TASK = "Regression"
 
     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
-                 theta_init=None,  epochs=1000, regularizer=Regularizer(),
-                 early_stop=False, patience=5,  precision=0.001, 
-                 cost='quadratic', metric='mse',  val_size=0.0, 
+                 theta_init=None,  epochs=1000, algorithm=Regression(),
+                 optimizer=Standard(),regularizer=NullRegularizer(), 
+                 scorer=MSE(), early_stop=False, val_size=0.0, 
                  verbose=False, checkpoint=100, random_state=None):
         super(Regression, self).__init__(name=name,
                                          learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
                                          epochs=epochs, 
+                                         algorithm=algorithm,
+                                         optimizer=optimizer,
                                          regularizer=regularizer,
+                                         scorer=scorer,
                                          early_stop=early_stop, 
-                                         patience=patience, 
-                                         precision=precision,
-                                         cost=cost, 
-                                         metric=metric,                                          
                                          val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
                                          random_state=random_state)   
-
-    def get_cost_function(self):
-        """Obtains the cost function associated with the cost parameter."""
-        cost_function = RegressionCostFactory()(cost=self.cost)
-        if not cost_function:
-            msg = str(self.cost) + ' is not a supported regression cost function.'
-            raise ValueError(msg)
-        else:
-            return cost_function
-
-    def get_scorer(self):
-        """Obtains the scoring function associated with the metric parameter."""
-        if self.metric:
-            scorer = RegressionScorerFactory()(metric=self.metric)
-            if not scorer:
-                msg = str(self.metric) + ' is not a supported regression metric.'
-                raise ValueError(msg)
-            return scorer
-        
-    def _predict(self, X):
-        """Computes predictions during training with current weights."""        
-        y_pred = self._linear_prediction(X)
-        return y_pred.ravel()
 
     def predict(self, X):
         """Predicts output as a linear function of inputs and final parameters.
@@ -103,8 +79,8 @@ class Regression(GradientDescent):
         """
         check_is_fitted(self)
         X = np.array(X)
-        check_array(X)
-        return self._predict(X)
+        check_array(X)        
+        return self.algorithm.predict(X, self._theta)
 
     def score(self, X, y):
         """Computes a score for the current model, given inputs X and output y.
@@ -125,12 +101,12 @@ class Regression(GradientDescent):
         float
             Returns the score for the designated metric.
         """
-        check_X_y(X,y)
-        y_pred = self.predict(X)
-        if self.metric:
-            score = self.scorer_(y=y, y_pred=y_pred)    
+        if self.scorer:
+            check_X_y(X,y)
+            y_pred = self.predict(X)
+            score = self.scorer(y=y, y_pred=y_pred)    
         else:
-            score = RegressionScorerFactory()(metric=self._DEFAULT_METRIC)(y=y, y_pred=y_pred)        
+            raise Exception("No scorer class designated. Unable to compute score.")
         return score
 
 # --------------------------------------------------------------------------- #
@@ -266,26 +242,26 @@ class LinearRegression(Regression):
     _DEFAULT_METRIC = 'mse'
     _TASK = "Linear Regression"
     
+
     def __init__(self, name=None, gradient_descent=True, learning_rate=0.01, 
                  batch_size=None, theta_init=None,  epochs=1000, 
-                 regularizer=Regularizer(),early_stop=False, patience=5,  
-                 precision=0.001, cost='quadratic', metric='mse',  
-                 val_size=0.0, verbose=False, checkpoint=100, 
-                 random_state=None):
+                 algorithm=Regression(), optimizer=Standard(), 
+                 regularizer=NullRegularizer(), scorer=MSE(), 
+                 early_stop=False, val_size=0.0, verbose=False, 
+                 checkpoint=100, random_state=None):
         super(LinearRegression, self).__init__(name=name,
                                          learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
                                          epochs=epochs, 
+                                         algorithm=algorithm,
+                                         optimizer=optimizer,
                                          regularizer=regularizer,
+                                         scorer=scorer,
                                          early_stop=early_stop, 
-                                         patience=patience, 
-                                         precision=precision,
-                                         cost=cost, 
-                                         metric=metric,                                          
                                          val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         random_state=random_state)  
+                                         random_state=random_state)   
 
         self.gradient_descent=gradient_descent  
             
@@ -293,7 +269,7 @@ class LinearRegression(Regression):
     def description(self):
         """Returns the estimator description."""
         if self.gradient_descent:
-            description = str(self._TASK + ' with ' + self.algorithm)      
+            description = str(self._TASK + ' with ' + self.variant)      
         else:
             description = str(self._TASK + ' by Ordinary Least Squares')
         return description
@@ -468,24 +444,24 @@ class LassoRegression(Regression):
     _TASK = "Lasso Regression"
 
     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
-                 theta_init=None,  epochs=1000, regularizer=L1(alpha=0.0001),
-                 early_stop=False, patience=5,  precision=0.001, 
-                 cost='quadratic', metric='mse',  val_size=0.0, 
+                 theta_init=None,  epochs=1000, algorithm=Regression(),
+                 optimizer=Standard(),regularizer=L1(alpha=0.0001), 
+                 scorer=MSE(), early_stop=False, val_size=0.0, 
                  verbose=False, checkpoint=100, random_state=None):
         super(LassoRegression, self).__init__(name=name,
                                          learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
                                          epochs=epochs, 
+                                         algorithm=algorithm,
+                                         optimizer=optimizer,
                                          regularizer=regularizer,
+                                         scorer=scorer,
                                          early_stop=early_stop, 
-                                         patience=patience, 
-                                         precision=precision,
-                                         cost=cost, 
-                                         metric=metric,                                          
                                          val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         random_state=random_state)    
+                                         random_state=random_state)   
+
 
 # --------------------------------------------------------------------------- #
 #                         RIDGE REGRESSION CLASS                              #
@@ -619,24 +595,24 @@ class RidgeRegression(Regression):
     _TASK = "Ridge Regression"      
 
     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
-                 theta_init=None,  epochs=1000, regularizer=L2(alpha=0.0001),
-                 early_stop=False, patience=5,  precision=0.001, 
-                 cost='quadratic', metric='mse',  val_size=0.0, 
+                 theta_init=None,  epochs=1000, algorithm=Regression(),
+                 optimizer=Standard(),regularizer=L2(alpha=0.0001),
+                 scorer=MSE(), early_stop=False, val_size=0.0, 
                  verbose=False, checkpoint=100, random_state=None):
         super(RidgeRegression, self).__init__(name=name,
                                          learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
                                          epochs=epochs, 
+                                         algorithm=algorithm,
+                                         optimizer=optimizer,
                                          regularizer=regularizer,
+                                         scorer=scorer,
                                          early_stop=early_stop, 
-                                         patience=patience, 
-                                         precision=precision,
-                                         cost=cost, 
-                                         metric=metric,                                          
                                          val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         random_state=random_state)    
+                                         random_state=random_state)   
+
                                   
 
 # --------------------------------------------------------------------------- #
@@ -778,23 +754,21 @@ class ElasticNetRegression(Regression):
     _TASK = "Elastic Net Regression"
 
     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
-                 theta_init=None,  epochs=1000, 
+                 theta_init=None,  epochs=1000, algorithm=Regression(),
+                 optimizer=Standard(), 
                  regularizer=ElasticNet(alpha=0.0001, ratio=0.15),
-                 early_stop=False, patience=5,  precision=0.001, 
-                 cost='quadratic', metric='mse',  val_size=0.0, 
+                 scorer=MSE(), early_stop=False, val_size=0.0, 
                  verbose=False, checkpoint=100, random_state=None):
         super(ElasticNetRegression, self).__init__(name=name,
                                          learning_rate=learning_rate, 
                                          batch_size=batch_size, 
                                          theta_init=theta_init, 
                                          epochs=epochs, 
+                                         algorithm=algorithm,
+                                         optimizer=optimizer,
                                          regularizer=regularizer,
+                                         scorer=scorer,
                                          early_stop=early_stop, 
-                                         patience=patience, 
-                                         precision=precision,
-                                         cost=cost, 
-                                         metric=metric,                                          
                                          val_size=val_size,                                          
                                          verbose=verbose, checkpoint=checkpoint, 
-                                         random_state=random_state)    
-        
+                                         random_state=random_state)   

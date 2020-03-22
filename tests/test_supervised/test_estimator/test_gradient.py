@@ -1,30 +1,39 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-# ============================================================================ #
-# Project : MLStudio                                                           #
-# Version : 0.1.0                                                              #
-# File    : test_cost.py                                                       #
-# Python  : 3.8.2                                                              #
-# ---------------------------------------------------------------------------- #
-# Author  : John James                                                         #
-# Company : DecisionScients                                                    #
-# Email   : jjames@decisionscients.com                                         #
-# URL     : https://github.com/decisionscients/MLStudio                        #
-# ---------------------------------------------------------------------------- #
-# Created       : Sunday, March 15th 2020, 11:22:45 pm                         #
-# Last Modified : Sunday, March 15th 2020, 11:22:45 pm                         #
-# Modified By   : John James (jjames@decisionscients.com)                      #
-# ---------------------------------------------------------------------------- #
-# License : BSD                                                                #
-# Copyright (c) 2020 DecisionScients                                           #
-# ============================================================================ #
+# =========================================================================== #
+# Project : MLStudio                                                          #
+# Version : 0.1.0                                                             #
+# File    : test_gradient.py                                                  #
+# Python  : 3.8.2                                                             #
+# --------------------------------------------------------------------------  #
+# Author  : John James                                                        #
+# Company : DecisionScients                                                   #
+# Email   : jjames@decisionscients.com                                        #
+# URL     : https://github.com/decisionscients/MLStudio                       #
+# --------------------------------------------------------------------------  #
+# Created       : Saturday, March 21st 2020, 10:12:40 pm                      #
+# Last Modified : Saturday, March 21st 2020, 10:12:52 pm                      #
+# Modified By   : John James (jjames@decisionscients.com)                     #
+# --------------------------------------------------------------------------  #
+# License : BSD                                                               #
+# Copyright (c) 2020 DecisionScients                                          #
+# =========================================================================== #
+"""Performs gradient checking for each cost function."""
 import math
 import numpy as np
 from pytest import mark
-from sklearn.metrics import zero_one_loss, log_loss, mean_squared_error
-from mlstudio.supervised.estimator.cost import Regression
-from mlstudio.supervised.estimator.cost import BinaryClassification
-from mlstudio.supervised.estimator.cost import MultiClassification
+from mlstudio.supervised.estimator.propagation import Regression
+from mlstudio.supervised.estimator.propagation import BinaryClassification
+from mlstudio.supervised.estimator.propagation import MultiClassification
+
+class GradientCheck:
+    """Performs gradient checking."""
+    def __init__(self, cost_function, epsilon=1e-6):
+        self._cost_function = cost_function
+        self._epsilon = epsilon
+
+    def check_gradient(self, X, y, theta):
+
 
 
 class RegressionCostTests:

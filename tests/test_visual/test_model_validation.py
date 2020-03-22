@@ -34,8 +34,8 @@ from mlstudio.visual.model_validation import ScaleLocation, CooksDistance
 
 
 class ResidualPlotTests:
-
     
+    @mark.residuals
     def test_residuals(self, get_regression_data):
         X, y = get_regression_data
         est = ElasticNetRegression(epochs=500)
@@ -44,6 +44,7 @@ class ResidualPlotTests:
         res.show()
 
     
+    @mark.residuals
     def test_residuals_wo_histogram(self, get_regression_data):
         X, y = get_regression_data
         est = ElasticNetRegression(epochs=500)
@@ -52,6 +53,7 @@ class ResidualPlotTests:
         res.show()        
 
     
+    @mark.residuals
     def test_residuals_w_density(self, get_regression_data):
         X, y = get_regression_data
         est = ElasticNetRegression(epochs=500)
@@ -59,6 +61,7 @@ class ResidualPlotTests:
         res.fit(X,y)
         res.show()        
    
+    @mark.residuals
     def test_standardized_residuals(self, get_regression_data):
         X, y = get_regression_data
         est = RidgeRegression(epochs=500)
@@ -67,6 +70,7 @@ class ResidualPlotTests:
         res.show()        
 
     
+    @mark.residuals
     def test_studentized_residuals(self, get_regression_data):
         X, y = get_regression_data
         est = LassoRegression(epochs=500)
@@ -74,6 +78,7 @@ class ResidualPlotTests:
         res.fit(X,y)
         res.show()          
 
+    @mark.residuals
     def test_scale_location(self, get_regression_data):
         X, y = get_regression_data
         est = LassoRegression(epochs=500)
@@ -81,6 +86,7 @@ class ResidualPlotTests:
         res.fit(X,y)
         res.show()            
 
+    @mark.residuals
     def test_normal_qq(self, get_regression_data):
         X, y = get_regression_data
         est = LinearRegression(epochs=500)
@@ -88,6 +94,7 @@ class ResidualPlotTests:
         res.fit(X,y)
         res.show()         
 
+    @mark.residuals
     def test_residuals_leverage(self, get_regression_data):
         X, y = get_regression_data
         est = ElasticNetRegression(epochs=1000, batch_size=32)
@@ -95,6 +102,7 @@ class ResidualPlotTests:
         res.fit(X,y)
         res.show()           
 
+    @mark.residuals
     def test_residuals_leverage_change_threshold(self, get_regression_data):
         X, y = get_regression_data
         est = ElasticNetRegression(epochs=1000, batch_size=32)

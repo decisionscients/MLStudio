@@ -1,26 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-# ============================================================================ #
-# Project : MLStudio                                                           #
-# Version : 0.1.0                                                              #
-# File    : test_regression.py                                                 #
-# Python  : 3.8.2                                                              #
-# ---------------------------------------------------------------------------- #
-# Author  : John James                                                         #
-# Company : DecisionScients                                                    #
-# Email   : jjames@decisionscients.com                                         #
-# URL     : https://github.com/decisionscients/MLStudio                        #
-# ---------------------------------------------------------------------------- #
-# Created       : Monday, March 16th 2020, 12:31:37 am                         #
-# Last Modified : Monday, March 16th 2020, 12:31:37 am                         #
-# Modified By   : John James (jjames@decisionscients.com)                      #
-# ---------------------------------------------------------------------------- #
-# License : BSD                                                                #
-# Copyright (c) 2020 DecisionScients                                           #
-# ============================================================================ #
-# --------------------------------------------------------------------------- #
-#                          TEST GRADIENT DESCENT                              #
-# --------------------------------------------------------------------------- #
+# =========================================================================== #
+# Project : MLStudio                                                          #
+# Version : 0.1.0                                                             #
+# File    : test_logistic_regression.py                                       #
+# Python  : 3.8.2                                                             #
+# --------------------------------------------------------------------------  #
+# Author  : John James                                                        #
+# Company : DecisionScients                                                   #
+# Email   : jjames@decisionscients.com                                        #
+# URL     : https://github.com/decisionscients/MLStudio                       #
+# --------------------------------------------------------------------------  #
+# Created       : Saturday, March 21st 2020, 4:32:52 pm                       #
+# Last Modified : Saturday, March 21st 2020, 4:33:59 pm                       #
+# Modified By   : John James (jjames@decisionscients.com)                     #
+# --------------------------------------------------------------------------  #
+# License : BSD                                                               #
+# Copyright (c) 2020 DecisionScients                                          #
+# =========================================================================== #
+""" Tests Logistic Regression """ 
 #%%
 import math
 import numpy as np
@@ -31,125 +29,41 @@ import sklearn.linear_model as lm
 from sklearn.utils.estimator_checks import parametrize_with_checks
 from sklearn.utils.estimator_checks import check_estimator
 
-from mlstudio.supervised.regression import LinearRegression
-from mlstudio.supervised.regression import LassoRegression
-from mlstudio.supervised.regression import RidgeRegression
-from mlstudio.supervised.regression import ElasticNetRegression
+from mlstudio.supervised.classification import LogisticRegression
 
 
 from mlstudio.supervised.estimator.callbacks import Callback
-from mlstudio.supervised.estimator.cost import Cost, Regression, BinaryClassification
+from mlstudio.supervised.estimator.cost import Cost, BinaryClassification
 from mlstudio.supervised.estimator.cost import MultiClassification
 from mlstudio.supervised.estimator.scorers import Metric
 from mlstudio.supervised.estimator.early_stop import EarlyStop
 
-@mark.regression
-@mark.regression_sklearn
-@parametrize_with_checks([LinearRegression(metric='r2'),
-                          LassoRegression(metric='r2'),
-                          RidgeRegression(metric='r2'),
-                          ElasticNetRegression(metric='r2')])
+@mark.logistic
+@mark.logistic_sklearn
+@parametrize_with_checks([LogisticRegression(metric='r2'),
+                          LogisticRegression(batch_size=1),
+                          LogisticRegression(early_stop=True, val_size=0.3)])
 def test_sklearn_compatible_estimator(estimator, check):
     check(estimator)
 
 
-class RegressionTests:
+class LogisticRegressionTests:
 
-    @mark.regression
-    @mark.regression_val
-    def test_regression_validation(self, regression, get_regression_data):
-
-        X, y = get_regression_data
-        with pytest.raises(TypeError):
-            est = regression(learning_rate="x")
-            est.fit(X, y)        
-        with pytest.raises(TypeError):
-            est = regression(batch_size='k')            
-            est.fit(X, y)
-        with pytest.raises(TypeError):
-            est = regression(theta_init='k')            
-            est.fit(X, y)
-        with pytest.raises(TypeError):
-            est = regression(epochs='k')           
-            est.fit(X, y)
-        with pytest.raises(ValueError):
-            est = regression(cost='x')                                
-            est.fit(X, y) 
-        with pytest.raises(ValueError):
-            est = regression(cost=None)                                
-            est.fit(X, y)                  
-        with pytest.raises(TypeError):
-            est = regression(early_stop='x')                                
-            est.fit(X, y)
-        with pytest.raises(TypeError):
-            est = regression(metric=0)                                
-            est.fit(X, y)             
-        with pytest.raises(ValueError):
-            est = regression(metric='x')                                
-            est.fit(X, y) 
-        with pytest.raises(TypeError):
-            est = regression(epochs=10,verbose=None)                                                                                      
-            est.fit(X, y)
-        with pytest.raises(ValueError):
-            est = regression(epochs=10,checkpoint=-1)
-            est.fit(X, y)
-        with pytest.raises(TypeError):
-            est = regression(epochs=10,checkpoint='x')
-            est.fit(X, y)  
-        with pytest.raises(TypeError):
-            est = regression(epochs=10,random_state='k')                                
-            est.fit(X, y)
-                       
-
-    @mark.regression
-    @mark.regression_get_params
-    def test_regression_get_params(self, regression):
-        est = regression(learning_rate=0.01, theta_init=np.array([2,2,2]),
-                             epochs=10, cost='quadratic', 
-                             verbose=False, checkpoint=100, 
-                             name=None, random_state=50)
-        params = est.get_params()
-        assert params['learning_rate'] == 0.01, "learning rate is invalid" 
-        assert all(np.equal(params['theta_init'], np.array([2,2,2]))) , "theta_init is invalid"
-        assert params['epochs'] == 10, "epochs is invalid"        
-        assert params['verbose'] == False, "verbose is invalid"
-
-    @mark.regression
-    @mark.regression_validate_data
-    def test_regression_validate_data(self, regression, get_regression_data):
-        est = regression(epochs=10)
-        X, y = get_regression_data        
-        with pytest.raises(ValueError):
-            est.fit([1,2,3], y)
-        with pytest.raises(ValueError):
-            est.fit(X, [1,2,3])            
-        with pytest.raises(ValueError):
-            est.fit(X, y[0:5])            
-
-    @mark.regression
-    @mark.regression_init_weights
-    def test_regression_init_weights_shape_mismatch(self, regression, get_regression_data):        
-        X, y = get_regression_data        
-        theta_init = np.ones(X.shape[1])        
-        est = regression(epochs=10, theta_init=theta_init)
-        with pytest.raises(ValueError):
-            est.fit(X,y)
-
-    @mark.regression
-    @mark.regression_results
-    def test_regression_results(self, split_regression_data):
+    @mark.logistic
+    @mark.logistic_results
+    def test_logistic_regression_results(self, split_regression_data):
         X, X_test, y, y_test = split_regression_data
-        est = LinearRegression(gradient_descent=False)            
+        est = LogisticRegression(gradient_descent=False)            
         est.fit(X,y)
         score1 = est.score(X_test, y_test)
         print("----------------------------")
         print(score1)
-        est = LinearRegression(epochs=5000)            
+        est = LogisticRegression(epochs=5000)            
         est.fit(X,y)        
         score2 = est.score(X_test, y_test)        
         print("----------------------------")
         print(score2)    
-        est = lm.LinearRegression()            
+        est = lm.LogisticRegression()            
         est.fit(X,y)
         y_pred = est.predict(X_test)
         score3 = np.mean(y_test - y_pred)**2
@@ -158,70 +72,32 @@ class RegressionTests:
         assert abs(score1-score2)/score2 < 0.05, "Scores 1 and 2 are not close"  
         assert abs(score2-score3)/score3 < 0.05, "Scores 1 and 2 are not close"  
 
-
-    @mark.regression
-    @mark.regression_rate
-    def test_regression_fit_rate_constant(self, regression, get_regression_data):
-        X, y = get_regression_data        
-        est = regression(learning_rate = 0.1, epochs=10)
-        est.fit(X,y)
-        assert est.learning_rate == 0.1, "learning rate not initialized correctly"
-        assert est.history_.epoch_log['learning_rate'][0]==\
-            est.history_.epoch_log['learning_rate'][-1], "learning rate not constant in history"
-
-    @mark.regression
-    @mark.regression_batch_size
-    def test_regression_fit_batch_size(self, regression, get_regression_data):
-        X, y = get_regression_data         
-        X = X[0:33]
-        y = y[0:33]       
-        est = regression(batch_size=32, epochs=10, val_size=0)
-        est.fit(X,y)                
-        assert est.history_.total_epochs == 10, "total epochs in history not correct"
-        assert est.history_.total_batches == 20, "total batches in history not correct"
-        assert est.history_.total_epochs != est.history_.total_batches, "batches and epochs are equal"
-        assert est.history_.batch_log['batch_size'][0]==32, "batch size not correct in history"
-        assert est.history_.batch_log['batch_size'][1]!=32, "batch size not correct in history"
-        assert len(est.history_.batch_log['batch_size']) ==20, "length of batch log incorrect"
-        assert len(est.history_.epoch_log['learning_rate'])==10, "length of epoch log incorrect"
-
-
-    @mark.regression
-    @mark.regression_epochs
-    def test_regression_fit_epochs(self, regression, get_regression_data):
-        X, y = get_regression_data                
-        est = regression(epochs=10)
-        est.fit(X,y)
-        assert est.epochs == 10, "regression epochs invalid"
-        assert est.history_.total_epochs == 10, "total epochs in history not valid"
-        assert len(est.history_.epoch_log['learning_rate']) == 10, "epoch log not equal to epochs"
-
     
-    @mark.regression
-    @mark.regression_early_stop
-    @mark.regression_early_stop_from_estimator
-    def test_regression_fit_early_stop_from_estimator_val_score(self, regression, get_regression_data):        
-        X, y = get_regression_data                
+    @mark.logistic
+    @mark.logistic_early_stop
+    @mark.logistic_early_stop_from_estimator
+    def test_logistic_regression_fit_early_stop_from_estimator_val_score(self, regression, get_logistic_regression_data):        
+        X, y = get_logistic_regression_data                
         est = regression(learning_rate=0.5, epochs=5000, early_stop=True, val_size=0.3)
         est.fit(X,y)
         assert est.history_.total_epochs < 5000, "didn't stop early"
         assert len(est.history_.epoch_log['learning_rate']) < 5000, "epoch log too long for early stop"        
 
-    @mark.regression
-    @mark.regression_early_stop
-    @mark.regression_early_stop_from_estimator
-    def test_regression_fit_early_stop_from_estimator_val_cost(self, regression, get_regression_data):        
-        X, y = get_regression_data                
+    @mark.logistic
+    @mark.logistic_early_stop
+    @mark.logistic_early_stop_from_estimator
+    def test_logistic_regression_fit_early_stop_from_estimator_val_cost(self, regression, get_logistic_regression_data):        
+        X, y = get_logistic_regression_data                
         est = regression(learning_rate=0.5, epochs=5000, early_stop=True, val_size=0.3, metric=None)
         est.fit(X,y)
         assert est.history_.total_epochs < 5000, "didn't stop early"
         assert len(est.history_.epoch_log['learning_rate']) < 5000, "epoch log too long for early stop"        
 
 
-    @mark.regression
-    @mark.regression_history
-    def test_regression_history_no_val_data_no_metric(self, regression, get_regression_data):        
-        X, y = get_regression_data        
+    @mark.logistic
+    @mark.logistic_history
+    def test_logistic_regression_history_no_val_data_no_metric(self, regression, get_logistic_regression_data):        
+        X, y = get_logistic_regression_data        
         est = regression(epochs=10, metric=None, val_size=0)
         est.fit(X, y)        
         # Test epoch history
@@ -239,10 +115,10 @@ class RegressionTests:
         assert est.history_.total_batches == len(est.history_.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
         assert est.history_.total_batches == len(est.history_.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
 
-    @mark.regression
-    @mark.regression_history
-    def test_regression_history_w_val_data_and_metric(self, regression, get_regression_data):        
-        X, y = get_regression_data  
+    @mark.logistic
+    @mark.logistic_history
+    def test_logistic_regression_history_w_val_data_and_metric(self, regression, get_logistic_regression_data):        
+        X, y = get_logistic_regression_data  
         stop = EarlyStop()
         est = regression(epochs=10, learning_rate=0.001, val_size=0.3, 
                          early_stop=stop, metric='nrmse')
@@ -262,10 +138,10 @@ class RegressionTests:
         assert est.history_.total_batches == len(est.history_.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
         assert est.history_.total_batches == len(est.history_.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
 
-    @mark.regression
-    @mark.regression_history
-    def test_regression_history_no_val_data_w_metric(self, regression, get_regression_data):        
-        X, y = get_regression_data        
+    @mark.logistic
+    @mark.logistic_history
+    def test_logistic_regression_history_no_val_data_w_metric(self, regression, get_logistic_regression_data):        
+        X, y = get_logistic_regression_data        
         est = regression(epochs=10, metric='mse', val_size=0)
         est.fit(X, y)        
         # Test epoch history
@@ -284,10 +160,10 @@ class RegressionTests:
         assert est.history_.total_batches == len(est.history_.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
         assert est.history_.total_batches == len(est.history_.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
 
-    @mark.regression
-    @mark.regression_history
-    def test_regression_history_w_val_data_w_metric(self, regression, get_regression_data):        
-        X, y = get_regression_data     
+    @mark.logistic
+    @mark.logistic_history
+    def test_logistic_regression_history_w_val_data_w_metric(self, regression, get_logistic_regression_data):        
+        X, y = get_logistic_regression_data     
         stop = EarlyStop()   
         est = regression(epochs=10, learning_rate=0.001, val_size=0.3, metric='mse', early_stop=stop)
         est.fit(X, y)        
@@ -309,31 +185,31 @@ class RegressionTests:
         assert est.history_.total_batches == len(est.history_.batch_log.get('theta')), "number of thetas in log doesn't match total batches"        
         assert est.history_.total_batches == len(est.history_.batch_log.get('train_cost')), "number of train_costs in log doesn't match total batches"        
 
-    @mark.regression
+    @mark.logistic
     @mark.linear_regression
-    def test_linear_regression_name(self, get_regression_data):        
-        X, y = get_regression_data
-        est = LinearRegression()
+    def test_linear_regression_name(self, get_logistic_regression_data):        
+        X, y = get_logistic_regression_data
+        est = LogisticRegression()
         est.fit(X,y)
-        assert est.description == "Linear Regression with Batch Gradient Descent", "incorrect name"
+        assert est.description == "Logistic Regression with Batch Gradient Descent", "incorrect name"
 
-    @mark.regression
+    @mark.logistic
     @mark.linear_regression
     @mark.linear_regression_validation
-    def test_linear_regression_validation(self, get_regression_data):        
-        X, y = get_regression_data        
+    def test_linear_regression_validation(self, get_logistic_regression_data):        
+        X, y = get_logistic_regression_data        
         with pytest.raises(ValueError):
-            est = LinearRegression(metric='accuracy')
+            est = LogisticRegression(metric='mse')
             est.fit(X, y)  
         with pytest.raises(ValueError):
-            est = LinearRegression(cost='binary_cross_entropy')
+            est = LogisticRegression(cost='quadratic')
             est.fit(X, y)              
 
-    @mark.regression
+    @mark.logistic
     @mark.linear_regression
     @mark.linear_regression_predict
-    def test_regression_predict(self, regression, get_regression_data):
-        X, y = get_regression_data                
+    def test_logistic_regression_predict(self, regression, get_logistic_regression_data):
+        X, y = get_logistic_regression_data                
         est = regression(learning_rate = 0.1, epochs=1000)
         with pytest.raises(Exception): # Tests predict w/o first fitting model
             y_pred = est.predict(X)        
@@ -345,12 +221,13 @@ class RegressionTests:
         est.fit(X,y)
         y_pred = est.predict(X)
         assert all(np.equal(y.shape, y_pred.shape)), "y and y_pred have different shapes"  
+        assert np.array_equal(y_pred, y_pred.astype(bool)), "Predictions not equal to zero or one."
 
-    @mark.regression
-    @mark.regression_score
-    def test_regression_score(self, regression, get_regression_data_w_validation, 
+    @mark.logistic
+    @mark.logistic_score
+    def test_logistic_regression_score(self, regression, get_logistic_regression_data_w_validation, 
                                     regression_metric):
-        X, X_test, y, y_test = get_regression_data_w_validation                
+        X, X_test, y, y_test = get_logistic_regression_data_w_validation                
         est = regression(learning_rate = 0.1, epochs=1000, metric=regression_metric)
         with pytest.raises(Exception):
             score = est.score(X, y)
@@ -365,26 +242,4 @@ class RegressionTests:
         score = est.score(X_test, y_test)
         assert isinstance(score, (int,float)), "score is not an int nor a float"  
 
-    @mark.regression
-    @mark.lasso_regression
-    def test_lasso_regression_name(self, get_regression_data):   
-        X, y = get_regression_data     
-        est = LassoRegression()
-        est.fit(X,y)
-        assert est.description == "Lasso Regression with Batch Gradient Descent", "incorrect name"
-
-    @mark.regression
-    @mark.ridge_regression
-    def test_ridge_regression_name(self, get_regression_data): 
-        X, y = get_regression_data       
-        est = RidgeRegression()
-        est.fit(X,y)
-        assert est.description == "Ridge Regression with Batch Gradient Descent", "incorrect name"        
-
-    @mark.regression
-    @mark.elasticnet_regression
-    def test_elasticnet_regression_name(self, get_regression_data):  
-        X, y = get_regression_data      
-        est = ElasticNetRegression()
-        est.fit(X,y)
-        assert est.description == "Elastic Net Regression with Batch Gradient Descent", "incorrect name"        
+   
