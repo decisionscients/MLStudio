@@ -41,15 +41,11 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from mlstudio.supervised.estimator.early_stop import EarlyStop
-from mlstudio.supervised.estimator.optimizer import Standard
-from mlstudio.supervised.estimator.regularizers import Regularizer
+from mlstudio.supervised.estimator.optimizers import Standard
+from mlstudio.supervised.estimator.regularizers import NullRegularizer
 from mlstudio.utils.data_manager import decode
 
 class Algorithm(ABC):
-
-    def __init__(self, optimizer=Standard(), regularizer=Regularizer()):
-        self.optimizer = optimizer
-        self.regularizer = regularizer
 
     @abstractmethod
     def predict(self, X, theta):
@@ -61,10 +57,6 @@ class Algorithm(ABC):
 
     @abstractmethod
     def compute_gradient(self, X, y, y_pred):   
-        pass
-
-    @abstractmethod
-    def update_parameters(self, theta, learning_rate, gradient):
         pass
 
     @abstractmethod
@@ -84,9 +76,9 @@ class Algorithm(ABC):
 class Regression(Algorithm):
     """Computes cost."""
 
-    def __init__(self, optimizer=Standard(), regularizer=Regularizer()):        
-        super(Regression, self).__init__(optimizer=optimizer,
-                                         regularizer=regularizer)
+    def __init__(self, optimizer=Standard()):        
+        self.optimizer = optimizer
+        self.regularizer = NullRegularizer()
 
     def predict(self, X, theta):
         """Computes the prediction.
@@ -108,9 +100,9 @@ class Regression(Algorithm):
         Value error if X and theta have incompatible shapes.
         """
         if X.shape[1] == len(theta):
-            y_pred = X.dot(theta).ravel()
+            y_pred = X.dot(theta)
         elif X.shape[1] == len(theta) - 1:
-            y_pred = (theta[0] + X.dot(theta[1:])).ravel()
+            y_pred = theta[0] + X.dot(theta[1:])
         else:
             raise ValueError("X and parameters theta have incompatible shapes.\
                  X.shape = {xshape}, theta.shape = {thetashape}.".format(
@@ -162,7 +154,8 @@ class Regression(Algorithm):
 
         """
         m = X.shape[0]
-        dW = 1.0/(2.0 * m) * (y_pred-y)**2
+        dZ = y_pred-y
+        dW = 1/m * X.T.dot(dZ)
         dW = dW + self.regularizer.gradient(theta)
         return(dW)   
 
@@ -213,7 +206,8 @@ class Regression(Algorithm):
         """
 
         gradient = self.compute_gradient(X, y, y_pred, theta)
-        theta = self.optimizer.update(learning_rate, gradient, theta)
+        theta = self.optimizer.update(learning_rate=learning_rate, 
+                                     gradient=gradient, theta=theta)
         return gradient, theta
 
 
@@ -223,7 +217,7 @@ class Regression(Algorithm):
 class BinaryClassification(Algorithm):
     """Computes cost."""
 
-    def __init__(self, optimizer=Standard(), regularizer=Regularizer()):        
+    def __init__(self, optimizer=Standard(), regularizer=NullRegularizer()):        
         super(BinaryClassification, self).__init__(optimizer=optimizer,
                                          regularizer=regularizer)
 
@@ -263,9 +257,9 @@ class BinaryClassification(Algorithm):
         Value error if X and theta have incompatible shapes.
         """
         if X.shape[1] == len(theta):
-            z = X.dot(theta).ravel()
+            z = X.dot(theta)
         elif X.shape[1] == len(theta) - 1:
-            z = (theta[0] + X.dot(theta[1:])).ravel()
+            z = theta[0] + X.dot(theta[1:])
         else:
             raise ValueError("X and parameters theta have incompatible shapes.\
                  X.shape = {xshape}, theta.shape = {thetashape}.".format(
@@ -384,7 +378,7 @@ class BinaryClassification(Algorithm):
 class MultiClassification(Algorithm):
     """Computes cost."""
 
-    def __init__(self, optimizer=Standard(), regularizer=Regularizer()):        
+    def __init__(self, optimizer=Standard(), regularizer=NullRegularizer()):        
         super(MultiClassification, self).__init__(optimizer=optimizer,
                                          regularizer=regularizer)
 
@@ -424,9 +418,9 @@ class MultiClassification(Algorithm):
         Value error if X and theta have incompatible shapes.
         """
         if X.shape[1] == len(theta):
-            z = X.dot(theta).ravel()
+            z = X.dot(theta)
         elif X.shape[1] == len(theta) - 1:
-            z = (theta[0] + X.dot(theta[1:])).ravel()
+            z = theta[0] + X.dot(theta[1:])
         else:
             raise ValueError("X and parameters theta have incompatible shapes.\
                  X.shape = {xshape}, theta.shape = {thetashape}.".format(

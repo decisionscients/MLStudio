@@ -18,36 +18,39 @@
 # License: Modified BSD                                                       #
 # Copyright (c) 2019 Decision Scients                                         #
 # =========================================================================== #
-
 """Classes for L1, L2, and Elasticnet Regularization"""
+from abc import ABC, abstractmethod
 import numpy as np
 
-class NullRegularizer(ABC):
-    """Abstract base class for regularizers.
-    
-    Also functions as default regularizer when no regularization is used.
-    """
-
-    def __init__(self):
-        self.callback = "Null Regularizer"
-
+class Regularizer(ABC):
+    """Abstract base class for regularizers."""
     def _validate_hyperparam(self, p):
-        assert isinstance(p, float), "Regularization hyperparameter must be numeric."
+        assert isinstance(p, (int,float)), "Regularization hyperparameter must be numeric."
         assert p >= 0 and p <= 1, "Regularization parameter must be between zero and 1."
     
+    def __call_(self, w):
+        pass
+
+    @abstractmethod
+    def gradient(self, w):
+        pass
+
+
+class NullRegularizer(Regularizer):
+    """The null regularizer for linear regression"""
+
+    def __init__(self):
+        self.name = "Null Regularizer"
+
     def __call__(self, w):
         return 0.0
     
     def gradient(self, w):
         return 0.0
 
- 
-
-
-class L1:
+class L1(Regularizer):
     """ Regularization for Lasso Regression """
-    def __init__(self, alpha):
-        super(L1,self).__init__()
+    def __init__(self, alpha=1):        
         self._alpha = alpha
         self.name = "Lasso Regression (L1)"
     
@@ -60,10 +63,9 @@ class L1:
         return self._alpha * np.sign(w)
 
 
-class L2:
+class L2(Regularizer):
     """ Regularization for Ridge Regression """
-    def __init__(self, alpha):
-        super(L2,self).__init__()
+    def __init__(self, alpha=1):        
         self._alpha = alpha
         self.name = "Ridge Regression (L2)"
     
@@ -76,10 +78,9 @@ class L2:
         return self._alpha * 2.0 * w
 
 
-class ElasticNet:
+class ElasticNet(Regularizer):
     """ Regularization for Elastic Net Regression """
-    def __init__(self, alpha=1.0, ratio=0.5):
-        super(ElasticNet,self).__init__()
+    def __init__(self, alpha=1.0, ratio=0.5):        
         self._alpha = alpha
         self._ratio = ratio
         self.name = "Elastic Net Regression"

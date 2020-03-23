@@ -20,6 +20,7 @@
 # ============================================================================ #
 """Gradient Descent base class, from which regression and classification inherit."""
 from abc import ABC, abstractmethod, ABCMeta
+import copy
 import datetime
 import numpy as np
 import pandas as pd
@@ -32,44 +33,20 @@ import time
 import uuid
 import warnings
 
-from mlstudio.supervised.estimator.algorithms import Regression
 from mlstudio.supervised.estimator.callbacks import CallbackList, Callback
 from mlstudio.supervised.estimator.early_stop import EarlyStop
 from mlstudio.supervised.estimator.monitor import History, Progress, summary
-from mlstudio.supervised.estimator.optimizer import Standard
-from mlstudio.supervised.estimator.regularizers import Regularizer
-from mlstudio.supervised.estimator.scorers import MSE
+from mlstudio.supervised.estimator.optimizers import Standard
+from mlstudio.supervised.estimator.scorers import R2, Accuracy
+from mlstudio.supervised.regression import LinearRegression
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
+from mlstudio.utils.data_analyzer import check_y
+from mlstudio.utils.debugging import GradientCheck
 # --------------------------------------------------------------------------- #
-
-class GradientDescent(ABC, BaseEstimator, RegressorMixin, 
-                      ClassifierMixin, metaclass=ABCMeta):
+#                          GRADIENT DESCENT                                   #
+# --------------------------------------------------------------------------- #
+class GradientDescent(ABC, BaseEstimator):
     """Base class gradient descent estimator."""
-
-    _TASK = "Gradient Descent"
-
-    def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
-                 theta_init=None,  epochs=1000, algorithm=Regression(),
-                 optimizer=Standard(),regularizer=NullRegularizer(), 
-                 scorer=MSE(), early_stop=False, val_size=0.0, 
-                 verbose=False, checkpoint=100, random_state=None):
-
-        # Public parameters
-        self.name = name
-        self.learning_rate = learning_rate
-        self.batch_size = batch_size
-        self.theta_init = theta_init
-        self.epochs = epochs
-        self.algorithm = algorithm
-        self.optimizer = optimizer        
-        self.regularizer = regularizer
-        self.scorer = scorer
-        self.early_stop = early_stop
-        self.val_size = val_size     
-        self.verbose = verbose
-        self.checkpoint = checkpoint
-        self.random_state = random_state
-    
 
     @property
     def set_variant(self):
@@ -84,35 +61,43 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
     @property
     def description(self):
         """Returns the estimator description."""
-        return str(self._TASK + ' with ' + self.variant)       
+        return str(self.algorithm.name + ' with ' + self.variant)       
 
     def _prepare_data(self, X, y):
         """Creates the X design matrix and saves data as attributes."""
         self._X = self._X_val = self._y = self._y_val = None
-        # Add a column of ones to train the intercept term
+        # Prepare sklearn check.
+        check_X_y(X,y)
+        # Convert input to numpy arrays just in case.
         self._X = np.array(X)
-        self._X_design = np.insert(self._X, 0, 1.0, axis=1)  
         self._y = np.array(y)
+        # Add a column of ones to create the X design matrix
+        self._X_design = np.insert(self._X, 0, 1.0, axis=1)          
         # Set aside val_size training observations for validation set 
         if self.val_size:
             self._X_design, self._X_val, self._y, self._y_val = \
                 data_split(self._X_design, self._y, 
                 test_size=self.val_size, random_state=self.random_state)
+        # Designate the number of features and classes (outputs)
+        self.n_classes_ = check_y(self._y)
+        self.n_features_ = self._X_design.shape[1]        
 
     def _evaluate_epoch(self, log=None):
         """Computes training (and validation) costs and scores."""
         log = log or {}
+        # Create copy of scorer to avoid sklearn check_estimator assertion error
+        # Sklearn check_estimator asserts that parameters are immutable during 
+        # fit. Therefore calls to scorer are dissallowed during fit. So, we'll
+        # create a copy of the scorer for internal evaluation. 
+        scorer = copy.copy(self.scorer)
         # Compute costs 
-        y_pred = self.algorithm.predict(self._X_design, self._theta)
+        y_pred = self.predict(self._X_design)
         log['train_cost'] = self.algorithm.compute_cost(self._y, y_pred, self._theta)
+        log['train_score'] = scorer(self._y, y_pred)
         if self.val_size:
-            y_pred_val = self.algorithm.predict(self._X_val, self._theta)
+            y_pred_val = self.predict(self._X_val)
             log['val_cost'] = self.algorithm.compute_cost(self._y_val, y_pred_val, self._theta)        
-        # Compute scores 
-        if self.metric is not None:            
-            log['train_score'] = self.scorer(self._y, y_pred)
-            if self.val_size:
-                log['val_score'] = self.scorer(self._y_val, y_pred_val)
+            log['val_score'] = scorer(self._y_val, y_pred_val)
 
         return log
 
@@ -125,31 +110,39 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
         self._progress = Progress()        
         self._cbks.append(self._progress)
         # Add early stop if object injected.
-        if early_stop:
+        if self.early_stop:
             self._cbks.append(self.early_stop)
         # Initialize all callbacks.
         self._cbks.set_params(self.get_params())
         self._cbks.set_model(self)
     
-    def _init_weights(self):
-        """Initializes weights"""        
+    def _init_weights(self, X, y):
+        """Initializes weights"""       
         if self.theta_init is not None:
             check_array(self.theta_init)
-            self._theta = np.atleast_2d(self.theta_init).reshape(-1,1)
+            if y.ndim == 1:
+                assert self.theta_init.shape == (self.n_features_,), \
+                    "Initial parameters theta must have shape (n_features,)."
+            else:
+                assert self.theta_init.shape == (self.n_features_, self.n_classes_), \
+                    "Initial parameters theta must have shape (n_classes, n_features)."
         else:
-            self.n_features_ = self._X_design.shape[1]
-            self.random_state_ = check_random_state(self.random_state)            
-            self._theta = self.random_state_.randn(self.n_features_).reshape(-1,1)
+            self.random_state_ = check_random_state(self.random_state)  
+            if y.ndim == 1:          
+                self._theta = self.random_state_.randn(self.n_features_)
+            else:
+                self._theta = self.random_state_.randn(self.n_features_, self.n_classes_)
 
     def _begin_training(self, log=None):
         """Performs initializations required at the beginning of training."""
         self._epoch = 0
         self._batch = 0
+        X = log.get('X')
+        y = log.get('y')
         self.converged_ = False
         self.is_fitted_ = False        
-        check_X_y(log.get('X'), log.get('y'))
-        self._prepare_data(log.get('X'), log.get('y'))
-        self._init_weights()   
+        self._prepare_data(X,y)
+        self._init_weights(self._X_design, self._y)   
         self._init_callbacks()
         self._cbks.on_train_begin(log)
         
@@ -157,7 +150,7 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
         """Closes history callout and assign final and best weights."""
         self._cbks.on_train_end()
         self.intercept_ = self._theta[0]
-        self.coef_ = self._theta[1:].ravel()
+        self.coef_ = self._theta[1:]
         self.n_iter_ = self._epoch
         self.is_fitted_ = True
 
@@ -186,6 +179,20 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
     def _end_batch(self, log=None):
         self._cbks.on_batch_end(self._batch, log)
 
+    def _propagate_forward(self, X, y, theta):
+        """Performs forward propagation."""
+        y_pred = self.algorithm.predict(X, theta)
+        J = self.algorithm.compute_cost(y, y_pred, theta)
+        return y_pred, J
+
+    def _propagate_backward(self, X, y, y_pred, theta, learning_rate):
+        """Performs backpropagation of errors through the parameters."""
+        gradient = self.algorithm.compute_gradient(X, y, y_pred, theta)
+        theta = self.optimizer.update(learning_rate=learning_rate,
+                                      gradient=gradient, theta=theta)
+        return gradient, theta
+
+
     def fit(self, X, y):
         """Trains model until stop condition is met.
         
@@ -203,7 +210,7 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
         """
         train_log = {'X': X, 'y': y}
         self._begin_training(train_log)
-        
+
         while (self._epoch < self.epochs and not self.converged_):
 
             self._begin_epoch()
@@ -212,16 +219,21 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
 
                 self._begin_batch()
                 # Perform forward propagation
-                y_pred, J = self.algorithm.propagate_forward(X_batch, y_batch, self._theta)
+                y_pred, J = self._propagate_forward(X_batch, y_batch, self._theta)
                 
-                # Update batch log with weights and cost
+                # Format batch log with weights and cost
                 batch_log = {'batch': self._batch, 'batch_size': X_batch.shape[0],
                              'theta': self._theta.copy(), 'train_cost': J}
 
                 # Perform backward propagation
                 gradient, self._theta = \
-                    self.algorithm.propagate_backward(X_batch, y_batch, y_pred,\
+                    self._propagate_backward(X_batch, y_batch, y_pred,\
                         self._theta, self.learning_rate)
+
+                # Conduct gradient check if required
+                if self.gradient_check:
+                    if self._epoch % self.gradient_check.iterations == 0:
+                        self.gradient_check.check_gradient(X_batch, y_batch, self._theta, self.learning_rate)
 
                 # Update batch log
                 self._end_batch(batch_log)
@@ -232,25 +244,102 @@ class GradientDescent(ABC, BaseEstimator, RegressorMixin,
         self._end_training()
         return self
     
-    def _linear_prediction(self, X):
-        """Computes prediction as linear combination of inputs and thetas."""
-        if X.shape[1] == self._theta.shape[0]:
-            y_pred = X.dot(self._theta)
-        else:
-            if not self.is_fitted_:
-                raise Exception("This %(name)s instance is not fitted "
-                                 "yet" % {'name': type(self).__name__})              
-            y_pred = self.intercept_ + X.dot(self.coef_)
-        return y_pred            
 
-
-    @abstractmethod
     def predict(self, X):
-        pass
+        """Computes prediction.
 
-    @abstractmethod
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+
+        Returns
+        -------
+        y_pred : prediction
+        """
+        # Check is fit had been called
+        check_is_fitted(self)
+
+        # Input validation
+        X = check_array(X)
+
+        return self.algorithm.predict(X, self._theta)
+    
     def score(self, X, y):
-        pass
+        """Computes scores using the scorer parameter.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+
+        y : array_like of shape (n_samples,) or (n_samples, n_classes)
+            The target variable.
+
+        Returns
+        -------
+        score based upon the scorer object.
+        
+        """
+        y_pred = self.predict(X)
+        return self.scorer(y, y_pred)
 
     def summary(self):
         summary(self.history_)
+
+# --------------------------------------------------------------------------- #
+#                     GRADIENT DESCENT REGRESSOR                              #
+# --------------------------------------------------------------------------- #
+class GradientDescentRegressor(GradientDescent, RegressorMixin):
+    """Gradient descent estimator for regression."""
+
+    def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
+                 theta_init=None,  epochs=1000, algorithm=LinearRegression(),
+                 optimizer=Standard(), scorer=R2(), early_stop=False, 
+                 val_size=0.0, verbose=False, checkpoint=100, 
+                 random_state=None, gradient_check=False):
+
+        # Public parameters
+        self.name = name
+        self.learning_rate = learning_rate
+        self.batch_size = batch_size
+        self.theta_init = theta_init
+        self.epochs = epochs
+        self.algorithm = algorithm
+        self.optimizer = optimizer    
+        self.scorer = scorer
+        self.early_stop = early_stop
+        self.val_size = val_size     
+        self.verbose = verbose
+        self.checkpoint = checkpoint
+        self.random_state = random_state
+        self.gradient_check = gradient_check         
+
+
+# # --------------------------------------------------------------------------- #
+# #                     GRADIENT DESCENT CLASSIFIER                             #
+# # --------------------------------------------------------------------------- #
+# class GradientDescentClassifier(GradientDescent, ClassifierMixin):
+#     """Gradient descent estimator for classification."""
+
+#     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
+#                  theta_init=None,  epochs=1000, algorithm=LogisticRegression(),
+#                  optimizer=Standard(), scorer=Accuracy(), early_stop=False, 
+#                  val_size=0.0, verbose=False, checkpoint=100, 
+#                  random_state=None, gradient_check=False):
+
+#         # Public parameters
+#         self.name = name
+#         self.learning_rate = learning_rate
+#         self.batch_size = batch_size
+#         self.theta_init = theta_init
+#         self.epochs = epochs
+#         self.algorithm = algorithm
+#         self.optimizer = optimizer    
+#         self.scorer = scorer
+#         self.early_stop = early_stop
+#         self.val_size = val_size     
+#         self.verbose = verbose
+#         self.checkpoint = checkpoint
+#         self.random_state = random_state
+#         self.gradient_check = gradient_check

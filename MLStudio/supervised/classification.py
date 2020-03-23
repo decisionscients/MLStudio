@@ -20,7 +20,7 @@
 # =========================================================================== #
 """Classes supporting binary and multinomial classification ."""
 import numpy as np
-from sklearn.base import RegressorMixin, ClassifierMixin
+from sklearn.base import ClassifierMixin
 from sklearn.metrics import euclidean_distances
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_X_y, check_is_fitted, check_array
@@ -110,8 +110,8 @@ class LogisticRegression(GradientDescent, ClassifierMixin):
 
     Attributes
     ----------
-    coef_ : array-like shape (n_features,1) or (n_features, n_classes)
-        Coefficient of the features in X. 'coef_' is of shape (n_features,1)
+    coef_ : array-like shape (1, n_features) or (n_classes, n_features)
+        Coefficient of the features in X. 'coef_' is of shape (1, n_features)
         for binary problems. For multi-class problems, 'coef_' corresponds
         to outcome 1 (True) and '-coef_' corresponds to outcome 0 (False).
 

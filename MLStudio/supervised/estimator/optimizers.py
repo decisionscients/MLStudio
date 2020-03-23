@@ -40,16 +40,19 @@ The optimization algorithms include:
 See https://ruder.io/optimizing-gradient-descent/index.html#otherrecentoptimizers
 
 """
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 import numpy as np
 # --------------------------------------------------------------------------  #
 #                                OPTIMIZER                                    #            
 # --------------------------------------------------------------------------  #
 class Optimizer(ABC):
     """Base class for all optimizers."""
+
+    def __init__(self):
+        pass
     
     @abstractmethod
-    def update(self, learning_rate, gradient, theta, **kwargs):
+    def update(self, learning_rate, gradient, theta):
         pass
 
 class Standard(Optimizer):
