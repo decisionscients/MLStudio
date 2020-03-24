@@ -75,7 +75,7 @@ class L2(Regularizer):
 
     def gradient(self, w):
         self._validate_hyperparam(self._alpha)
-        return self._alpha * 2.0 * w
+        return self._alpha * w
 
 
 class ElasticNet(Regularizer):

@@ -29,15 +29,14 @@ from sklearn.utils.estimator_checks import check_estimator
 
 from sklearn.metrics import zero_one_loss, log_loss, mean_squared_error
 from mlstudio.supervised.estimator.callbacks import Callback
+from mlstudio.supervised.estimator.debugging import GradientCheck
 from mlstudio.supervised.estimator.early_stop import EarlyStop
 from mlstudio.supervised.estimator.gradient import GradientDescentRegressor
-from mlstudio.supervised.estimator.optimizers import Standard
 from mlstudio.supervised.estimator.scorers import MSE
 from mlstudio.supervised.regression import LinearRegression
 from mlstudio.supervised.regression import LassoRegression
 from mlstudio.supervised.regression import RidgeRegression
 from mlstudio.supervised.regression import ElasticNetRegression
-from mlstudio.utils.debugging import GradientCheck
 
 # --------------------------------------------------------------------------  #
 
@@ -50,18 +49,12 @@ from mlstudio.utils.debugging import GradientCheck
 def test_sklearn_compatible_estimator(estimator, check):
     check(estimator)
 
-class RegressionTests:
-
-    @mark.regression
-    def test_regression_gradients(self, get_regression_data):
-        X, y = get_regression_data
-        optimizer = Standard()        
-        regularizer = NullRegularizer()
-        algorithm = Regression(optimizer=optimizer, regularizer=regularizer)
-        gradient_check = GradientCheck(algorithm)
-        est = LinearRegression(algorithm, gradient_check)
-        est.fit(X, y)
-        failures = est.gradient_check.check_results()
-        assert failures == 0, "Got some gradient problems."
-
-        
+@mark.gradient_check
+@mark.parametrize("algorithm", [LinearRegression(), LassoRegression(),
+                                RidgeRegression(), ElasticNetRegression()])
+def test_regression_gradients(get_regression_data, algorithm):
+    X, y = get_regression_data    
+    gradient_check = GradientCheck()
+    est = GradientDescentRegressor(algorithm=algorithm, gradient_check=GradientCheck())        
+    est.fit(X, y)
+    

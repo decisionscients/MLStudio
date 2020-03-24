@@ -38,35 +38,22 @@ The core behaviors exposed for each class include:
 from abc import ABC, abstractmethod
 import numpy as np
 
-from mlstudio.supervised.estimator.optimizers import Standard
 from mlstudio.supervised.estimator.regularizers import NullRegularizer
 from mlstudio.supervised.estimator.regularizers import L1, L2, ElasticNet
 from mlstudio.utils.data_manager import decode
 
-class Algorithm(ABC):
-
-    @abstractmethod
-    def predict(self, X, theta):
-        pass
-
-    @abstractmethod
-    def compute_cost(self, y, y_pred):
-        pass
-
-    @abstractmethod
-    def compute_gradient(self, X, y, y_pred):   
-        pass
-
-
 # --------------------------------------------------------------------------- #
 #                          REGRESSION ALGORITHM                               #
 # --------------------------------------------------------------------------- #
-class Regression(Algorithm):
+class Regression(ABC):
     """Base class for regression subclasses."""
 
     def __init__(self):      
         raise Exception("Instantiation of the Regression base class is prohibited.")  
         
+    def _validate_hyperparam(self, p):
+        assert isinstance(p, (int,float)), "Regularization hyperparameter must be numeric."
+        assert p >= 0 and p <= 1, "Regularization parameter must be between zero and 1."
 
     def predict(self, X, theta):
         """Computes the prediction.
@@ -97,6 +84,7 @@ class Regression(Algorithm):
                      xshape=X.shape, thetashape = theta.shape))
         return y_pred
 
+    @abstractmethod
     def compute_cost(self, y, y_pred, theta):
         """Computes the mean squared error cost.
 
@@ -116,7 +104,63 @@ class Regression(Algorithm):
         cost : The quadratic cost 
 
         """
-        J = 1/2 * np.mean(y-y_pred)**2 + self.regularizer(theta)
+        pass
+
+    @abstractmethod
+    def compute_gradient(self, X, y, y_pred, theta):
+        """Computes quadratic costs gradient with respect to weights.
+        
+        Parameters
+        ----------
+        X : array of shape (m_observations, n_features)
+            Input data
+
+        y : array of shape (n_features,)
+            Ground truth target values
+
+        y_pred : array of shape (n_features,)
+            Predictions 
+
+        theta : array of shape (n_features,)  
+            The model parameters                        
+
+        Returns
+        -------
+        gradient of the cost function w.r.t. the parameters.
+
+        """
+        pass
+   
+
+# --------------------------------------------------------------------------- #
+#                          LINEAR REGRESSION                                  #
+# --------------------------------------------------------------------------- #    
+class LinearRegression(Regression):
+    """Linear Regression algorithm."""
+    
+    def __init__(self):
+        self.name = "Linear Regression"
+
+    def compute_cost(self, y, y_pred, theta):
+        """Computes the mean squared error cost.
+
+        Parameters
+        ----------
+        y : array of shape (n_features,)
+            Ground truth target values
+
+        y_pred : array of shape (n_features,)
+            Predictions 
+
+        theta : array of shape (n_features,)  
+            The model parameters            
+
+        Returns
+        -------
+        cost : The quadratic cost 
+
+        """
+        J = np.mean(0.5 * (y-y_pred)**2)
         return J
 
     def compute_gradient(self, X, y, y_pred, theta):
@@ -143,19 +187,8 @@ class Regression(Algorithm):
         """
         m = X.shape[0]
         dZ = y_pred-y
-        dW = 1/m * X.T.dot(dZ)
-        dW = dW + self.regularizer.gradient(theta)
-        return(dW)   
-
-# --------------------------------------------------------------------------- #
-#                          LINEAR REGRESSION                                  #
-# --------------------------------------------------------------------------- #    
-class LinearRegression(Regression):
-    """Linear Regression algorithm."""
-    
-    def __init__(self):
-        self.regularizer = NullRegularizer()
-        self.name = "Linear Regression"
+        dW = float(1./m) * X.T.dot(dZ) 
+        return(dW)           
 
 # --------------------------------------------------------------------------- #
 #                          LASSO REGRESSION                                   #
@@ -164,8 +197,60 @@ class LassoRegression(Regression):
     """Lasso Regression algorithm."""
     
     def __init__(self, alpha=1):
-        self.regularizer = L1(alpha=alpha)
+        self.alpha = alpha
         self.name = "Lasso Regression"
+
+    def compute_cost(self, y, y_pred, theta):
+        """Computes the mean squared error cost.
+
+        Parameters
+        ----------
+        y : array of shape (n_features,)
+            Ground truth target values
+
+        y_pred : array of shape (n_features,)
+            Predictions 
+
+        theta : array of shape (n_features,)  
+            The model parameters            
+
+        Returns
+        -------
+        cost : The quadratic cost 
+
+        """
+        self._validate_hyperparam(self.alpha)
+        m = y.shape[0]
+        J_reg = (self.alpha / m) * np.linalg.norm(theta, ord=1)
+        J = np.mean(0.5 * (y-y_pred)**2) + J_reg
+        return J
+
+    def compute_gradient(self, X, y, y_pred, theta):
+        """Computes quadratic costs gradient with respect to weights.
+        
+        Parameters
+        ----------
+        X : array of shape (m_observations, n_features)
+            Input data
+
+        y : array of shape (n_features,)
+            Ground truth target values
+
+        y_pred : array of shape (n_features,)
+            Predictions 
+
+        theta : array of shape (n_features,)  
+            The model parameters                        
+
+        Returns
+        -------
+        gradient of the cost function w.r.t. the parameters.
+
+        """
+        m = X.shape[0]
+        dZ = y_pred-y
+        dW = 1/m * (X.T.dot(dZ) + self.alpha * np.sign(theta))
+        return(dW)           
 
 # --------------------------------------------------------------------------- #
 #                          RIDGE REGRESSION                                   #
@@ -174,8 +259,60 @@ class RidgeRegression(Regression):
     """Ridge Regression algorithm."""
     
     def __init__(self, alpha=1):
-        self.regularizer = L2(alpha=alpha)
-        self.name = "Ridge Regression"                    
+        self.alpha=alpha
+        self.name = "Ridge Regression"    
+
+    def compute_cost(self, y, y_pred, theta):
+        """Computes the mean squared error cost.
+
+        Parameters
+        ----------
+        y : array of shape (n_features,)
+            Ground truth target values
+
+        y_pred : array of shape (n_features,)
+            Predictions 
+
+        theta : array of shape (n_features,)  
+            The model parameters            
+
+        Returns
+        -------
+        cost : The quadratic cost 
+
+        """
+        self._validate_hyperparam(self.alpha)
+        m = y.shape[0]
+        J_reg = (self.alpha / (2*m)) * np.linalg.norm(theta)**2
+        J = np.mean(0.5 * (y-y_pred)**2) + J_reg
+        return J
+
+    def compute_gradient(self, X, y, y_pred, theta):
+        """Computes quadratic costs gradient with respect to weights.
+        
+        Parameters
+        ----------
+        X : array of shape (m_observations, n_features)
+            Input data
+
+        y : array of shape (n_features,)
+            Ground truth target values
+
+        y_pred : array of shape (n_features,)
+            Predictions 
+
+        theta : array of shape (n_features,)  
+            The model parameters                        
+
+        Returns
+        -------
+        gradient of the cost function w.r.t. the parameters.
+
+        """
+        m = X.shape[0]
+        dZ = y_pred-y
+        dW = 1/m * (X.T.dot(dZ) + self.alpha * theta)
+        return(dW)                         
 
 # --------------------------------------------------------------------------- #
 #                        ELASTIC NET REGRESSION                               #
@@ -184,5 +321,64 @@ class ElasticNetRegression(Regression):
     """Elastic Net Regression algorithm."""
     
     def __init__(self, alpha=1, ratio=0.5):
-        self.regularizer = ElasticNet(alpha=alpha, ratio=ratio)
+        self.alpha=alpha
+        self.ratio=ratio
         self.name = "ElasticNet Regression"           
+
+    def compute_cost(self, y, y_pred, theta):
+        """Computes the mean squared error cost.
+
+        Parameters
+        ----------
+        y : array of shape (n_features,)
+            Ground truth target values
+
+        y_pred : array of shape (n_features,)
+            Predictions 
+
+        theta : array of shape (n_features,)  
+            The model parameters            
+
+        Returns
+        -------
+        cost : The quadratic cost 
+
+        """
+        m = y.shape[0]
+        self._validate_hyperparam(self.alpha)
+        self._validate_hyperparam(self.ratio)
+        l1_contr = self.ratio * np.linalg.norm(theta, ord=1)
+        l2_contr = (1 - self.ratio) * 0.5 * np.linalg.norm(theta)**2        
+        J_reg = float(1./m) * self.alpha * (l1_contr + l2_contr)
+        J = np.mean(0.5 * (y-y_pred)**2) + J_reg
+        return J
+
+    def compute_gradient(self, X, y, y_pred, theta):
+        """Computes quadratic costs gradient with respect to weights.
+        
+        Parameters
+        ----------
+        X : array of shape (m_observations, n_features)
+            Input data
+
+        y : array of shape (n_features,)
+            Ground truth target values
+
+        y_pred : array of shape (n_features,)
+            Predictions 
+
+        theta : array of shape (n_features,)  
+            The model parameters                        
+
+        Returns
+        -------
+        gradient of the cost function w.r.t. the parameters.
+
+        """
+        m = X.shape[0]
+        l1_contr = self.ratio * np.sign(theta)
+        l2_contr = (1 - self.ratio) * theta
+        alpha = np.asarray(self.alpha, dtype='float64')         
+        dZ = y_pred-y
+        dW = 1/m * (X.T.dot(dZ) + np.multiply(alpha, np.add(l1_contr, l2_contr)))
+        return(dW)               

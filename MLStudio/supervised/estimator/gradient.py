@@ -35,13 +35,12 @@ import warnings
 
 from mlstudio.supervised.estimator.callbacks import CallbackList, Callback
 from mlstudio.supervised.estimator.early_stop import EarlyStop
+from mlstudio.supervised.estimator.debugging import GradientCheck
 from mlstudio.supervised.estimator.monitor import History, Progress, summary
-from mlstudio.supervised.estimator.optimizers import Standard
 from mlstudio.supervised.estimator.scorers import R2, Accuracy
 from mlstudio.supervised.regression import LinearRegression
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
 from mlstudio.utils.data_analyzer import check_y
-from mlstudio.utils.debugging import GradientCheck
 # --------------------------------------------------------------------------- #
 #                          GRADIENT DESCENT                                   #
 # --------------------------------------------------------------------------- #
@@ -49,7 +48,7 @@ class GradientDescent(ABC, BaseEstimator):
     """Base class gradient descent estimator."""
 
     @property
-    def set_variant(self):
+    def variant(self):
         if self.batch_size is None:
             variant = 'Batch Gradient Descent'
         elif self.batch_size == 1:
@@ -61,7 +60,7 @@ class GradientDescent(ABC, BaseEstimator):
     @property
     def description(self):
         """Returns the estimator description."""
-        return str(self.algorithm.name + ' with ' + self.variant)       
+        return self.algorithm.name + ' with ' + self.variant       
 
     def _prepare_data(self, X, y):
         """Creates the X design matrix and saves data as attributes."""
@@ -112,6 +111,9 @@ class GradientDescent(ABC, BaseEstimator):
         # Add early stop if object injected.
         if self.early_stop:
             self._cbks.append(self.early_stop)
+        # Add gradient checking if object injected.
+        if self.gradient_check:
+            self._cbks.append(self.gradient_check)        
         # Initialize all callbacks.
         self._cbks.set_params(self.get_params())
         self._cbks.set_model(self)
@@ -164,6 +166,8 @@ class GradientDescent(ABC, BaseEstimator):
         """Performs end-of-epoch evaluation and scoring."""
         log = log or {}
         # Update log with current learning rate and parameters theta
+        log['X'] = self._X_design
+        log['y'] = self._y
         log['epoch'] = self._epoch
         log['learning_rate'] = self.learning_rate
         log['theta'] = self._theta.copy()     
@@ -178,20 +182,6 @@ class GradientDescent(ABC, BaseEstimator):
 
     def _end_batch(self, log=None):
         self._cbks.on_batch_end(self._batch, log)
-
-    def _propagate_forward(self, X, y, theta):
-        """Performs forward propagation."""
-        y_pred = self.algorithm.predict(X, theta)
-        J = self.algorithm.compute_cost(y, y_pred, theta)
-        return y_pred, J
-
-    def _propagate_backward(self, X, y, y_pred, theta, learning_rate):
-        """Performs backpropagation of errors through the parameters."""
-        gradient = self.algorithm.compute_gradient(X, y, y_pred, theta)
-        theta = self.optimizer.update(learning_rate=learning_rate,
-                                      gradient=gradient, theta=theta)
-        return gradient, theta
-
 
     def fit(self, X, y):
         """Trains model until stop condition is met.
@@ -218,22 +208,22 @@ class GradientDescent(ABC, BaseEstimator):
             for X_batch, y_batch in batch_iterator(self._X_design, self._y, batch_size=self.batch_size):
 
                 self._begin_batch()
-                # Perform forward propagation
-                y_pred, J = self._propagate_forward(X_batch, y_batch, self._theta)
+                
+                # Compute prediction
+                y_pred = self.algorithm.predict(X_batch, self._theta)
+
+                # Compute costs
+                J = self.algorithm.compute_cost(y_batch, y_pred, self._theta)                
                 
                 # Format batch log with weights and cost
                 batch_log = {'batch': self._batch, 'batch_size': X_batch.shape[0],
                              'theta': self._theta.copy(), 'train_cost': J}
 
-                # Perform backward propagation
-                gradient, self._theta = \
-                    self._propagate_backward(X_batch, y_batch, y_pred,\
-                        self._theta, self.learning_rate)
+                # Compute gradient
+                gradient = self.algorithm.compute_gradient(X_batch, y_batch, y_pred, self._theta)
 
-                # Conduct gradient check if required
-                if self.gradient_check:
-                    if self._epoch % self.gradient_check.iterations == 0:
-                        self.gradient_check.check_gradient(X_batch, y_batch, self._theta, self.learning_rate)
+                # Update parameters.
+                self._theta = self._theta - self.learning_rate * gradient
 
                 # Update batch log
                 self._end_batch(batch_log)
@@ -295,9 +285,8 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
 
     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
                  theta_init=None,  epochs=1000, algorithm=LinearRegression(),
-                 optimizer=Standard(), scorer=R2(), early_stop=False, 
-                 val_size=0.0, verbose=False, checkpoint=100, 
-                 random_state=None, gradient_check=False):
+                 scorer=R2(), early_stop=False, val_size=0.0, verbose=False, 
+                 checkpoint=100, random_state=None, gradient_check=False):
 
         # Public parameters
         self.name = name
@@ -306,7 +295,6 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
         self.theta_init = theta_init
         self.epochs = epochs
         self.algorithm = algorithm
-        self.optimizer = optimizer    
         self.scorer = scorer
         self.early_stop = early_stop
         self.val_size = val_size     
