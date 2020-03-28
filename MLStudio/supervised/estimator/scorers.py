@@ -22,10 +22,11 @@
 from abc import ABC, abstractmethod
 import math
 import numpy as np
+from sklearn.base import BaseEstimator
 
 from mlstudio.utils.data_manager import decode
 
-class Metric(ABC):
+class Scorer(ABC, BaseEstimator):
     """Abstract base class for all metrics."""
 
     @abstractmethod
@@ -38,7 +39,7 @@ class Metric(ABC):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
-class RegressionScorer(Metric):
+class RegressionScorer(Scorer):
     """Base class for regression metrics."""
 
     @abstractmethod
@@ -51,7 +52,7 @@ class RegressionScorer(Metric):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
-class ClassificationScorer(Metric):
+class ClassificationScorer(Scorer):
     """Base class for classification metrics."""
 
     @abstractmethod

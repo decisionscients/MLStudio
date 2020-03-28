@@ -21,15 +21,15 @@
 # =========================================================================== #
 
 from abc import ABC, abstractmethod, ABCMeta
-
+import copy
 import numpy as np
-
+from sklearn.base import BaseEstimator
 from mlstudio.supervised.estimator.callbacks import Callback
 
 # --------------------------------------------------------------------------- #
 #                              EARLY STOP                                     #
 # --------------------------------------------------------------------------- #
-class EarlyStop(Callback):
+class EarlyStop(Callback, BaseEstimator):
     """Stops training if performance hasn't improved.
     
     Stops training if performance hasn't improved. Improvement is measured 
@@ -48,6 +48,9 @@ class EarlyStop(Callback):
         'val_cost': Validation set costs
         'val_score': Validation set scores based upon the model's metric parameter
 
+    val_size : float
+        The proportion of the dataset to allocate to validation set.        
+
     precision : float, optional (default=0.01)
         The factor by which performance is considered to have improved. For 
         instance, a value of 0.01 means that performance must have improved
@@ -58,10 +61,11 @@ class EarlyStop(Callback):
         stop training.    
     """
 
-    def __init__(self, early_stop=True, monitor='val_score', precision=0.01, patience=10):
+    def __init__(self, monitor='val_score', val_size=0.3, precision=0.01, patience=10):
         super(EarlyStop, self).__init__()
-        self.early_stop = early_stop
+        self.name = "Early Stop"
         self.monitor = monitor
+        self.val_size = val_size
         self.precision = precision
         self.patience = patience
         self.n_iter_ = 0
@@ -83,11 +87,10 @@ class EarlyStop(Callback):
             raise ValueError("precision must be between 0 and 1. A good default is 0.01 or 1%.")
         elif not isinstance(self.patience, (int)):
             raise TypeError("patience must be an integer.")
-        elif 'score' in self.monitor and self.model.metric is None:
+        elif 'score' in self.monitor and self.model.scorer is None:
             raise ValueError("'score' has been selected for evaluation; however"
-                             " no scoring metric has been provided for the model. "
-                             "Either change the metric in the EarlyStop class to "
-                             "'train_cost' or 'val_cost', or add a metric to the model.")
+                             " no scorer has been designated for the model. "
+                             "Monitor cost or add a scorer to the estimator.")
 
 
     def on_train_begin(self, logs=None):        
@@ -99,26 +102,25 @@ class EarlyStop(Callback):
             Contains no information
         """
         super(EarlyStop, self).on_train_begin()
-        if self.early_stop:
-            logs = logs or {}
-            self._validate()
-            # We evaluate improvement against the prior metric plus or minus a
-            # margin given by precision * the metric. Whether we add or subtract the margin
-            # is based upon the metric. For metrics that increase as they improve
-            # we add the margin, otherwise we subtract the margin.  Each metric
-            # has a bit called a precision factor that is -1 if we subtract the 
-            # margin and 1 if we add it. The following logic extracts the precision
-            # factor for the metric and multiplies it by the precision for the 
-            # improvement calculation.
-            if 'score' in self.monitor:
-                scorer = self.model.scorer_
-                self._better = scorer.better
-                self.best_performance_ = scorer.worst
-                self.precision *= scorer.precision_factor
-            else:
-                self._better = np.less
-                self.best_performance_ = np.Inf
-                self.precision *= -1 # Bit always -1 since it improves negatively
+        logs = logs or {}
+        self._validate()
+        # We evaluate improvement against the prior metric plus or minus a
+        # margin given by precision * the metric. Whether we add or subtract the margin
+        # is based upon the metric. For metrics that increase as they improve
+        # we add the margin, otherwise we subtract the margin.  Each metric
+        # has a bit called a precision factor that is -1 if we subtract the 
+        # margin and 1 if we add it. The following logic extracts the precision
+        # factor for the metric and multiplies it by the precision for the 
+        # improvement calculation.
+        if 'score' in self.monitor:
+            scorer = copy.copy(self.model.scorer)
+            self._better = scorer.better
+            self.best_performance_ = scorer.worst
+            self.precision *= scorer.precision_factor
+        else:
+            self._better = np.less
+            self.best_performance_ = np.Inf
+            self.precision *= -1 # Bit always -1 since it improves negatively
 
     def on_epoch_end(self, epoch, logs=None):
         """Determines whether convergence has been achieved.
@@ -137,32 +139,30 @@ class EarlyStop(Callback):
         Bool if True convergence has been achieved. 
 
         """
-        if self.early_stop:
-            logs = logs or {}
-            # Obtain current cost or score
-            current = logs.get(self.monitor)
+        
+        logs = logs or {}
+        # Obtain current cost or score
+        current = logs.get(self.monitor)
 
-            # Handle the first iteration
-            if self.best_performance_ in [np.Inf,-np.Inf]:
-                self._iter_no_improvement = 0
-                self.best_performance_ = current
-                self.best_weights_ = logs.get('theta')
-                self.converged_ = False
-            # Evaluate performance
-            elif self._better(current, 
-                                (self.best_performance_+self.best_performance_ \
-                                    *self.precision)):            
-                self._iter_no_improvement = 0
-                self.best_performance_ = current
-                self.best_weights_ = logs.get('theta')
-                self.converged_=False
-            else:
-                self._iter_no_improvement += 1
-                if self._iter_no_improvement == self.patience:
-                    self.converged_ = True            
-            self.model.converged_ = self.converged_                     
+        # Handle the first iteration
+        if self.best_performance_ in [np.Inf,-np.Inf]:
+            self._iter_no_improvement = 0
+            self.best_performance_ = current
+            self.best_weights_ = logs.get('theta')
+            self.converged_ = False
+        # Evaluate performance
+        elif self._better(current, 
+                            (self.best_performance_+self.best_performance_ \
+                                *self.precision)):            
+            self._iter_no_improvement = 0
+            self.best_performance_ = current
+            self.best_weights_ = logs.get('theta')
+            self.converged_=False
         else:
-            self.model.converged_ = False
+            self._iter_no_improvement += 1
+            if self._iter_no_improvement == self.patience:
+                self.converged_ = True            
+        self.model.converged_ = self.converged_                     
 
 
 

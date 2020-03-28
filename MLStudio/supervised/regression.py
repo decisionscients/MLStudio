@@ -37,15 +37,12 @@ The core behaviors exposed for each class include:
 """
 from abc import ABC, abstractmethod
 import numpy as np
-
-from mlstudio.supervised.estimator.regularizers import NullRegularizer
-from mlstudio.supervised.estimator.regularizers import L1, L2, ElasticNet
-from mlstudio.utils.data_manager import decode
+from sklearn.base import BaseEstimator
 
 # --------------------------------------------------------------------------- #
 #                          REGRESSION ALGORITHM                               #
 # --------------------------------------------------------------------------- #
-class Regression(ABC):
+class Regression(ABC, BaseEstimator):
     """Base class for regression subclasses."""
 
     def __init__(self):      

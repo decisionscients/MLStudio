@@ -72,11 +72,12 @@ class GradientDescent(ABC, BaseEstimator):
         self._y = np.array(y)
         # Add a column of ones to create the X design matrix
         self._X_design = np.insert(self._X, 0, 1.0, axis=1)          
-        # Set aside val_size training observations for validation set 
-        if self.val_size:
-            self._X_design, self._X_val, self._y, self._y_val = \
-                data_split(self._X_design, self._y, 
-                test_size=self.val_size, random_state=self.random_state)
+        # If early stopping, set aside a proportion of the data for the validation set
+        if self.early_stop:
+            if self.early_stop.val_size:
+                self._X_design, self._X_val, self._y, self._y_val = \
+                    data_split(self._X_design, self._y, 
+                    test_size=self.early_stop.val_size, random_state=self.random_state)
         # Designate the number of features and classes (outputs)
         self.n_classes_ = check_y(self._y)
         self.n_features_ = self._X_design.shape[1]        
@@ -93,10 +94,11 @@ class GradientDescent(ABC, BaseEstimator):
         y_pred = self.predict(self._X_design)
         log['train_cost'] = self.algorithm.compute_cost(self._y, y_pred, self._theta)
         log['train_score'] = scorer(self._y, y_pred)
-        if self.val_size:
-            y_pred_val = self.predict(self._X_val)
-            log['val_cost'] = self.algorithm.compute_cost(self._y_val, y_pred_val, self._theta)        
-            log['val_score'] = scorer(self._y_val, y_pred_val)
+        if self.early_stop:
+            if self.early_stop.val_size:
+                y_pred_val = self.predict(self._X_val)
+                log['val_cost'] = self.algorithm.compute_cost(self._y_val, y_pred_val, self._theta)        
+                log['val_score'] = scorer(self._y_val, y_pred_val)
 
         return log
 
@@ -274,8 +276,8 @@ class GradientDescent(ABC, BaseEstimator):
         y_pred = self.predict(X)
         return self.scorer(y, y_pred)
 
-    def summary(self):
-        summary(self.history_)
+    def summary(self, features=None):
+        summary(self.history_, features)
 
 # --------------------------------------------------------------------------- #
 #                     GRADIENT DESCENT REGRESSOR                              #
@@ -285,8 +287,8 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
 
     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
                  theta_init=None,  epochs=1000, algorithm=LinearRegression(),
-                 scorer=R2(), early_stop=False, val_size=0.0, verbose=False, 
-                 checkpoint=100, random_state=None, gradient_check=False):
+                 scorer=R2(), early_stop=False, verbose=False, checkpoint=100, 
+                 random_state=None, gradient_check=False):
 
         # Public parameters
         self.name = name
@@ -297,7 +299,6 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
         self.algorithm = algorithm
         self.scorer = scorer
         self.early_stop = early_stop
-        self.val_size = val_size     
         self.verbose = verbose
         self.checkpoint = checkpoint
         self.random_state = random_state

@@ -24,7 +24,10 @@
 import datetime
 import numpy as np
 import types
+from collections import OrderedDict 
+
 from mlstudio.supervised.estimator.callbacks import Callback
+from mlstudio.utils.print import Printer
 
 # --------------------------------------------------------------------------- #
 #                             HISTORY CLASS                                   #
@@ -118,9 +121,7 @@ class Progress(Callback):
 #                                SUMMARY                                      #
 # --------------------------------------------------------------------------- #
 
-center = 25
-
-def summary(history):
+def summary(history, features=None):
     """Summarizes statistics for model.
 
     Parameters
@@ -128,79 +129,56 @@ def summary(history):
     history : history object
         history object containing data and statistics from training.
     """
-    metric = history.params.get('metric', "")
+    # ----------------------------------------------------------------------- #
+    printer = Printer()
+    optimization_summary = {'Name': history.model.description,
+                            'Start': str(history.start),
+                            'End': str(history.end),
+                            'Duration': str(history.duration) + " seconds.",
+                            'Epochs': str(history.total_epochs),
+                            'Batches': str(history.total_batches)}
+    printer.print_dictionary(optimization_summary, "Optimization Summary")
 
-    print("\nOptimization Summary")
-    print("                     Name: " + history.params.get('name'))
-    print("                    Start: " + str(history.start))
-    print("                      End: " + str(history.end))
-    print("                 Duration: " + str(history.duration) + " seconds.")
-    print("                   Epochs: " + str(history.total_epochs))
-    print("                  Batches: " + str(history.total_batches))
-    print("\n")
-    print("Performance Summary")
-    print("      Final Training Loss: " +
-          str(round(history.epoch_log.get('train_cost')[-1],4)))
-    if history.epoch_log.get('train_score'):
-        print("     Final Training Score: " +\
-             str(round(history.epoch_log.get('train_score')[-1],4))
-              + " " + history.params.get('metric'))
-    if history.epoch_log.get('val_cost'):
-        print("    Final Validation Loss: " +
-              str(round(history.epoch_log.get('val_cost')[-1],4)))
-    if history.epoch_log.get('val_score'):
-        print("   Final Validation Score: " + \
-            str(round(history.epoch_log.get('val_score')[-1],4))
-                + " " + metric)
-    if history.epoch_log.get('theta')[-1].shape[0] < 10:
-        print("          Final Intercept: " + str(history.epoch_log.get('theta')[-1][0]))
-        print("       Final Coefficients:\t " +\
-            str(history.epoch_log.get('theta')[-1][1:]).replace('\n','\n\t\t\t'))
-    print("\nModel Parameters")
+    # ----------------------------------------------------------------------- #
+    if history.model.early_stop:    
+        performance_summary = \
+            {'Final Training Loss': str(round(history.epoch_log.get('train_cost')[-1],4)),
+            'Final Training Score' : str(round(history.epoch_log.get('train_score')[-1],4))
+                + " " + history.model.scorer.name,
+            'Final Validation Loss': str(round(history.epoch_log.get('val_cost')[-1],4)),
+            'Final Validation Score': str(round(history.epoch_log.get('val_score')[-1],4))
+                    + " " + history.model.scorer.name}
+    else:
+        performance_summary = \
+            {'Final Training Loss': str(round(history.epoch_log.get('train_cost')[-1],4)),
+            'Final Training Score' : str(round(history.epoch_log.get('train_score')[-1],4))
+                + " " + history.model.scorer.name}
 
-    for p, v in history.params.items():
-        label_length = len(p)
-        spaces = center - label_length
-        if isinstance(v, (str, bool, int, list, np.ndarray, types.FunctionType, float)) \
-                or v is None:
-            p = " " * spaces + p + ": "
-            # If v is a function type, it is the lambda function that
-            # initializes the regularizer to zeros if the parameter
-            # is None. If this is the case, we'll print "None" for
-            # this parameter.
-            if isinstance(v, types.FunctionType):
-                v = ""
-            print(p + str(v))
-        else:
-            _recur(p, v)
+    printer.print_dictionary(performance_summary, "Performance Summary")
+    
+    # --------------------------------------------------------------------------- #
+    if features is None:
+        features = []
+        for i in np.arange(len(history.model.coef_)):
+            features.append("Feature_" + str(i))
 
-    print("\nData")
-    print("        Num. Observations: " +\
-             str(history.model.X.shape[0]))
-    print("            Num. Features: " +\
-             str(history.model.X.shape[1]-1))
-
-
-def _recur(callable_type, callable_object):
-    callable_name = callable_object.name
-    spaces = center - len(callable_type)
-    callable_type = " " * spaces + callable_type + ":"
-    print(callable_type, callable_name)
-    config = callable_object.get_params()
-    if len(config) > 0:
-        for k, v in config.items():
-            if isinstance(v, (str, bool, int, list, np.ndarray, types.FunctionType, float)) \
-                    or v is None:
-                spaces = center - len(k)
-                k = " " * spaces + k + ": "
-                # If v is a function type, it is the lambda function that
-                # initializes the regularizer to zeros if the parameter
-                # is None. If this is the case, we'll print "None" for
-                # this parameter.
-                if isinstance(v, types.FunctionType):
-                    v = None
-                print(k + str(v))
+    theta = OrderedDict()
+    theta['Intercept'] = str(round(history.model.intercept_, 4))
+    for k, v in zip(features, history.model.coef_):
+        theta[k]=str(round(v,4))
+    printer.print_dictionary(theta, "Model Parameters")
+    # --------------------------------------------------------------------------- #
+    hyperparameters = OrderedDict()
+    def get_params(o):
+        params = o.get_params()
+        for k, v in params.items():
+            if isinstance(v, (str, bool, int, float)) or v is None:
+                k = o.__class__.__name__ + '__' + k
+                hyperparameters[k] = str(v)
             else:
-                _recur(k, v)
+                pass
+    get_params(history.model)
+    printer.print_dictionary(hyperparameters, "Model HyperParameters")
 
+    #printer.print_dictionary(hyperparameters, "Model HyperParameters")
         

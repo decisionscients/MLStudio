@@ -46,6 +46,11 @@ def get_regression_data():
     return X, y
 
 @fixture(scope="session")
+def get_regression_data_features():
+    data = datasets.load_boston()
+    return data['feature_names']
+
+@fixture(scope="session")
 def get_regression_data_w_validation(get_regression_data):
     X, y = get_regression_data
     X_train, X_test, y_train, y_test = train_test_split(

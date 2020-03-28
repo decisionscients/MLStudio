@@ -39,16 +39,22 @@ from mlstudio.supervised.regression import RidgeRegression
 from mlstudio.supervised.regression import ElasticNetRegression
 
 # --------------------------------------------------------------------------  #
+#                          TEST ALGORITHMS                                    #
+# --------------------------------------------------------------------------  #
 
 @mark.regression
-@mark.regression_sklearn
+@mark.regression_algorithms
 @parametrize_with_checks([GradientDescentRegressor(algorithm=LinearRegression()),
                           GradientDescentRegressor(algorithm=LassoRegression()),
                           GradientDescentRegressor(algorithm=RidgeRegression()),
                           GradientDescentRegressor(algorithm=ElasticNetRegression())])
-def test_sklearn_compatible_estimator(estimator, check):
+def test_regression_algorithms(estimator, check):
     check(estimator)
 
+# --------------------------------------------------------------------------  #
+#                          TEST GRADIENTS                                     #
+# --------------------------------------------------------------------------  #
+@mark.regression
 @mark.gradient_check
 @mark.parametrize("algorithm", [LinearRegression(), LassoRegression(),
                                 RidgeRegression(), ElasticNetRegression()])
@@ -58,3 +64,32 @@ def test_regression_gradients(get_regression_data, algorithm):
     est = GradientDescentRegressor(algorithm=algorithm, gradient_check=GradientCheck())        
     est.fit(X, y)
     
+# --------------------------------------------------------------------------  #
+#                              TEST VARIANTS                                  #
+# --------------------------------------------------------------------------  #    
+@mark.regression
+@mark.regression_variants
+@parametrize_with_checks([GradientDescentRegressor(algorithm=LinearRegression()),
+                          GradientDescentRegressor(algorithm=LassoRegression(), batch_size=1),
+                          GradientDescentRegressor(algorithm=RidgeRegression(), batch_size=32)])
+def test_regression_variants(estimator, check):
+    check(estimator)
+
+# --------------------------------------------------------------------------  #
+#                              TEST EARLYSTOP                                 #
+# --------------------------------------------------------------------------  #        
+@mark.regression
+@mark.regression_early_stop
+@parametrize_with_checks([GradientDescentRegressor(algorithm=LinearRegression(), early_stop=EarlyStop())])
+def test_regression_early_stop(estimator, check):
+    check(estimator)
+
+@mark.regression
+@mark.regression_early_stop
+def test_regression_early_stop_II(get_regression_data, get_regression_data_features):
+    X, y = get_regression_data
+    est = GradientDescentRegressor(algorithm=ElasticNetRegression(), early_stop=EarlyStop())
+    est.fit(X,y)
+    est.summary(features=get_regression_data_features)
+    assert est.history_.total_epochs < est.epochs, "Early stop didn't work"
+
