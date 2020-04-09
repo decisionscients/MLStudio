@@ -61,7 +61,7 @@ class EarlyStop(Callback, BaseEstimator):
         stop training.    
     """
 
-    def __init__(self, monitor='val_score', val_size=0.3, precision=0.01, patience=10):
+    def __init__(self, monitor='val_score', val_size=0.3, precision=0.001, patience=10):
         super(EarlyStop, self).__init__()
         self.name = "Early Stop"
         self.monitor = monitor

@@ -39,6 +39,7 @@ from mlstudio.supervised.estimator.debugging import GradientCheck
 from mlstudio.supervised.estimator.monitor import History, Progress, summary
 from mlstudio.supervised.estimator.scorers import R2, Accuracy
 from mlstudio.supervised.regression import LinearRegression
+from mlstudio.supervised.classification import LogisticRegression
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
 from mlstudio.utils.data_analyzer import check_y
 # --------------------------------------------------------------------------- #
@@ -212,7 +213,7 @@ class GradientDescent(ABC, BaseEstimator):
                 self._begin_batch()
                 
                 # Compute prediction
-                y_pred = self.algorithm.predict(X_batch, self._theta)
+                y_pred = self.algorithm.hypothesis(X_batch, self._theta)
 
                 # Compute costs
                 J = self.algorithm.compute_cost(y_batch, y_pred, self._theta)                
@@ -234,8 +235,7 @@ class GradientDescent(ABC, BaseEstimator):
             self._end_epoch()
 
         self._end_training()
-        return self
-    
+        return self         
 
     def predict(self, X):
         """Computes prediction.
@@ -290,7 +290,6 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
                  scorer=R2(), early_stop=False, verbose=False, checkpoint=100, 
                  random_state=None, gradient_check=False):
 
-        # Public parameters
         self.name = name
         self.learning_rate = learning_rate
         self.batch_size = batch_size
@@ -302,33 +301,30 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
         self.verbose = verbose
         self.checkpoint = checkpoint
         self.random_state = random_state
-        self.gradient_check = gradient_check         
+        self.gradient_check = gradient_check        
 
 
-# # --------------------------------------------------------------------------- #
-# #                     GRADIENT DESCENT CLASSIFIER                             #
-# # --------------------------------------------------------------------------- #
-# class GradientDescentClassifier(GradientDescent, ClassifierMixin):
-#     """Gradient descent estimator for classification."""
+# --------------------------------------------------------------------------- #
+#                     GRADIENT DESCENT CLASSIFIFER                            #
+# --------------------------------------------------------------------------- #
+class GradientDescentClassifier(GradientDescent, ClassifierMixin):
+    """Gradient descent estimator for classification."""
 
-#     def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
-#                  theta_init=None,  epochs=1000, algorithm=LogisticRegression(),
-#                  optimizer=Standard(), scorer=Accuracy(), early_stop=False, 
-#                  val_size=0.0, verbose=False, checkpoint=100, 
-#                  random_state=None, gradient_check=False):
+    def __init__(self, name=None, learning_rate=0.01, batch_size=None, 
+                 theta_init=None,  epochs=1000, algorithm=LogisticRegression(),
+                 scorer=Accuracy(), early_stop=False, verbose=False, checkpoint=100, 
+                 random_state=None, gradient_check=False):
 
-#         # Public parameters
-#         self.name = name
-#         self.learning_rate = learning_rate
-#         self.batch_size = batch_size
-#         self.theta_init = theta_init
-#         self.epochs = epochs
-#         self.algorithm = algorithm
-#         self.optimizer = optimizer    
-#         self.scorer = scorer
-#         self.early_stop = early_stop
-#         self.val_size = val_size     
-#         self.verbose = verbose
-#         self.checkpoint = checkpoint
-#         self.random_state = random_state
-#         self.gradient_check = gradient_check
+        self.name = name
+        self.learning_rate = learning_rate
+        self.batch_size = batch_size
+        self.theta_init = theta_init
+        self.epochs = epochs
+        self.algorithm = algorithm
+        self.scorer = scorer
+        self.early_stop = early_stop
+        self.verbose = verbose
+        self.checkpoint = checkpoint
+        self.random_state = random_state
+        self.gradient_check = gradient_check    
+ 

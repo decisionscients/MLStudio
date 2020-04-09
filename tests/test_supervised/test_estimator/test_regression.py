@@ -67,22 +67,22 @@ def test_regression_gradients(get_regression_data, algorithm):
 # --------------------------------------------------------------------------  #
 #                              TEST VARIANTS                                  #
 # --------------------------------------------------------------------------  #    
-@mark.regression
-@mark.regression_variants
-@parametrize_with_checks([GradientDescentRegressor(algorithm=LinearRegression()),
-                          GradientDescentRegressor(algorithm=LassoRegression(), batch_size=1),
-                          GradientDescentRegressor(algorithm=RidgeRegression(), batch_size=32)])
-def test_regression_variants(estimator, check):
-    check(estimator)
+# @mark.regression
+# @mark.regression_variants
+# @parametrize_with_checks([GradientDescentRegressor(algorithm=LinearRegression()),
+#                           GradientDescentRegressor(algorithm=LassoRegression(), batch_size=1),
+#                           GradientDescentRegressor(algorithm=RidgeRegression(), batch_size=32)])
+# def test_regression_variants(estimator, check):
+#     check(estimator)
 
 # --------------------------------------------------------------------------  #
 #                              TEST EARLYSTOP                                 #
 # --------------------------------------------------------------------------  #        
-@mark.regression
-@mark.regression_early_stop
-@parametrize_with_checks([GradientDescentRegressor(algorithm=LinearRegression(), early_stop=EarlyStop())])
-def test_regression_early_stop(estimator, check):
-    check(estimator)
+# @mark.regression
+# @mark.regression_early_stop
+# @parametrize_with_checks([GradientDescentRegressor(algorithm=LinearRegression(), early_stop=EarlyStop())])
+# def test_regression_early_stop(estimator, check):
+#     check(estimator)
 
 @mark.regression
 @mark.regression_early_stop

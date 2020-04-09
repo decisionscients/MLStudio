@@ -42,7 +42,7 @@ from sklearn.base import BaseEstimator
 # --------------------------------------------------------------------------- #
 #                          REGRESSION ALGORITHM                               #
 # --------------------------------------------------------------------------- #
-class Regression(ABC, BaseEstimator):
+class Regression(ABC):
     """Base class for regression subclasses."""
 
     def __init__(self):      
@@ -52,15 +52,34 @@ class Regression(ABC, BaseEstimator):
         assert isinstance(p, (int,float)), "Regularization hyperparameter must be numeric."
         assert p >= 0 and p <= 1, "Regularization parameter must be between zero and 1."
 
+    def hypothesis(self, X, theta):
+        """Computes the hypothesis using an input design matrix with bias term.
+
+        Parameter
+        ---------
+        X : array of shape (m_observations, n_features+1)
+            Input data
+
+        theta : array of shape (n_features+1,)  
+            The model parameters
+
+        Returns
+        -------
+        hypothesis : Linear combination of inputs.
+
+        """
+        return X.dot(theta)
+
+
     def predict(self, X, theta):
-        """Computes the prediction.
+        """Computes the prediction as linear combination of inputes and parameters.
 
         Parameter
         ---------
         X : array of shape (m_observations, n_features)
             Input data
 
-        theta : array of shape (n_features,)  
+        theta : array of shape (n_features+1,)  
             The model parameters
 
         Returns
@@ -71,14 +90,15 @@ class Regression(ABC, BaseEstimator):
         ------
         Value error if X and theta have incompatible shapes.
         """
+        X = np.array(X)
+        check_array(X)        
+                
         if X.shape[1] == len(theta):
             y_pred = X.dot(theta)
         elif X.shape[1] == len(theta) - 1:
             y_pred = theta[0] + X.dot(theta[1:])
         else:
-            raise ValueError("X and parameters theta have incompatible shapes.\
-                 X.shape = {xshape}, theta.shape = {thetashape}.".format(
-                     xshape=X.shape, thetashape = theta.shape))
+            raise ValueError("X.shape[1] not compatible with parameters theta.")
         return y_pred
 
     @abstractmethod
