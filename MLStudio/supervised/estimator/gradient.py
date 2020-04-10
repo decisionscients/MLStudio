@@ -39,7 +39,7 @@ from mlstudio.supervised.estimator.debugging import GradientCheck
 from mlstudio.supervised.estimator.monitor import History, Progress, summary
 from mlstudio.supervised.estimator.scorers import R2, Accuracy
 from mlstudio.supervised.regression import LinearRegression
-from mlstudio.supervised.classification import LogisticRegression
+from mlstudio.supervised.logistic_regression import LogisticRegression
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
 from mlstudio.utils.data_analyzer import check_y
 # --------------------------------------------------------------------------- #
