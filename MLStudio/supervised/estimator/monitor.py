@@ -113,7 +113,7 @@ class Progress(Callback):
         if self.model.verbose and (epoch % self.model.checkpoint == 0):
             items_to_report = ('epoch', 'train', 'val')
             logs = {k:v for k,v in logs.items() if k.startswith(items_to_report)}
-            progress = "".join(str(key) + ': ' + str(round(value,4)) + ' ' \
+            progress = "".join(str(key) + ': ' + str(np.round(value,4)) + ' ' \
                 for key, value in logs.items())
             print(progress)
 
@@ -142,16 +142,16 @@ def summary(history, features=None):
     # ----------------------------------------------------------------------- #
     if history.model.early_stop:    
         performance_summary = \
-            {'Final Training Loss': str(round(history.epoch_log.get('train_cost')[-1],4)),
-            'Final Training Score' : str(round(history.epoch_log.get('train_score')[-1],4))
+            {'Final Training Loss': str(np.round(history.epoch_log.get('train_cost')[-1],4)),
+            'Final Training Score' : str(np.round(history.epoch_log.get('train_score')[-1],4))
                 + " " + history.model.scorer.name,
-            'Final Validation Loss': str(round(history.epoch_log.get('val_cost')[-1],4)),
-            'Final Validation Score': str(round(history.epoch_log.get('val_score')[-1],4))
+            'Final Validation Loss': str(np.round(history.epoch_log.get('val_cost')[-1],4)),
+            'Final Validation Score': str(np.round(history.epoch_log.get('val_score')[-1],4))
                     + " " + history.model.scorer.name}
     else:
         performance_summary = \
-            {'Final Training Loss': str(round(history.epoch_log.get('train_cost')[-1],4)),
-            'Final Training Score' : str(round(history.epoch_log.get('train_score')[-1],4))
+            {'Final Training Loss': str(np.round(history.epoch_log.get('train_cost')[-1],4)),
+            'Final Training Score' : str(np.round(history.epoch_log.get('train_score')[-1],4))
                 + " " + history.model.scorer.name}
 
     printer.print_dictionary(performance_summary, "Performance Summary")
@@ -163,9 +163,9 @@ def summary(history, features=None):
             features.append("Feature_" + str(i))
 
     theta = OrderedDict()
-    theta['Intercept'] = str(round(history.model.intercept_, 4))
+    theta['Intercept'] = str(np.round(history.model.intercept_, 4))
     for k, v in zip(features, history.model.coef_):
-        theta[k]=str(round(v,4))
+        theta[k]=str(np.round(v,4))
     printer.print_dictionary(theta, "Model Parameters")
     # --------------------------------------------------------------------------- #
     hyperparameters = OrderedDict()

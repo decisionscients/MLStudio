@@ -78,3 +78,17 @@ def get_logistic_regression_split_data():
 def get_logistic_regression_data_features():
     data = datasets.load_breast_cancer()
     return data['feature_names']
+
+@fixture(scope="session")
+def get_softmax_regression_split_data():
+    X, y = datasets.load_iris(return_X_y=True)
+    scaler = StandardScaler()    
+    X = scaler.fit_transform(X)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.33, random_state=50)
+    return X_train, X_test, y_train, y_test                
+
+@fixture(scope="session")
+def get_softmax_regression_data_features():
+    data = datasets.load_iris()
+    return data['feature_names']    

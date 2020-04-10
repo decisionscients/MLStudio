@@ -66,8 +66,6 @@ class GradientDescent(ABC, BaseEstimator):
     def _prepare_data(self, X, y):
         """Creates the X design matrix and saves data as attributes."""
         self._X = self._X_val = self._y = self._y_val = None
-        # Prepare sklearn check.
-        check_X_y(X,y)
         # Convert input to numpy arrays just in case.
         self._X = np.array(X)
         self._y = np.array(y)
@@ -92,12 +90,12 @@ class GradientDescent(ABC, BaseEstimator):
         # create a copy of the scorer for internal evaluation. 
         scorer = copy.copy(self.scorer)
         # Compute costs 
-        y_pred = self.predict(self._X_design)
+        y_pred = self.algorithm.hypothesis(self._X_design, self._theta)
         log['train_cost'] = self.algorithm.compute_cost(self._y, y_pred, self._theta)
         log['train_score'] = scorer(self._y, y_pred)
         if self.early_stop:
             if self.early_stop.val_size:
-                y_pred_val = self.predict(self._X_val)
+                y_pred_val = self.algorithm.hypothesis(self._X_val, self._theta)
                 log['val_cost'] = self.algorithm.compute_cost(self._y_val, y_pred_val, self._theta)        
                 log['val_score'] = scorer(self._y_val, y_pred_val)
 
@@ -328,3 +326,8 @@ class GradientDescentClassifier(GradientDescent, ClassifierMixin):
         self.random_state = random_state
         self.gradient_check = gradient_check    
  
+    def _prepare_data(self, X, y):
+        """Creates the X design matrix and one-hot encodes y if appropriate."""
+        if len(np.unique(y)>2):
+            y = (np.arange(np.max(y) + 1) == y[:, None]).astype(float)
+        super(GradientDescentClassifier, self)._prepare_data(X,y)
