@@ -122,13 +122,13 @@ class GradientDescent(ABC, BaseEstimator):
     def _init_weights(self, X, y):
         """Initializes weights"""       
         if self.theta_init is not None:
-            check_array(self.theta_init)
             if y.ndim == 1:
                 assert self.theta_init.shape == (self.n_features_,), \
                     "Initial parameters theta must have shape (n_features,)."
             else:
                 assert self.theta_init.shape == (self.n_features_, self.n_classes_), \
                     "Initial parameters theta must have shape (n_classes, n_features)."
+            self._theta = self.theta_init
         else:
             self.random_state_ = check_random_state(self.random_state)  
             if y.ndim == 1:          
