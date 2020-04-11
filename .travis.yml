@@ -22,7 +22,8 @@ deploy:
   distributions: sdist bdist_wheel
   user: decisionscients
   password:
-    secure: PLEASE_REPLACE_ME
+    secure: "IUgTJ0eJzeilfVkr8nVNCzb/aeE+sfub8sc0DxsSxG/bbL+V0FFZiXtx5TiMajU6R3cos9TQcbh42bdz8+zi8J/bR9Nk1+qf+sUCAkn8isIvLBWC9pRtmB3kBvN2Zwwvie54bmgAW7OL6cYm/utQ3oaa2MeNeNLo6Haxme18dVxEapnX/9B1GCYu6v1CntjtTR6JS7f2Xvn8hhWcKWT5WNVfVKWpjK/FAZhNkp2RRvNeUi522enKw38RhPeGWYNA7is/iWHXkHnNYfhq60yiDdsdVCU5sLMAMulPjoOxheqLjUkTehxdKENdTZxBmSgSXhQ40iD0OMyHvDtFbe3LEKB23LT3F3JlgzWuvKdGDXn4XOZaPdG8HCRHhdfTeNcxmlaD1/mAy6IgzuRHAVw1ROcYeXnWKIrTcQMNQxYVLv0B3+c4kGeqBdqdAQfVFweyapMQ1f/qy2v02+6GTwo4oKmAo5FbAxWu8tWsqvlj744JkYJlQx+Jc5pWU7yZPwbOBy/cUW0FSpo64UmPZs3pIZugJ98ddFXn0fbUehLyILL9hQVTSR3FobI57k/8T8xgqpEnz3eThpykM9HJhaE/nuRKVITtznxnhXO+DOreEMpfb8N2yeRVbz20TwVbcz6CLdwaTHHwSipvt+aG1H9UuHiZC2/6ZiTgfU6PP/jjbcs="
+  edge: true #opt in to dpl v2
   on:
     tags: true
     repo: decisionscients/MLStudio
