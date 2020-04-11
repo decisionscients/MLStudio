@@ -28,6 +28,7 @@ wheels/
 # Test data and visualizations
 tests/test_data/
 tests/test_visual/figures/
+*.html
 
 # Lab and internal folders
 mlstudio/lab/
