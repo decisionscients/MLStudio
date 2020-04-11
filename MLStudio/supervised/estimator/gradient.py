@@ -65,21 +65,21 @@ class GradientDescent(ABC, BaseEstimator):
 
     def _prepare_data(self, X, y):
         """Creates the X design matrix and saves data as attributes."""
-        self._X = self._X_val = self._y = self._y_val = None
+        self.X = self.X_val = self.y = self.y_val = None
         # Convert input to numpy arrays just in case.
-        self._X = np.array(X)
-        self._y = np.array(y)
+        self.X = np.array(X)
+        self.y = np.array(y)
         # Add a column of ones to create the X design matrix
-        self._X_design = np.insert(self._X, 0, 1.0, axis=1)          
+        self.X_design = np.insert(self.X, 0, 1.0, axis=1)          
         # If early stopping, set aside a proportion of the data for the validation set
         if self.early_stop:
             if self.early_stop.val_size:
-                self._X_design, self._X_val, self._y, self._y_val = \
-                    data_split(self._X_design, self._y, 
+                self.X_design, self.X_val, self.y, self.y_val = \
+                    data_split(self.X_design, self.y, 
                     test_size=self.early_stop.val_size, random_state=self.random_state)
         # Designate the number of features and classes (outputs)
-        self.n_classes_ = check_y(self._y)
-        self.n_features_ = self._X_design.shape[1]        
+        self.n_classes_ = check_y(self.y)
+        self.n_features_ = self.X_design.shape[1]        
 
     def _evaluate_epoch(self, log=None):
         """Computes training (and validation) costs and scores."""
@@ -90,14 +90,14 @@ class GradientDescent(ABC, BaseEstimator):
         # create a copy of the scorer for internal evaluation. 
         scorer = copy.copy(self.scorer)
         # Compute costs 
-        y_pred = self.algorithm.hypothesis(self._X_design, self._theta)
-        log['train_cost'] = self.algorithm.compute_cost(self._y, y_pred, self._theta)
-        log['train_score'] = scorer(self._y, y_pred)
+        y_pred = self.algorithm.hypothesis(self.X_design, self._theta)
+        log['train_cost'] = self.algorithm.compute_cost(self.y, y_pred, self._theta)
+        log['train_score'] = scorer(self.y, y_pred)
         if self.early_stop:
             if self.early_stop.val_size:
-                y_pred_val = self.algorithm.hypothesis(self._X_val, self._theta)
-                log['val_cost'] = self.algorithm.compute_cost(self._y_val, y_pred_val, self._theta)        
-                log['val_score'] = scorer(self._y_val, y_pred_val)
+                y_pred_val = self.algorithm.hypothesis(self.X_val, self._theta)
+                log['val_cost'] = self.algorithm.compute_cost(self.y_val, y_pred_val, self._theta)        
+                log['val_score'] = scorer(self.y_val, y_pred_val)
 
         return log
 
@@ -145,7 +145,7 @@ class GradientDescent(ABC, BaseEstimator):
         self.converged_ = False
         self.is_fitted_ = False        
         self._prepare_data(X,y)
-        self._init_weights(self._X_design, self._y)   
+        self._init_weights(self.X_design, self.y)   
         self._init_callbacks()
         self._cbks.on_train_begin(log)
         
@@ -160,15 +160,15 @@ class GradientDescent(ABC, BaseEstimator):
     def _begin_epoch(self):
         """Increment the epoch count and shuffle the data."""
         self._epoch += 1
-        self._X_design, self._y = shuffle_data(self._X_design, self._y)
+        self.X_design, self.y = shuffle_data(self.X_design, self.y)
         self._cbks.on_epoch_begin(self._epoch)
 
     def _end_epoch(self, log=None):        
         """Performs end-of-epoch evaluation and scoring."""
         log = log or {}
         # Update log with current learning rate and parameters theta
-        log['X'] = self._X_design
-        log['y'] = self._y
+        log['X'] = self.X_design
+        log['y'] = self.y
         log['epoch'] = self._epoch
         log['learning_rate'] = self.learning_rate
         log['theta'] = self._theta.copy()     
@@ -206,7 +206,7 @@ class GradientDescent(ABC, BaseEstimator):
 
             self._begin_epoch()
 
-            for X_batch, y_batch in batch_iterator(self._X_design, self._y, batch_size=self.batch_size):
+            for X_batch, y_batch in batch_iterator(self.X_design, self.y, batch_size=self.batch_size):
 
                 self._begin_batch()
                 
@@ -300,6 +300,11 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
         self.checkpoint = checkpoint
         self.random_state = random_state
         self.gradient_check = gradient_check        
+
+    def _prepare_data(self, X, y):
+        """Creates the X design matrix and one-hot encodes y if appropriate."""
+        check_X_y(X,y)
+        super(GradientDescentRegressor, self)._prepare_data(X,y)        
 
 
 # --------------------------------------------------------------------------- #

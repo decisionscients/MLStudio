@@ -38,6 +38,7 @@ The core behaviors exposed for each class include:
 from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.base import BaseEstimator
+from sklearn.utils.validation import check_array
 
 # --------------------------------------------------------------------------- #
 #                          REGRESSION ALGORITHM                               #
@@ -204,7 +205,7 @@ class LinearRegression(Regression):
         """
         n_samples = X.shape[0]
         dZ = y_pred-y
-        dW = float(1./m) * X.T.dot(dZ) 
+        dW = float(1./n_samples) * X.T.dot(dZ) 
         return(dW)           
 
 # --------------------------------------------------------------------------- #
@@ -238,7 +239,7 @@ class LassoRegression(Regression):
         """
         self._validate_hyperparam(self.alpha)
         n_samples = y.shape[0]
-        J_reg = (self.alpha / m) * np.linalg.norm(theta, ord=1)
+        J_reg = (self.alpha / n_samples) * np.linalg.norm(theta, ord=1)
         J = np.mean(0.5 * (y-y_pred)**2) + J_reg
         return J
 
