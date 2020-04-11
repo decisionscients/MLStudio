@@ -175,7 +175,8 @@ class MSE(RegressionScorer):
         self.precision_factor = -1
     
     def __call__(self, y, y_pred):        
-        return np.mean(y-y_pred)**2
+        e = y - y_pred
+        return np.mean(e**2)
 
 class NMSE(RegressionScorer):
     """Computes negative mean squared error given data and parameters."""
@@ -192,7 +193,8 @@ class NMSE(RegressionScorer):
 
     
     def __call__(self, y, y_pred):        
-        return -np.mean(y-y_pred)**2
+        e = y - y_pred
+        return -np.mean(e**2)
 
 class RMSE(RegressionScorer):
     """Computes root mean squared error given data and parameters."""
@@ -244,7 +246,10 @@ class MSLE(RegressionScorer):
     
     def __call__(self, y, y_pred):
         e = np.log(y+1)-np.log(y_pred+1)
-        return np.mean(e**2)  
+        y = np.clip(y, 1e-15, 1-1e-15)    
+        y_pred = np.clip(y_pred, 1e-15, 1-1e-15)    
+        e = np.log(y)-np.log(y_pred)
+        return np.mean(e**2)
 
 class RMSLE(RegressionScorer):
     """Computes root mean squared log error given data and parameters."""
@@ -260,7 +265,9 @@ class RMSLE(RegressionScorer):
         self.precision_factor = -1
     
     def __call__(self, y, y_pred):
-        e = np.log(y+1)-np.log(y_pred+1)
+        y = np.clip(y, 1e-15, 1-1e-15)    
+        y_pred = np.clip(y_pred, 1e-15, 1-1e-15)    
+        e = np.log(y)-np.log(y_pred)
         return np.sqrt(np.mean(e**2))
 
 class MEDAE(RegressionScorer):

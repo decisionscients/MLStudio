@@ -77,16 +77,13 @@ class OLSRegression(BaseEstimator, RegressorMixin):
         r = np.linalg.matrix_rank(X)        
 
         # Find matrix equivalent using singular value decomposition
-        U, S, V = np.linalg.svd(X, full_matrices=False)
+        U, S, V = np.linalg.svd(X)
 
         # Derive D^+ from sigma        
-        D_plus = np.diag(np.hstack([1/S[:r], np.zeros(n-r)]))
+        D_plus = np.zeros((X.shape[0], X.shape[1])).T
+        D_plus[:S.shape[0], :S.shape[0]] = np.linalg.inv(np.diag(S))
         
         # Compute Moore-Penrose pseudoinverse of X
-        print("_____________________")
-        print("V.T shape is {s}".format(s=V.T.shape))
-        print("D_plus shape is {s}".format(s=D_plus.shape))
-        print("U.T shape is {s}".format(s=U.T.shape))
         X_plus = V.T.dot(D_plus).dot(U.T)
 
         # Weights are the dot product of X_plus and y

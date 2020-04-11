@@ -29,10 +29,11 @@ from mlstudio.supervised.regression import LinearRegression, LassoRegression
 from mlstudio.supervised.regression import RidgeRegression, ElasticNetRegression
 from mlstudio.visual.model_evaluation import PredictionError
 
+@mark.plots
+@mark.prediction_error
+@mark.skip(reason="visually tested")
 class PredictionErrorTests:
 
-    @mark.plots
-    @mark.prediction_error
     @mark.parametrize("algorithm", [LinearRegression(), LassoRegression(),
                       RidgeRegression(), ElasticNetRegression()])
     def test_prediction_error(self, get_regression_data, algorithm):

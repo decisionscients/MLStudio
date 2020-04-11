@@ -31,6 +31,7 @@ from sklearn.model_selection import validation_curve
 
 from .base import ModelVisualatrix
 from mlstudio.supervised.regression import LinearRegression
+from mlstudio.supervised.ols_regression import OLSRegression
 from mlstudio.utils.format import proper
 
 # ---------------------------------------------------------------------------- #
@@ -87,7 +88,7 @@ class PredictionError(ModelVisualatrix):
 
         # Compute best fit line predicted vs actual
         y = y.reshape(-1,1)
-        est = LinearRegression(gradient_descent=False)
+        est = OLSRegression()
         est.fit(y, y_pred) 
 
         # Format data for identity and best fit lines

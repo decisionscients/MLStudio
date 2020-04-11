@@ -366,7 +366,7 @@ class LearningCurve(ModelVisualatrix):
         self.fig.update_layout(
             title=self.title,
             xaxis=dict(title='Training Samples'),
-            yaxis=dict(title=self.estimator.get_scorer().label),
+            yaxis=dict(title=self.estimator.scorer.label),
             title_x=0.5,
             template=self.template)
 
@@ -623,7 +623,7 @@ class ModelLearningPerformance(ModelVisualatrix):
         # Update layout with designated template
         layout = go.Layout(
             xaxis=dict(title='Fit Times'),
-            yaxis=dict(title=self.estimator.get_scorer().label),
+            yaxis=dict(title=self.estimator.scorer.label),
             title=self.title,title_x=0.5,
             template=self.template
         )
@@ -734,12 +734,12 @@ class LearningCurves(ModelVisualatrix):
         # Create subplots
         self.fig = plotly.tools.make_subplots(rows=rows, cols=cols,
                                                subplot_titles=subtitles,
-                                               horizontal_spacing=0.25/cols,
+                                               horizontal_spacing=0.3/cols,
                                                vertical_spacing = 0.3/rows)
 
         # Update font size for subplot titles.
         for i in self.fig['layout']['annotations']:
-            i['font']['size'] = 14
+            i['font']['size'] = 12
         
         # Populate cells of subplot
         for i, estimator in enumerate(self.estimators):
@@ -776,15 +776,19 @@ class LearningCurves(ModelVisualatrix):
             self.fig.update_xaxes(title_text="Fit Times", row=i+1, col=3)
 
             # Update subplot yaxis titles
-            self.fig.update_yaxes(title_text=estimator.get_scorer().label, row=i+1, col=1)
+            self.fig.update_yaxes(title_text=estimator.scorer.label, row=i+1, col=1)
             self.fig.update_yaxes(title_text="Fit Times", row=i+1, col=2)
-            self.fig.update_yaxes(title_text=estimator.get_scorer().label, row=i+1, col=3)
+            self.fig.update_yaxes(title_text=estimator.scorer.label, row=i+1, col=3)
 
         #  Add title and template to layout.
         self.fig.update_layout(title_text="Learning Curve Analysis",
                                 template=self.template,
                                 height=rows*400, width=1200,
                                 title_x=0.5)
+
+        # Update subplot title font size
+        for i in self.fig['layout']['annotations']:
+            i['font']['size'] = 12
 # ---------------------------------------------------------------------------- #
 #                            VALIDATION CURVE                                  #
 # ---------------------------------------------------------------------------- #        
