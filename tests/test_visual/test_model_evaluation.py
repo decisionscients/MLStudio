@@ -24,16 +24,20 @@ from pytest import mark
 import shutil
 from sklearn.model_selection import ShuffleSplit
 
+from mlstudio.supervised.estimator.gradient import GradientDescentRegressor
 from mlstudio.supervised.regression import LinearRegression, LassoRegression
 from mlstudio.supervised.regression import RidgeRegression, ElasticNetRegression
 from mlstudio.visual.model_evaluation import PredictionError
 
 class PredictionErrorTests:
 
+    @mark.plots
     @mark.prediction_error
-    def test_prediction_error(self, get_regression_data):
+    @mark.parametrize("algorithm", [LinearRegression(), LassoRegression(),
+                      RidgeRegression(), ElasticNetRegression()])
+    def test_prediction_error(self, get_regression_data, algorithm):
         X, y = get_regression_data
-        est = ElasticNetRegression(epochs=1000)
+        est = GradientDescentRegressor(algorithm=algorithm)        
         pe = PredictionError(est)
         pe.fit(X,y)
         pe.show()

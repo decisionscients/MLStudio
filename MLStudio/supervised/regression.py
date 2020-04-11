@@ -151,6 +151,45 @@ class Regression(ABC):
    
 
 # --------------------------------------------------------------------------- #
+#                        LINEAR REGRESSION (OLS)                              #
+# --------------------------------------------------------------------------- # 
+class LinearRegressionOLS(Regression):
+    """Ordinary least squares closed form linear regression."""
+
+    def __init__(self):
+        self.name = "Linear Regression (OLS)"
+
+    def fit(self, X, y):
+        """Fits the linear regression ordinary least squares solution.
+        
+        Parameters
+        ----------
+        X : array-like, shape (n_samples, n_features)
+            Training data
+
+        y : numpy array, shape (n_samples,)
+            Target values 
+
+        Returns
+        -------
+        self : returns instance of self._
+        """
+        train_log = {'X': X, 'y': y}
+        self._begin_training(train_log)
+        
+        # Calculate weights by least squares (using Moore-Penrose pseudoinverse)
+        U, S, V = np.linalg.svd(self.X_design_.T.dot(self.X_design_))
+        S = np.diag(S)
+        X_ols = V.dot(np.linalg.pinv(S)).dot(U.T)
+        self._theta = X_ols.dot(self.X_design.T).dot(self.y_)
+
+        self._end_training()
+
+        return self
+
+
+
+# --------------------------------------------------------------------------- #
 #                          LINEAR REGRESSION                                  #
 # --------------------------------------------------------------------------- #    
 class LinearRegression(Regression):

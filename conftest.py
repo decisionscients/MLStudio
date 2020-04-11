@@ -51,7 +51,7 @@ def get_regression_data_features():
     return data['feature_names']
 
 @fixture(scope="session")
-def get_regression_data_w_validation(get_regression_data):
+def get_regression_data_split(get_regression_data):
     X, y = get_regression_data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.33, random_state=50)

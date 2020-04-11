@@ -24,6 +24,7 @@ import site
 PROJECT_DIR = Path(__file__).resolve().parents[3]
 site.addsitedir(PROJECT_DIR)
 
+import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.datasets import make_regression
 
@@ -40,7 +41,7 @@ X = scaler.transform(X)
 
 # Run Models
 name = np.array(['Batch Gradient Descent', 'Minibatch Gradient Descent', 'Stochastic Gradient Descent'])
-theta_init = np.array([-15., 0.])
+theta_init = np.array([-15., 15.])
 batch_size = np.array([None, 32, 1])
 models = {}
 for i in range(len(batch_size)):
@@ -51,9 +52,11 @@ directory = "../figures/variants/"
 filename = "gradient_descent_search.gif"
 viz = MultiModelSearch3D()
 viz.search(models=models, directory=directory, filename=filename)
+plt.show()
 filename = "gradient_descent_fit.gif"
 viz = MultiModelFit2D()
 viz.fit(models=models, directory=directory, filename=filename)
+plt.show()
 
 
 

@@ -395,8 +395,8 @@ class MultiModelSearch3D(animation.FuncAnimation):
             paths.append(np.array(v.history_.epoch_log.get('theta')).T)
             zpaths.append(np.array(v.history_.epoch_log.get('train_cost'))) 
             methods.append(k)  
-            X = v.X_design
-            y = v.y
+            X = v.X_design_
+            y = v.y_
         return(X, y, paths, zpaths, methods)
 
     def search(self, models, frames=100, directory=None, filename=None, fps=5,
@@ -480,8 +480,8 @@ class MultiModelFit2D(animation.FuncAnimation):
         for k, v in models.items():    
             paths.append(np.array(v.history_.batch_log.get('theta')).T)
             methods.append(k)  
-            self.X = v.X_design
-            self.y = v.y
+            self.X = v.X_design_
+            self.y = v.y_
 
         return paths, methods
     def fit(self, models, frames=100, x_label=None, y_label=None, 

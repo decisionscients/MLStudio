@@ -33,10 +33,38 @@ from mlstudio.supervised.estimator.debugging import GradientCheck
 from mlstudio.supervised.estimator.early_stop import EarlyStop
 from mlstudio.supervised.estimator.gradient import GradientDescentRegressor
 from mlstudio.supervised.estimator.scorers import MSE
+from mlstudio.supervised.ols_regression import OLSRegression
 from mlstudio.supervised.regression import LinearRegression
 from mlstudio.supervised.regression import LassoRegression
 from mlstudio.supervised.regression import RidgeRegression
 from mlstudio.supervised.regression import ElasticNetRegression
+
+# --------------------------------------------------------------------------  #
+#                       TEST LINEAR REGRESSION OLS                            #
+# --------------------------------------------------------------------------  #
+@mark.regression
+@mark.regression_ols
+@parametrize_with_checks([OLSRegression()])
+def test_ols_regression(estimator, check):
+    check(estimator)
+
+# --------------------------------------------------------------------------  #
+#                       BENCHMARK LINEAR REGRESSION OLS                       #
+# --------------------------------------------------------------------------  #
+@mark.regression
+@mark.regression_skl
+def test_ols_regression_sklearn(get_regression_data_split):
+    X_train, X_test, y_train, y_test = get_regression_data_split
+    ols = OLSRegression()
+    ols.fit(X_train, y_train)
+    ols_score = ols.score(X_test, y_test)
+    skl = lm.LinearRegression()
+    skl.fit(X_train, y_train)
+    skl_score = skl.score(X_test, y_test)
+    assert np.isclose(ols_score, skl_score), "Score not close to sklearn score."
+
+
+
 
 # --------------------------------------------------------------------------  #
 #                          TEST ALGORITHMS                                    #
@@ -64,16 +92,6 @@ def test_regression_gradients(get_regression_data, algorithm):
     est = GradientDescentRegressor(algorithm=algorithm, gradient_check=GradientCheck())        
     est.fit(X, y)
     
-# --------------------------------------------------------------------------  #
-#                              TEST VARIANTS                                  #
-# --------------------------------------------------------------------------  #    
-# @mark.regression
-# @mark.regression_variants
-# @parametrize_with_checks([GradientDescentRegressor(algorithm=LinearRegression()),
-#                           GradientDescentRegressor(algorithm=LassoRegression(), batch_size=1),
-#                           GradientDescentRegressor(algorithm=RidgeRegression(), batch_size=32)])
-# def test_regression_variants(estimator, check):
-#     check(estimator)
 
 # --------------------------------------------------------------------------  #
 #                              TEST EARLYSTOP                                 #

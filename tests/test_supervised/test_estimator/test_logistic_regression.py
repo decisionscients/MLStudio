@@ -37,6 +37,19 @@ from mlstudio.supervised.logistic_regression import RidgeLogisticRegression
 from mlstudio.supervised.logistic_regression import ElasticNetLogisticRegression
 
 # --------------------------------------------------------------------------  #
+#                          TEST GRADIENTS                                     #
+# --------------------------------------------------------------------------  #
+@mark.logistic_regression
+@mark.logistic_regression_gradient_check
+@mark.parametrize("algorithm", [LogisticRegression(), LassoLogisticRegression(),
+                                RidgeLogisticRegression(), ElasticNetLogisticRegression()])
+def test_regression_gradients(get_logistic_regression_data, algorithm):
+    X, y = get_logistic_regression_data    
+    gradient_check = GradientCheck()
+    est = GradientDescentClassifier(algorithm=algorithm, gradient_check=GradientCheck())        
+    est.fit(X, y)
+
+# --------------------------------------------------------------------------  #
 #                            TEST ACCURACY                                    #
 # --------------------------------------------------------------------------  #
 
@@ -84,7 +97,7 @@ def test_logistic_regression_early_stop(get_logistic_regression_split_data,
                                       get_logistic_regression_data_features):
     X_train, X_test, y_train, y_test = get_logistic_regression_split_data        
     est = GradientDescentClassifier(algorithm=LogisticRegression(),
-                                    early_stop=EarlyStop(precision=0.00001, patience=200))        
+                                    early_stop=EarlyStop(precision=1e-12, patience=200))        
     est.fit(X_train, y_train)
     est.summary(features=get_logistic_regression_data_features)
-    assert est.score(X_test, y_test) > 0.90, "Accuracy less than 0.90"
+    assert est.score(X_test, y_test) > 0.80, "Accuracy less than 0.80"
