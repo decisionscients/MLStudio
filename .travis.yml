@@ -7,11 +7,19 @@ python:
   - 3.6
   - 3.5
 
+before_install:
+- python --version
+- pip install -U pip
+- pip install -U pytest
+- pip install codecov
+
 # Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: pip install -U tox-travis
+install:
+- pip install -r requirements.txt
 
 # Command to run tests, e.g. python setup.py test
-script: tox
+script:
+- pytest --cov-report term --cov=mlstudio
 
 # Assuming you have installed the travis-ci CLI tool, after you
 # create the Github repo and add it to Travis, run the
@@ -25,6 +33,10 @@ deploy:
     secure: "j2/Cd/TsVCfiMOZXL5OkacxeClILk9r5bhQYsYy0GopV+t6QKKgyEr8K1JmCWgyeP1Af3DUzVrkWOhUsFlhVLIHmy4a68te40Sa4UiiWjFLUuZNSZt9S718jJJiFlS+RvorLKTQqu9W6vPjdl0UB4a0szOWrVJHFN65+2+t/JxAZIoseIxVtcur0d9zCpcf7t8BUOPZOkeUtwZyeM55GjYuOGxfm/NhRiklLoTjCfBSH+SY7f8kPWarYuF3Dkkn7msI1j3v8kJIHZyU8e9rUPOAyiVetkb3ncXx8zCXq1p9olmMR43vB/P2T+jNuOvmP6rrluIRvPc88yAfsy3i1lA7btHOs1Uo+/SZRoM77Y6H85CIcbHZlXY7KrqZ32iNkh6lwVIci0he+9upoynIAq84U1A1nM9pkSG8R8srHZqTfWEkl9LG/EG6+u+IDW2J1ZJcyluupbLSHzskgDlvSH/oafQcyE58ZgTBmFD8YEj0/PTRVElSI6lzRqtn+2nM1V5jPNwBY63NZfTh5CwN8SXDSh/z7RzOQJ3xv8XnDc3zlZO365vyNbOywAN9Gb7DPCR3gDI8WHBBf31Hr2BPLQcBVAdUNnYmKDWAW0HC/I4geMSUxPkWvpJJcsB1vykFaysL+QQjP8aTMKiPKS9DgwCFQbhICe3UD4sjFlVh3vLk="
   edge: true #opt in to dpl v2
   on:
+    branch: master
     tags: true
     repo: decisionscients/MLStudio
     python: 3.8
+    
+after_success:
+- codecov
