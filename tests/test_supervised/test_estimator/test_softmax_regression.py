@@ -88,4 +88,4 @@ def test_softmax_regression_early_stop(get_softmax_regression_split_data,
                                     early_stop=EarlyStop(precision=1e-9, patience=200))        
     est.fit(X_train, y_train)
     est.summary(features=get_softmax_regression_data_features)
-    assert est.score(X_test, y_test) > 0.90, "Accuracy less than 0.90"
+    assert est.score(X_test, y_test) > 0.80, "Accuracy less than 0.80"

@@ -55,6 +55,6 @@ def profile_linear_regression():
     pr.disable()
     pr.print_stats(sort='time')
 
-profile_linear_regression()
+#profile_linear_regression()
 #%%
 #%%

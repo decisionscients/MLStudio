@@ -60,7 +60,7 @@ def test_logistic_regression_accuracy(get_logistic_regression_split_data,
     est = GradientDescentClassifier(algorithm=LogisticRegression())        
     est.fit(X_train, y_train)
     est.summary(features=get_logistic_regression_data_features)
-    assert est.score(X_test, y_test) > 0.90, "Accuracy less than 0.90"
+    assert est.score(X_test, y_test) > 0.85, "Accuracy less than 0.85"
 
 @mark.logistic_regression
 def test_lasso_logistic_regression_accuracy(get_logistic_regression_split_data,
