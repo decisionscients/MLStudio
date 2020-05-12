@@ -55,6 +55,17 @@ def profile_linear_regression():
     pr.disable()
     pr.print_stats(sort='time')
 
-#profile_linear_regression()
+# --------------------------------------------------------------------------- #
+#                       PROFILE LINEAR REGRESSION SGD                         #
+# --------------------------------------------------------------------------- #  
+def profile_linear_regression_sgd():    
+    X, y = get_regression_data()
+    lr = GradientDescentRegressor(algorithm=LinearRegression(), batch_size=1)        
+    pr = cProfile.Profile()
+    pr.enable()
+    lr.fit(X,y)
+    pr.disable()
+    pr.print_stats(sort='time')
+profile_linear_regression_sgd()
 #%%
 #%%

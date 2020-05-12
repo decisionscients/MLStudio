@@ -23,13 +23,13 @@
 from abc import ABC, abstractmethod, ABCMeta
 import copy
 import numpy as np
-from sklearn.base import BaseEstimator
+
 from mlstudio.supervised.estimator.callbacks import Callback
 
 # --------------------------------------------------------------------------- #
 #                              EARLY STOP                                     #
 # --------------------------------------------------------------------------- #
-class EarlyStop(Callback, BaseEstimator):
+class EarlyStop(Callback):
     """Stops training if performance hasn't improved.
     
     Stops training if performance hasn't improved. Improvement is measured 

@@ -27,12 +27,100 @@ import numpy as np
 from numpy.random import RandomState
 
 import pandas as pd
-from sklearn.base import TransformerMixin, BaseEstimator
 
 # --------------------------------------------------------------------------- #
 #                               TRANSFORMERS                                  #
 # --------------------------------------------------------------------------- #
-class StandardScaler(BaseEstimator, TransformerMixin):
+class MinMaxScaler:
+    """Scales each feature to values between 0 and 1.
+
+    Scaling a sample 'x' to 0-1 is calculated as:
+
+        X_new = (X - X_min) / (X_max-X_min)
+
+    Attributes
+    ----------
+    data_min_ : ndarray, shape (n_features)
+        Per feature minimum seen in the data
+
+    data_max_ : ndarray, shape (n_features)
+        Per feature maximum seen in the data        
+
+    data_range_ : ndarray, shape (n_features)
+        Per feature range ``(data_max_ - data_min_)`` seen in the data
+
+    """        
+
+    def __init__(self):        
+        pass
+
+    def fit(self, X, y=None):
+        """Computes the min and max on X for scaling.
+        
+        Parameters
+        ----------
+        X : array-like, shape [n_samples, n_features]
+            The data used to compute the mean and standard deviation
+            used for centering and scaling.
+
+        y : Ignored
+
+        """
+        self.data_min_ = np.nanmin(X, axis=0)
+        self.data_max_ = np.nanmax(X, axis=0)
+        self.data_range_ = self.data_max_ - self.data_min_
+
+    def transform(self, X):
+        """Scales features to range 0 to 1.
+
+        Parameters
+        ----------
+        X : array-like, shape [n_samples, n_features]
+            The data to center and scale.
+
+        Returns
+        -------
+        Xt : array-like of same shape as X
+        """
+        X = np.subtract(X, self.data_min_)        
+        X = np.divide(X, self.data_range_, 
+                      out = np.zeros(X.shape,dtype=float), 
+                      where = self.data_range_ != 0)        
+        return X
+
+    def fit_transform(self, X):
+        """Combines fit and transform methods.
+        
+        Parameters
+        ----------
+        X : array-like, shape [n_samples, n_features]
+            The data to center and scale.
+        
+        Returns
+        -------
+        Xt : array-like of same shape as X
+        """
+        self.fit(X)
+        return self.transform(X)
+
+    def inverse_transform(self, X):
+        """Inverses the standardization process.
+
+        Parameters
+        ----------
+        X : array-like, shape [n_samples, n_features]
+            The centered and scaled data.
+
+        Returns
+        -------
+        array-like of same shape as X, with data returned to original
+        un-standardized values.
+        """
+        X = X * self.data_range_
+        X = X + self.data_min_
+        return X
+
+class StandardScaler:
     """Standardizes data to a zero mean and unit variance.
 
     Standardizing a sample 'x' is calculated as:
