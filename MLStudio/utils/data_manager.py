@@ -22,7 +22,7 @@
 """Data manipulation functions."""
 
 from itertools import combinations_with_replacement
-from math import ceil
+from math import ceil, floor
 import numpy as np
 from numpy.random import RandomState
 
@@ -268,7 +268,7 @@ def sampler(X, y, size=1, replace=True, random_state=None):
 # --------------------------------------------------------------------------- #
 #                            SPLIT DATA                                       #
 # --------------------------------------------------------------------------- #
-def data_split(X, y, test_size=0.3, shuffle=True, stratify=False, random_state=None):
+def data_split(X, y, test_size=0.3, shuffle=False, stratify=False, random_state=None):
     """ Split the data into train and test sets 
     
     Splits inputs X, and y into training and test sets of proportions
@@ -321,10 +321,10 @@ def data_split(X, y, test_size=0.3, shuffle=True, stratify=False, random_state=N
     else:
         train_idx = []
         test_idx = []
-        classes, group_indices = np.unique(y, return_inverse=True)
+        classes = np.unique(y)
         for k in classes:
             # Obtain the indices and number of samples for class k
-            idx_k = np.array(np.where(group_indices == k)).reshape(-1,1)  
+            idx_k = np.array(np.where(y == k)).reshape(-1,1)  
             n_samples_k = idx_k.shape[0]
             # Compute number of training and test samples
             n_train_samples_k = ceil(n_samples_k * (1-test_size))

@@ -23,8 +23,9 @@
 import numpy as np
 import pytest
 from pytest import mark
+import scipy.sparse as sp
 
-from sklearn import datasets 
+from mlstudio.datasets import load_urls
 from mlstudio.utils.data_manager import MinMaxScaler, data_split
 # --------------------------------------------------------------------------  #
 #                       TEST MINMAX SCALER                                    #
@@ -49,7 +50,7 @@ def test_minmax_scaler():
 @mark.data_manager
 @mark.data_split  
 def test_data_split():
-    X, y = datasets.load_breast_cancer(return_X_y=True)
+    X, y = load_urls()
     X_train, X_test, y_train, y_test = data_split(X,y, stratify=True)
     n_train = y_train.shape[0]
     n_test = y_test.shape[0]
