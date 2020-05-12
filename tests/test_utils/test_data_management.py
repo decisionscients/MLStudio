@@ -24,12 +24,14 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.utils.data_manager import MinMaxScaler, StandardScaler
+from sklearn import datasets 
+from mlstudio.utils.data_manager import MinMaxScaler, data_split
 # --------------------------------------------------------------------------  #
-#                      TESTS MINMAX SCALER                                    #
+#                       TEST MINMAX SCALER                                    #
 # --------------------------------------------------------------------------  #
 @mark.utils
 @mark.data_manager
+@mark.minmax
 def test_minmax_scaler():
     x = np.array([[0,0,22],
                 [0,1,17],
@@ -40,3 +42,26 @@ def test_minmax_scaler():
     scaler = MinMaxScaler()
     x_t = scaler.fit_transform(x)
     assert np.array_equal(x_new, x_t), "Minmax scaler not working"    
+# --------------------------------------------------------------------------  #
+#                        TEST DATA SPLIT                                      #
+# --------------------------------------------------------------------------  #  
+@mark.utils
+@mark.data_manager
+@mark.data_split  
+def test_data_split():
+    X, y = datasets.load_breast_cancer(return_X_y=True)
+    X_train, X_test, y_train, y_test = data_split(X,y, stratify=True)
+    n_train = y_train.shape[0]
+    n_test = y_test.shape[0]
+    train_values, train_counts = np.unique(y_train, return_counts=True)
+    test_values, test_counts = np.unique(y_test, return_counts=True)
+    train_proportions = train_counts / n_train
+    test_proportions = test_counts / n_test
+    assert np.allclose(train_proportions, test_proportions, rtol=1e-2), "Data split stratification problem "
+    print(train_proportions)
+    print(test_proportions)
+
+
+
+
+
