@@ -45,7 +45,8 @@ class SurfaceLine:
         # Extract model blackbox
         blackbox = model.blackbox_
 
-        # Extract the x=theta0, y=theta1 and cost history
+        # Extract the theta, x=theta0, y=theta1 and cost history
+        theta = blackbox.epoch_log.get('theta')
         weights = todf(blackbox.epoch_log['theta'], stub='theta_')        
         theta0 = np.array(weights['theta_0'])
         theta1 = np.array(weights['theta_1'])
@@ -65,6 +66,22 @@ class SurfaceLine:
                     for THETA in zip(np.ravel(theta0_mesh), np.ravel(theta1_mesh))])
         Js = Js.reshape(theta0_mesh.shape)  
 
+        # Create regression line data
+        n_frames = len(theta0) 
+        def f(x, theta):
+            return theta[0] + x * theta[1]
+
+        X = model.X_train_
+        x = X[:,1]        
+        xm = np.min(x)
+        xM = np.max(x)
+        xx = np.linspace(xm, xM)
+        yy = []
+        for i in range(n_frames):
+            ym = f(xm, theta[i])
+            yM = f(xM, theta[i])
+            yy.append(np.linspace(ym, yM))      
+    
         # Initialize figure with 2 subplots
         fig = make_subplots(rows=1, cols=2, subplot_titles=("Gradient Descent", "Linear Regression"),
                             specs=[[{'type': "surface"}, {"type": "scatter"}]])      
@@ -75,19 +92,20 @@ class SurfaceLine:
             row=1, col=1)
 
         fig.add_trace(
-            go.Scatter(x=model.X_train_, y=model.y_train_,
+            go.Scatter(x=model.X_train_[:,1], y=model.y_train_,
                        name="ames",
                        mode="markers",
                        marker=dict(color="#1560bd")), row=1, col=2)
-        # Create frames definition        
-        n_frames = len(theta0)        
-        frames = [dict(
-            name = k,
-            data = [
-                go.Scatter3d(x=[theta0[k]], y=[theta1[k]], z=[cost[k]], mode='markers', marker=dict(color="red", size=16)),
-                go.Scatter(x=[theta0[k]], y=[theta1[k]], mode="lines")
-            ],
-            traces=[0,1]
+
+        # Create frames definition                       
+        frames = [go.Frame(
+            dict(
+                name = k,
+                data = [
+                    go.Scatter3d(x=[theta0[k]], y=[theta1[k]], z=[cost[k]], mode='markers', marker=dict(color="red", size=16)),
+                    go.Scatter(x=xx, y=yy[k], mode="lines")
+                ],
+                traces=[0,1])
             ) for k in range(n_frames)]
 
         # Update the menus
@@ -110,7 +128,7 @@ class SurfaceLine:
                    'transition': {'duration': 100.0, 'easing': 'linear'},
                    'pad': {'b': 10, 't': 50}, 
                    'len': 0.9, 'x': 0.1, 'y': 0, 
-                   'steps': [{'args': [[k], {'frame': {'duration': 500.0, 'easing': 'linear', 'redraw': False},
+                   'steps': [{'args': [[k], {'frame': {'duration': 100.0, 'easing': 'linear', 'redraw': False},
                                       'transition': {'duration': 0, 'easing': 'linear'}}], 
                        'label': k, 'method': 'animate'} for k in range(n_frames)       
                     ]}]
