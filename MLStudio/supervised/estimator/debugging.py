@@ -68,8 +68,8 @@ class GradientCheck(Callback):
         """
         if self.model.gradient_check:
             if logs.get('epoch') % self.iterations == 0:
-                X = self.model.X_
-                y = self.model.y_
+                X = self.model.X_train_
+                y = self.model.y_train_
                 epoch = logs.get('epoch')
                 learning_rate = logs.get('learning_rate')
                 theta = logs.get('theta')

@@ -38,7 +38,7 @@ The core behaviors exposed for each class include:
 from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.validation import check_array
+from sklearn.utils.validation import check_array
 
 from mlstudio.supervised.base_model import BaseModel
 # --------------------------------------------------------------------------- #
@@ -85,15 +85,21 @@ class LinearRegression(BaseModel, RegressorMixin):
         X : array of shape [n_samples, n_features]
             The model inputs. 
 
-        theta : array of shape [n_features,] or [n_features, n_classes]
+        theta : array of shape [n_features,] 
             Model parameters
+
+        Note: n_features may or may not include the bias term added prior to 
+        training, so we will need to accommodate X of either dimension.
 
         Returns
         -------
         prediction : Linear combination of inputs.
 
         """         
-        y_pred = theta[0] + X.dot(theta[1:])
+        if X.shape[1] == len(theta):
+            y_pred = X.dot(theta)
+        else:
+            y_pred = theta[0] + X.dot(theta[1:])
         return y_pred
 
     def compute_cost(self, y, y_out, theta):

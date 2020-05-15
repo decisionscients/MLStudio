@@ -109,5 +109,5 @@ def test_regression_early_stop_II(get_regression_data, get_regression_data_featu
     est = GradientDescentRegressor(algorithm=ElasticNetRegression(), early_stop=EarlyStop())
     est.fit(X,y)
     est.summary(features=get_regression_data_features)
-    assert est.history_.total_epochs < est.epochs, "Early stop didn't work"
+    assert est.blackbox_.total_epochs < est.epochs, "Early stop didn't work"
 

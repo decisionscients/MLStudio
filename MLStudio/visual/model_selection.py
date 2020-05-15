@@ -160,8 +160,8 @@ class CostCurve(ModelVisualatrix):
 
                 self.estimator.fit(X,y)
                 
-                d['Epoch'] = np.arange(start=1, stop=self.estimator.history_.total_epochs+1)
-                d['Cost'] = self.estimator.history_.epoch_log['train_cost']
+                d['Epoch'] = np.arange(start=1, stop=self.estimator.blackbox_.total_epochs+1)
+                d['Cost'] = self.estimator.blackbox_.epoch_log['train_cost']
                 df = pd.DataFrame(d)
                 data = pd.concat([data, df], axis=0)  
 
@@ -169,8 +169,8 @@ class CostCurve(ModelVisualatrix):
         else:      
             self.estimator.fit(X,y)
             d = {}
-            d['Epoch'] = np.arange(start=1, stop=self.estimator.history_.total_epochs+1)
-            d['Cost'] = self.estimator.history_.epoch_log['train_cost']
+            d['Epoch'] = np.arange(start=1, stop=self.estimator.blackbox_.total_epochs+1)
+            d['Cost'] = self.estimator.blackbox_.epoch_log['train_cost']
             data = pd.DataFrame(d)
 
         return data

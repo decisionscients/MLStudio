@@ -78,6 +78,9 @@ class SoftmaxRegression(BaseModel, ClassifierMixin):
         theta : array of shape (n_features, n_classes)  
             The model parameters
 
+        Note: n_features may or may not include the bias term added prior to 
+        training, so we will need to accommodate X of either dimension.               
+
         Returns
         -------
         prediction : Softmax prediction
@@ -86,7 +89,10 @@ class SoftmaxRegression(BaseModel, ClassifierMixin):
         ------
         Value error if X and theta have incompatible shapes.
         """    
-        z = theta[0] + X.dot(theta[1:])
+        if X.shape[1] == theta.shape[0]:
+            z = X.dot(theta)
+        else:
+            z = theta[0] + X.dot(theta[1:])
         a = self._softmax(z)        
         return a.argmax(axis=1)                
 

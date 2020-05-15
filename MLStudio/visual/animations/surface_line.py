@@ -39,7 +39,7 @@ class SurfaceLine:
     def animate(self, model, directory=None, filename=None):
 
         # Extract model history
-        history = model.history_
+        history = model.blackbox_
 
         # Extract the x=theta0, y=theta1 and cost history
         weights = todf(history.epoch_log['theta'], stub='theta_')        

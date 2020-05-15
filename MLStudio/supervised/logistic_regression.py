@@ -66,11 +66,14 @@ class LogisticRegression(BaseModel, ClassifierMixin):
 
         Parameter
         ---------
-        X : 
+        X : array of shape (n_samples, n_features)
             Input data
 
-        theta : array of shape (n_features+1,)  
+        theta : array of shape (n_features,)  
             The model parameters
+
+        Note: n_features may or may not include the bias term added prior to 
+        training, so we will need to accommodate X of either dimension.            
 
         Returns
         -------
@@ -80,7 +83,10 @@ class LogisticRegression(BaseModel, ClassifierMixin):
         ------
         Value error if X and theta have incompatible shapes.
         """    
-        z = theta[0] + X.dot(theta[1:])
+        if X.shape[1] == len(theta):
+            z = X.dot(theta)
+        else:
+            z = theta[0] + X.dot(theta[1:])
         a = self._sigmoid(z)        
         return np.round(a).astype(int)        
 

@@ -35,7 +35,7 @@ from sklearn.preprocessing import LabelBinarizer
 from mlstudio.supervised.estimator.callbacks import CallbackList, Callback
 from mlstudio.supervised.estimator.early_stop import EarlyStop
 from mlstudio.supervised.estimator.debugging import GradientCheck
-from mlstudio.supervised.estimator.monitor import History, Progress, summary
+from mlstudio.supervised.estimator.monitor import BlackBox, Progress, summary
 from mlstudio.supervised.estimator.scorers import R2, Accuracy
 from mlstudio.supervised.estimator.optimizers import Standard
 from mlstudio.supervised.regression import LinearRegression
@@ -74,46 +74,28 @@ class GradientDescent(ABC, BaseEstimator):
     @abstractmethod
     def _prepare_data(self, X, y):
         """Prepares X and y data for training."""
-        self.X_ = self.X_val_ = self.y_ = self.y_val_ = None
+        self.X_train_ = self.X_val_ = self.y_train_ = self.y_val_ = None
         # Validate inputs
-        self.X_, self.y_ = check_X_y(X, y)
+        self.X_train_, self.y_train_ = check_X_y(X, y)
         # Add a column of ones to create the X design matrix
-        self.X_ = np.insert(self.X_, 0, 1.0, axis=1)      
+        self.X_train_ = np.insert(self.X_train_, 0, 1.0, axis=1)      
 
     @abstractmethod
     def _init_weights(self):
         """Initializes weights"""       
         pass
 
+    @abstractmethod
     def _evaluate_epoch(self, log=None):
-        """Computes training (and validation) costs and scores."""
-        log = log or {}
-        # Init variables, such as the scorer, may not be mutated during fit. 
-        # Behind the scenes, sklearn clones estimators to do parallel 
-        # processing in functions such as GridSearchCV. We therefore make a 
-        # copy of the scorer to avoid mutating the original parameter. 
-        scorer = copy.copy(self.scorer)        
-        # Compute costs 
-        y_out = self.algorithm.compute_output(self.X_, self._theta)
-        log['train_cost'] = self.algorithm.compute_cost(self.y_, y_out, self._theta)
-        y_pred = self.algorithm.predict(self.X_, self._theta)
-        log['train_score'] = scorer(self.y_, y_pred)
-        # If early stop object is provided, get validation cost and score
-        if self.early_stop:
-            if self.early_stop.val_size:
-                y_pred_val = self.algorithm.predict(self.X_val_, self._theta)
-                log['val_cost'] = self.algorithm.compute_cost(self.y_val_, y_pred_val, self._theta)        
-                y_pred_val = self.algorithm.predict(self.X_val_, self._theta)
-                log['val_score'] = scorer(self.y_val_, y_pred_val)
-
-        return log
-
+        """Computes training (and validation) costs and scores for each epoch."""
+        pass
+    
     def _init_callbacks(self):
         # Initialize callback list
         self._cbks = CallbackList()        
-        # History callback
-        self.history_ = History()
-        self._cbks.append(self.history_)
+        # BlackBox callback
+        self.blackbox_ = BlackBox()
+        self._cbks.append(self.blackbox_)
         # Progress callback
         self._progress = Progress()        
         self._cbks.append(self._progress)
@@ -143,15 +125,15 @@ class GradientDescent(ABC, BaseEstimator):
     def _end_training(self, log=None):
         """Closes history callout and assign final and best weights."""
         self._cbks.on_train_end()
-        self.intercept_ = self._theta[0]
-        self.coef_ = self._theta[1:]
+        self.intercept_ = self.theta_[0]
+        self.coef_ = self.theta_[1:]
         self.n_iter_ = self._epoch
         self.is_fitted_ = True
 
     def _begin_epoch(self, log=None):
         """Increment the epoch count and shuffle the data."""
         self._epoch += 1
-        self.X_, self.y_ = shuffle_data(self.X_, self.y_) 
+        self.X_train_, self.y_train_ = shuffle_data(self.X_train_, self.y_train_) 
         self._cbks.on_epoch_begin(self._epoch, log)
 
     def _end_epoch(self, log=None):        
@@ -160,7 +142,7 @@ class GradientDescent(ABC, BaseEstimator):
         # Update log with current learning rate and parameters theta
         log['epoch'] = self._epoch
         log['learning_rate'] = self.learning_rate
-        log['theta'] = self._theta.copy()     
+        log['theta'] = self.theta_.copy()     
         # Compute performance statistics for epoch and post to history
         log = self._evaluate_epoch(log)
         # Call 'on_epoch_end' methods on callbacks.
@@ -195,25 +177,25 @@ class GradientDescent(ABC, BaseEstimator):
 
             self._begin_epoch()
 
-            for X_batch, y_batch in batch_iterator(self.X_, self.y_, batch_size=self.batch_size):
+            for X_batch, y_batch in batch_iterator(self.X_train_, self.y_train_, batch_size=self.batch_size):
 
                 self._begin_batch()
                 
                 # Compute model output
-                y_out = self.algorithm.compute_output(X_batch, self._theta)
+                y_out = self.algorithm.compute_output(X_batch, self.theta_)
 
                 # Compute costs
-                J = self.algorithm.compute_cost(y_batch, y_out, self._theta)                
+                J = self.algorithm.compute_cost(y_batch, y_out, self.theta_)                
                 
                 # Format batch log with weights and cost
                 batch_log = {'batch': self._batch, 'batch_size': X_batch.shape[0],
-                             'theta': self._theta.copy(), 'train_cost': J}
+                             'theta': self.theta_.copy(), 'train_cost': J}
 
                 # Compute gradient
-                gradient = self.algorithm.compute_gradient(X_batch, y_batch, y_out, self._theta)
+                gradient = self.algorithm.compute_gradient(X_batch, y_batch, y_out, self.theta_)
 
                 # Update parameters.
-                self._theta = self.optimizer.update_parameters(self._theta, gradient, self._learning_rate)                
+                self.theta_ = self.optimizer.update_parameters(self.theta_, gradient, self._learning_rate)                
 
                 # Update batch log
                 self._end_batch(batch_log)
@@ -238,7 +220,7 @@ class GradientDescent(ABC, BaseEstimator):
         """
         check_is_fitted(self)        
         X = check_array(X, accept_sparse=True, accept_large_sparse=True, estimator=self)
-        return self.algorithm.predict(X, self._theta)
+        return self.algorithm.predict(X, self.theta_)
     
     def score(self, X, y):
         """Computes scores using the scorer parameter.
@@ -260,7 +242,7 @@ class GradientDescent(ABC, BaseEstimator):
         return self.scorer(y, y_pred)
 
     def summary(self, features=None):
-        summary(self.history_, features)
+        summary(self.blackbox_, features)
 
 # --------------------------------------------------------------------------- #
 #                     GRADIENT DESCENT REGRESSOR                              #
@@ -268,13 +250,12 @@ class GradientDescent(ABC, BaseEstimator):
 class GradientDescentRegressor(GradientDescent, RegressorMixin):
     """Gradient descent estimator for regression."""
 
-    def __init__(self, name=None, learning_rate_0=0.01, batch_size=None, 
+    def __init__(self, learning_rate_0=0.01, batch_size=None, 
                  theta_init=None,  epochs=1000, algorithm=LinearRegression(),
                  optimizer=Standard(), scorer=R2(), early_stop=False, 
                  verbose=False, checkpoint=100,  random_state=None, 
                  gradient_check=False):
 
-        self.name = name
         self.learning_rate_0 = learning_rate_0        
         self.batch_size = batch_size
         self.theta_init = theta_init
@@ -286,7 +267,7 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
         self.verbose = verbose
         self.checkpoint = checkpoint
         self.random_state = random_state
-        self.gradient_check = gradient_check        
+        self.gradient_check = gradient_check   
 
     def _prepare_data(self, X, y):
         """Creates the X design matrix and saves data as attributes."""
@@ -294,19 +275,19 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
         # If early stopping, set aside a proportion of the data for the validation set    
         if self.early_stop:            
             if self.early_stop.val_size:                
-                self.X_, self.X_val_, self.y_, self.y_val_ = \
-                    data_split(self.X_, self.y_, stratify=False,
+                self.X_train_, self.X_val_, self.y_train_, self.y_val_ = \
+                    data_split(self.X_train_, self.y_train_, stratify=False,
                     test_size=self.early_stop.val_size, random_state=self.random_state)   
 
     def _init_weights(self):
         """Initializes parameters."""
         if self.theta_init is not None:
-            assert self.theta_init.shape == (self.X_.shape[1],), \
+            assert self.theta_init.shape == (self.X_train_.shape[1],), \
                     "Initial parameters theta must have shape (n_features+1,)."
-            self._theta = self.theta_init
+            self.theta_ = self.theta_init
         else:
             rng = np.random.RandomState(self.random_state)                
-            self._theta = rng.randn(self.X_.shape[1])            
+            self.theta_ = rng.randn(self.X_train_.shape[1])            
 
     def _evaluate_epoch(self, log=None):
         """Computes training (and validation) costs and scores."""
@@ -317,16 +298,16 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
         # copy of the scorer to avoid mutating the original parameter. 
         scorer = copy.copy(self.scorer)        
         # Compute costs 
-        y_out = self.algorithm.compute_output(self.X_, self._theta)
-        log['train_cost'] = self.algorithm.compute_cost(self.y_, y_out, self._theta)
-        y_pred = self.algorithm.predict(self.X_, self._theta)
-        log['train_score'] = scorer(self.y_, y_pred)
+        y_out = self.algorithm.compute_output(self.X_train_, self.theta_)
+        log['train_cost'] = self.algorithm.compute_cost(self.y_train_, y_out, self.theta_)
+        y_pred = self.algorithm.predict(self.X_train_, self.theta_)
+        log['train_score'] = scorer(self.y_train_, y_pred)
         # If early stop object is provided, get validation cost and score
         if self.early_stop:
             if self.early_stop.val_size:
-                y_pred_val = self.algorithm.predict(self.X_val_, self._theta)
-                log['val_cost'] = self.algorithm.compute_cost(self.y_val_, y_pred_val, self._theta)        
-                y_pred_val = self.algorithm.predict(self.X_val_, self._theta)
+                y_out_val = self.algorithm.compute_output(self.X_val_, self.theta_)
+                log['val_cost'] = self.algorithm.compute_cost(self.y_val_, y_out_val, self.theta_)        
+                y_pred_val = self.algorithm.predict(self.X_val_, self.theta_)
                 log['val_score'] = scorer(self.y_val_, y_pred_val)
 
         return log
@@ -339,13 +320,12 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
 class GradientDescentClassifier(GradientDescent, ClassifierMixin):
     """Gradient descent estimator for classification."""
 
-    def __init__(self, name=None, learning_rate_0=0.01, batch_size=None, 
+    def __init__(self, learning_rate_0=0.01, batch_size=None, 
                  theta_init=None,  epochs=1000, algorithm=LogisticRegression(),
                  optimizer=Standard(), scorer=Accuracy(), early_stop=False, 
                  verbose=False, checkpoint=100, random_state=None, 
                  gradient_check=False):
 
-        self.name = name
         self.learning_rate_0 = learning_rate_0        
         self.batch_size = batch_size
         self.theta_init = theta_init
@@ -358,43 +338,124 @@ class GradientDescentClassifier(GradientDescent, ClassifierMixin):
         self.checkpoint = checkpoint
         self.random_state = random_state
         self.gradient_check = gradient_check    
- 
-    def _prepare_data(self, X, y):
-        """Creates the X design matrix and saves data as attributes."""
-        super(GradientDescentClassifier, self)._prepare_data(X,y)
-        # Convert y to one-hot encoding if more than two classes.
-        if len(np.unique(y)) > 2:
-            enc = LabelBinarizer()            
-            self.y_ = enc.fit_transform(y)
 
+    def _prepare_binary_classification_data(self, X, y):
+        """Prepare data for binary classification."""
+        super(GradientDescentClassifier, self)._prepare_data(X,y)    
         # If early stopping, set aside a proportion of the data for the validation set    
         if self.early_stop:            
             if self.early_stop.val_size:                
-                self.X_, self.X_val_, self.y_, self.y_val_ = \
-                    data_split(self.X_, self.y_, stratify=True,
+                self.X_train_, self.X_val_, self.y_train_, self.y_val_ = \
+                    data_split(self.X_train_, self.y_train_, stratify=True,
                     test_size=self.early_stop.val_size, random_state=self.random_state)   
-        
 
-    def _init_weights(self):
-        """Initializes parameters."""        
-        n_features = self.X_.shape[1]
-        if self.y_.ndim == 1:
-            n_classes = len(np.unique(self.y_))
+    def _prepare_multiclass_data(self, X, y):
+        """Prepare data for multiclass logistic regression."""
+        super(GradientDescentClassifier, self)._prepare_data(X,y)    
+        # If early stopping, set aside a proportion of the data for the validation set            
+        if self.early_stop:            
+            if self.early_stop.val_size:                
+                self.X_train_, self.X_val_, self.y_train_, self.y_val_ = \
+                    data_split(self.X_train_, self.y_train_, stratify=True,
+                    test_size=self.early_stop.val_size, random_state=self.random_state)           
+        # One-hot encode the y variable. Save the original for evaluation purposes.
+        enc = LabelBinarizer()
+        self._y_train_orig = self.y_train_
+        self.y_train_ = enc.fit_transform(self.y_train_)
+        if self.early_stop:            
+            if self.early_stop.val_size:    
+                self._y_val_orig = self.y_val_
+                self.y_val_ = enc.fit_transform(self.y_val_)
+
+ 
+    def _prepare_data(self, X, y):
+        """Prepares data for binary or multiclass classification."""
+        if len(np.unique(y)) == 2:
+            self._prepare_binary_classification_data(X, y)
         else:
-            n_classes = self.y_.shape[1]
+            self._prepare_multiclass_data(X, y)
 
+    def _init_weights_binary_classification(self):
+        """Initializes weights for binary classification."""
+        n_features = self.X_train_.shape[1]
         if self.theta_init is not None:
-            if n_classes == 2:
-                assert self.theta_init.shape == (n_features,), \
-                        "Initial parameters must match shape[1] of X,the design matrix."
-                self._theta = self.theta_init
-            else:
-                assert self.theta_init.shape == (n_features, n_classes), \
-                        "Initial parameters theta must have shape (n_features+1, n_classes)."
-                self._theta = self.theta_init
+            assert self.theta_init.shape == (n_features,), \
+                "Initial parameters theta must have shape (n_features+1)."
+            self.theta_ = self.theta_init
         else:
             rng = np.random.RandomState(self.random_state)                
-            if n_classes == 2:    
-                self._theta = rng.randn(n_features)   
-            else:
-                self._theta = rng.randn(n_features, n_classes)   
+            self.theta_ = rng.randn(n_features)   
+
+    def _init_weights_multiclass(self):
+        """Initializes weights for multiclass classification."""
+        n_features = self.X_train_.shape[1]
+        n_classes = self.y_train_.shape[1]
+        if self.theta_init is not None:
+            assert self.theta_init.shape == (n_features, n_classes), \
+                "Initial parameters theta must have shape (n_features+1, n_classes)."
+            self.theta_ = self.theta_init
+        else:
+            rng = np.random.RandomState(self.random_state)                
+            self.theta_ = rng.randn(n_features, n_classes)        
+
+    def _init_weights(self):
+        """Initializes model parameters."""        
+        if self.y_train_.ndim == 1:
+            self._init_weights_binary_classification()
+        else:
+            self._init_weights_multiclass()
+
+    def _evaluate_epoch_binary_classification(self, log=None):
+        """Computes training (and validation) costs and scores for binary classification."""
+        log = log or {}
+        # Init variables, such as the scorer, may not be mutated during fit. 
+        # Behind the scenes, sklearn clones estimators to do parallel 
+        # processing in functions such as GridSearchCV. We therefore make a 
+        # copy of the scorer to avoid mutating the original parameter. 
+        scorer = copy.copy(self.scorer)        
+        # Compute training costs and scores
+        y_out = self.algorithm.compute_output(self.X_train_, self.theta_)
+        log['train_cost'] = self.algorithm.compute_cost(self.y_train_, y_out, self.theta_)
+        y_pred = self.algorithm.predict(self.X_train_, self.theta_)
+        log['train_score'] = scorer(self.y_train_, y_pred)
+        # If early stop object is provided, get validation cost and score
+        if self.early_stop:
+            if self.early_stop.val_size:
+                y_out_val = self.algorithm.compute_output(self.X_val_, self.theta_)
+                log['val_cost'] = self.algorithm.compute_cost(self.y_val_, y_out_val, self.theta_)        
+                y_pred_val = self.algorithm.predict(self.X_val_, self.theta_)
+                log['val_score'] = scorer(self.y_val_, y_pred_val)
+
+        return log
+
+    def _evaluate_epoch_multiclass(self, log=None):
+        """Computes training (and validation) costs and scores for multiclass classification."""
+        log = log or {}
+        # Init variables, such as the scorer, may not be mutated during fit. 
+        # Behind the scenes, sklearn clones estimators to do parallel 
+        # processing in functions such as GridSearchCV. We therefore make a 
+        # copy of the scorer to avoid mutating the original parameter. 
+        scorer = copy.copy(self.scorer)        
+        # Compute training costs and scores
+        y_out = self.algorithm.compute_output(self.X_train_, self.theta_)
+        log['train_cost'] = self.algorithm.compute_cost(self.y_train_, y_out, self.theta_)
+        y_pred = self.algorithm.predict(self.X_train_, self.theta_)
+        log['train_score'] = scorer(self._y_train_orig, y_pred)
+
+        # If early stop object is provided, get validation cost and score
+        if self.early_stop:
+            if self.early_stop.val_size:
+                y_out_val = self.algorithm.compute_output(self.X_val_, self.theta_)
+                log['val_cost'] = self.algorithm.compute_cost(self.y_val_, y_out_val, self.theta_)        
+                y_pred_val = self.algorithm.predict(self.X_val_, self.theta_)
+                log['val_score'] = scorer(self._y_val_orig, y_pred_val)
+
+        return log        
+
+    def _evaluate_epoch(self, log=None):
+        """Computes training costs, and optionally scores, for each epoch."""
+        if self.y_train_.ndim == 1:
+            log = self._evaluate_epoch_binary_classification(log)
+        else:
+            log = self._evaluate_epoch_multiclass(log)
+        return log

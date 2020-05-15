@@ -32,7 +32,7 @@ from mlstudio.utils.print import Printer
 # --------------------------------------------------------------------------- #
 #                             HISTORY CLASS                                   #
 # --------------------------------------------------------------------------- #
-class History(Callback):
+class BlackBox(Callback):
     """Records history and metrics for training by epoch."""
     def on_train_begin(self, logs=None):
         """Sets instance variables at the beginning of training.
