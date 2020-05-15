@@ -56,7 +56,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
-.hypothesis/
+.activation/
 .pytest_cache/
 
 # Translations

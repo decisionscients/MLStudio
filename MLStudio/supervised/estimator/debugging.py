@@ -68,8 +68,8 @@ class GradientCheck(Callback):
         """
         if self.model.gradient_check:
             if logs.get('epoch') % self.iterations == 0:
-                X = logs.get('X')
-                y = logs.get('y')
+                X = self.model.X_
+                y = self.model.y_
                 epoch = logs.get('epoch')
                 learning_rate = logs.get('learning_rate')
                 theta = logs.get('theta')
@@ -83,9 +83,9 @@ class GradientCheck(Callback):
                     theta_plus[i] = theta_plus[i] + self.epsilon
                     theta_minus[i] = theta_minus[i] - self.epsilon
                     # Compute associated costs
-                    y_pred = self._algorithm.hypothesis(X, theta_plus)
+                    y_pred = self._algorithm.predict(X, theta_plus)
                     J_plus = self._algorithm.compute_cost(y, y_pred, theta_plus)
-                    y_pred = self._algorithm.hypothesis(X, theta_minus)
+                    y_pred = self._algorithm.predict(X, theta_minus)
                     J_minus = self._algorithm.compute_cost(y, y_pred, theta_minus)
 
                     # Estimate the gradient
@@ -93,7 +93,7 @@ class GradientCheck(Callback):
                     grad_approx.append(grad_approx_i)
                 
                 # Compute gradient via back-propagation
-                y_pred = self._algorithm.hypothesis(X, theta)
+                y_pred = self._algorithm.predict(X, theta)
                 grad = self._algorithm.compute_gradient(X, y, y_pred, theta) 
 
                 grad = np.array(grad)

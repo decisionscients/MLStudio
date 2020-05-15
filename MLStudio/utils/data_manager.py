@@ -25,18 +25,22 @@ from itertools import combinations_with_replacement
 from math import ceil, floor
 import numpy as np
 from numpy.random import RandomState
+from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.utils.validation import check_is_fitted
 
 import pandas as pd
 
 # --------------------------------------------------------------------------- #
 #                               TRANSFORMERS                                  #
 # --------------------------------------------------------------------------- #
-class MinMaxScaler:
+class MinMaxScaler(TransformerMixin, BaseEstimator):
     """Scales each feature to values between 0 and 1.
 
     Scaling a sample 'x' to 0-1 is calculated as:
 
         X_new = (X - X_min) / (X_max-X_min)
+
+    Note: Works for dense matrices only.
 
     Attributes
     ----------
@@ -66,8 +70,8 @@ class MinMaxScaler:
         y : Ignored
 
         """
-        self.data_min_ = np.nanmin(X, axis=0)
-        self.data_max_ = np.nanmax(X, axis=0)
+        self.data_min_ = np.amin(X, axis=0)
+        self.data_max_ = np.amax(X, axis=0)
         self.data_range_ = self.data_max_ - self.data_min_
 
     def transform(self, X):
@@ -82,7 +86,7 @@ class MinMaxScaler:
         -------
         Xt : array-like of same shape as X
         """
-        X = np.subtract(X, self.data_min_)        
+        X = X - self.data_min_
         X = np.divide(X, self.data_range_, 
                       out = np.zeros(X.shape,dtype=float), 
                       where = self.data_range_ != 0)        
@@ -119,8 +123,8 @@ class MinMaxScaler:
         X = X * self.data_range_
         X = X + self.data_min_
         return X
-
-class StandardScaler:
+# --------------------------------------------------------------------------- #
+class StandardScaler(TransformerMixin, BaseEstimator):
     """Standardizes data to a zero mean and unit variance.
 
     Standardizing a sample 'x' is calculated as:
@@ -203,7 +207,13 @@ class StandardScaler:
         X = X * self.std_
         X = X + self.mean_
         return X
-        
+
+    def fit_transform(self, X):
+        """Calls fit and transform methods."""
+        self.fit(X)
+        return self.transform(X)
+
+
 # --------------------------------------------------------------------------- #
 #                            SHUFFLE DATA                                     #
 # --------------------------------------------------------------------------- #

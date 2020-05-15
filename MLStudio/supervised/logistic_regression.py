@@ -22,55 +22,51 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.base import ClassifierMixin
-from sklearn.metrics import euclidean_distances
-from sklearn.utils.multiclass import check_classification_targets
-from sklearn.utils.validation import check_X_y, check_is_fitted, check_array
 
-from mlstudio.utils.data_manager import data_split, one_hot
-
+from mlstudio.supervised.base_model import BaseModel
 # --------------------------------------------------------------------------- #
 #                          LOGISTIC REGRESSION                                #
 # --------------------------------------------------------------------------- #            
-class LogisticRegression(ABC):
+class LogisticRegression(BaseModel, ClassifierMixin):
     """Logistic Regression Algorithm"""
-    _DEFAULT_METRIC = 'accuracy'
-    _TASK = "Logistic Regression"
 
     def __init__(self):
-        self.name = "Logistic Regression"
+        pass
 
-    def _validate_hyperparam(self, p):
-        assert isinstance(p, (int,float)), "Regularization hyperparameter must be numeric."
-        assert p >= 0 and p <= 1, "Regularization parameter must be between zero and 1."        
+    @property
+    def name(self):
+        return "Logistic Regression"    
+
+    @property
+    def task(self):
+        return "Classification"        
 
     def _sigmoid(self, Z):
         """Uses sigmoid to predict the probability of a positive response.""" 
         s = 1.0 / (1 + np.exp(-Z))
         return s
 
-    def hypothesis(self, X, theta):
-        """Computes the hypothesis using an input design matrix with bias term.
+    def compute_output(self, X, theta):
+        """Computes output from the sigmoid function.
 
-        Parameter
-        ---------
-        X : array of shape (m_observations, n_features+1)
-            Input data
+        Parameters
+        ----------
+        X : array of shape [n_samples, n_features]
+            The model inputs. Note the number of features includes the coefficient
+            for the bias term
 
-        theta : array of shape (n_features+1,)  
-            The model parameters
-
-        Returns
-        -------
-        hypothesis : Linear combination of inputs.
+        theta : array of shape [n_features,] or [n_features, n_classes]
+            Model parameters
+        
         """
-        return self._sigmoid(X.dot(theta))        
+        return self._sigmoid(X.dot(theta))
 
     def predict(self, X, theta):
         """Computes the prediction logistic regression prediction.
 
         Parameter
         ---------
-        X : array of shape (m_observations, n_features)
+        X : 
             Input data
 
         theta : array of shape (n_features+1,)  
@@ -78,22 +74,17 @@ class LogisticRegression(ABC):
 
         Returns
         -------
-        prediction : Linear combination of inputs.
+        prediction : Binary classification
 
         Raises
         ------
         Value error if X and theta have incompatible shapes.
         """    
-        X = np.array(X)
-        check_array(X)        
+        z = theta[0] + X.dot(theta[1:])
+        a = self._sigmoid(z)        
+        return np.round(a).astype(int)        
 
-        if X.shape[1] == len(theta) - 1:
-            X = np.insert(X, 0, 1.0, axis=1)   
-        h = self.hypothesis(X, theta)            
-        y_pred = np.round(h).astype(int)
-        return y_pred
-
-    def compute_cost(self, y, y_pred, theta=None):
+    def compute_cost(self, y, y_out, theta=None):
         """Computes the binary cross-entropy cost.
 
         Parameters
@@ -101,9 +92,9 @@ class LogisticRegression(ABC):
         y : array of shape (n_features,)
             Ground truth target values
 
-        y_pred : array of shape (n_features,)
-            Predictions 
-
+        y_out : array of shape (n_features,)
+            Model output.
+            
         Returns
         -------
         cost : The binary cross-entropy cost 
@@ -111,12 +102,12 @@ class LogisticRegression(ABC):
         """
         n_samples = y.shape[0]
         # Prevent division by zero
-        y_pred = np.clip(y_pred, 1e-15, 1-1e-15)        
-        J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_pred)) + np.multiply(1-y, np.log(1-y_pred)))
+        y_out = np.clip(y_out, 1e-15, 1-1e-15)        
+        J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + np.multiply(1-y, np.log(1-y_out)))
         return J        
 
-    def compute_gradient(self, X, y, y_pred, theta=None):
-        """Computes quadratic costs gradient with respect to weights.
+    def compute_gradient(self, X, y, y_out, theta):
+        """Computes logistic costs gradient with respect to weights.
         
         Parameters
         ----------
@@ -126,7 +117,7 @@ class LogisticRegression(ABC):
         y : array of shape (n_features,)
             Ground truth target values
 
-        y_pred : array of shape (n_features,)
+        y_out : array of shape (n_features,)
             Predictions                    
 
         Returns
@@ -135,7 +126,7 @@ class LogisticRegression(ABC):
 
         """  
         n_samples = y.shape[0]
-        dZ = y_pred-y
+        dZ = y_out-y
         dW = 1/n_samples * X.T.dot(dZ)
         return(dW)             
 
@@ -143,15 +134,20 @@ class LogisticRegression(ABC):
 #                          LASSO LOGISTIC REGRESSION                          #
 # --------------------------------------------------------------------------- #            
 class LassoLogisticRegression(LogisticRegression):
-    """Logistic Regression Algorithm"""
-    _DEFAULT_METRIC = 'accuracy'
-    _TASK = "Lasso Logistic Regression"
+    """Logistic Regression Algorithm with Lasso Regularization"""
 
     def __init__(self, alpha=1):
         self.alpha = alpha
-        self.name = "Lasso Logistic Regression"
 
-    def compute_cost(self, y, y_pred, theta):
+    @property
+    def name(self):
+        return "Logistic Regression with Lasso Regularization"    
+
+    @property
+    def task(self):
+        return "Classification"        
+
+    def compute_cost(self, y, y_out, theta):
         """Computes the binary cross-entropy cost.
 
         Parameters
@@ -159,7 +155,7 @@ class LassoLogisticRegression(LogisticRegression):
         y : array of shape (n_samples,)
             Ground truth target values
 
-        y_pred : array of shape (n_samples,)
+        y_out : array of shape (n_samples,)
             Predictions 
 
         theta : array of shape (n_features+1,)  
@@ -173,15 +169,15 @@ class LassoLogisticRegression(LogisticRegression):
         self._validate_hyperparam(self.alpha)
         n_samples = y.shape[0]
         # Prevent division by zero
-        y_pred = np.clip(y_pred, 1e-15, 1-1e-15)        
+        y_out = np.clip(y_out, 1e-15, 1-1e-15)        
         # Compute regularization
         J_reg = (self.alpha / n_samples) * np.linalg.norm(theta, ord=1)
         # Compute lasso regularized cost
-        J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_pred)) + \
-            np.multiply(1-y, np.log(1-y_pred))) + J_reg
+        J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + \
+            np.multiply(1-y, np.log(1-y_out))) + J_reg
         return J        
 
-    def compute_gradient(self, X, y, y_pred, theta):
+    def compute_gradient(self, X, y, y_out, theta):
         """Computes quadratic costs gradient with respect to weights.
         
         Parameters
@@ -192,7 +188,7 @@ class LassoLogisticRegression(LogisticRegression):
         y : array of shape (n_samples,)
             Ground truth target values
 
-        y_pred : array of shape (n_samples,)
+        y_out : array of shape (n_samples,)
             Predictions 
 
         theta : array of shape (n_features+1,)  
@@ -204,7 +200,7 @@ class LassoLogisticRegression(LogisticRegression):
 
         """
         n_samples = y.shape[0]
-        dZ = y_pred-y
+        dZ = y_out-y
         dW = 1/n_samples * (X.T.dot(dZ) + self.alpha * np.sign(theta))
         return(dW)                     
 
@@ -212,15 +208,20 @@ class LassoLogisticRegression(LogisticRegression):
 #                          RIDGE LOGISTIC REGRESSION                          #
 # --------------------------------------------------------------------------- #            
 class RidgeLogisticRegression(LogisticRegression):
-    """Logistic Regression Algorithm"""
-    _DEFAULT_METRIC = 'accuracy'
-    _TASK = "Ridge Logistic Regression"
+    """Logistic Regression Algorithm with Ridge Regularization"""
 
     def __init__(self, alpha=1):
         self.alpha = alpha
-        self.name = "Ridge Logistic Regression"
 
-    def compute_cost(self, y, y_pred, theta):
+    @property
+    def name(self):
+        return "Logistic Regression with Ridge Regularization"    
+
+    @property
+    def task(self):
+        return "Classification"              
+
+    def compute_cost(self, y, y_out, theta):
         """Computes the binary cross-entropy cost.
 
         Parameters
@@ -228,7 +229,7 @@ class RidgeLogisticRegression(LogisticRegression):
         y : array of shape (n_samples,)
             Ground truth target values
 
-        y_pred : array of shape (n_samples,)
+        y_out : array of shape (n_samples,)
             Predictions 
 
         theta : array of shape (n_features+1,)  
@@ -242,15 +243,15 @@ class RidgeLogisticRegression(LogisticRegression):
         self._validate_hyperparam(self.alpha)
         n_samples = y.shape[0]
         # Prevent division by zero
-        y_pred = np.clip(y_pred, 1e-15, 1-1e-15)        
+        y_out = np.clip(y_out, 1e-15, 1-1e-15)        
         # Compute regularization
         J_reg = (self.alpha / (2*n_samples)) * np.linalg.norm(theta)**2
         # Compute ridge regularized cost
-        J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_pred)) + \
-            np.multiply(1-y, np.log(1-y_pred))) + J_reg
+        J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + \
+            np.multiply(1-y, np.log(1-y_out))) + J_reg
         return J        
 
-    def compute_gradient(self, X, y, y_pred, theta):
+    def compute_gradient(self, X, y, y_out, theta):
         """Computes quadratic costs gradient with respect to weights.
         
         Parameters
@@ -261,7 +262,7 @@ class RidgeLogisticRegression(LogisticRegression):
         y : array of shape (n_samples,)
             Ground truth target values
 
-        y_pred : array of shape (n_samples,)
+        y_out : array of shape (n_samples,)
             Predictions 
 
         theta : array of shape (n_features+1,)  
@@ -273,7 +274,7 @@ class RidgeLogisticRegression(LogisticRegression):
 
         """
         n_samples = y.shape[0]
-        dZ = y_pred-y
+        dZ = y_out-y
         dW = 1/n_samples * (X.T.dot(dZ) + self.alpha * theta)
         return(dW)                             
 
@@ -281,16 +282,21 @@ class RidgeLogisticRegression(LogisticRegression):
 #                       ELASTIC NET LOGISTIC REGRESSION                       #
 # --------------------------------------------------------------------------- #            
 class ElasticNetLogisticRegression(LogisticRegression):
-    """Logistic Regression Algorithm"""
-    _DEFAULT_METRIC = 'accuracy'
-    _TASK = "ElasticNet Logistic Regression"
+    """Logistic Regression Algorithm with ElasticNet Regularization"""
 
     def __init__(self, alpha=1, ratio=0.5):
         self.alpha=alpha
         self.ratio=ratio
-        self.name = "ElasticNet Logistic Regression" 
 
-    def compute_cost(self, y, y_pred, theta):
+    @property
+    def name(self):
+        return "Logistic Regression with ElasticNet Regularization"    
+
+    @property
+    def task(self):
+        return "Classification"      
+
+    def compute_cost(self, y, y_out, theta):
         """Computes the binary cross-entropy cost.
 
         Parameters
@@ -298,7 +304,7 @@ class ElasticNetLogisticRegression(LogisticRegression):
         y : array of shape (n_samples,)
             Ground truth target values
 
-        y_pred : array of shape (n_samples,)
+        y_out : array of shape (n_samples,)
             Predictions 
 
         theta : array of shape (n_features+1,)  
@@ -314,17 +320,17 @@ class ElasticNetLogisticRegression(LogisticRegression):
 
         n_samples = y.shape[0]
         # Prevent division by zero
-        y_pred = np.clip(y_pred, 1e-15, 1-1e-15)        
+        y_out = np.clip(y_out, 1e-15, 1-1e-15)        
         # Compute regularization
         l1_contr = self.ratio * np.linalg.norm(theta, ord=1)
         l2_contr = (1 - self.ratio) * 0.5 * np.linalg.norm(theta)**2        
         J_reg = float(1./n_samples) * self.alpha * (l1_contr + l2_contr)
         # Compute elasticnet regularized cost
-        J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_pred)) + \
-            np.multiply(1-y, np.log(1-y_pred))) + J_reg
+        J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + \
+            np.multiply(1-y, np.log(1-y_out))) + J_reg
         return J        
 
-    def compute_gradient(self, X, y, y_pred, theta):
+    def compute_gradient(self, X, y, y_out, theta):
         """Computes quadratic costs gradient with respect to weights.
         
         Parameters
@@ -335,7 +341,7 @@ class ElasticNetLogisticRegression(LogisticRegression):
         y : array of shape (n_samples,)
             Ground truth target values
 
-        y_pred : array of shape (n_samples,)
+        y_out : array of shape (n_samples,)
             Predictions 
 
         theta : array of shape (n_features+1,)  
@@ -350,6 +356,6 @@ class ElasticNetLogisticRegression(LogisticRegression):
         l1_contr = self.ratio * np.sign(theta)
         l2_contr = (1 - self.ratio) * theta        
         alpha = np.asarray(self.alpha, dtype='float64')     
-        dZ = y_pred-y
+        dZ = y_out-y
         dW = 1/n_samples  * (X.T.dot(dZ) + np.multiply(alpha, np.add(l1_contr, l2_contr)))
         return(dW)                       

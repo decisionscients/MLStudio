@@ -44,7 +44,7 @@ class History(Callback):
         """ 
         self.total_epochs = 0
         self.total_batches = 0
-        self.start = datetime.datetime.now() 
+        self.start = datetime.datetime.now()
         self.epoch_log = {}
         self.batch_log = {}        
 
