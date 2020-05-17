@@ -21,46 +21,51 @@
 """Classes used to regularize cost and gradient computations."""
 import numpy as np
 # --------------------------------------------------------------------------  #
-class L0:
+class Nill:
     """ No Regularization """
     
     def __call__(self, theta):
         return 0
-
+        self.name = "No Regularization"
+    
     def gradient(self, theta):
         return np.zeros(theta.shape)
 # --------------------------------------------------------------------------  #
 class L1:
     """ Regularization for Lasso Regression """
-    def __init__(self, alpha=1):
+    def __init__(self, alpha=0.1):
         self.alpha = alpha
+        self.name = "Lasso (L1) Regularization"
     
     def __call__(self, theta):
-        return self.alpha * np.linalg.norm(theta)
+        return self.alpha * np.linalg.norm(theta, 1)
 
     def gradient(self, theta):
         return self.alpha * np.sign(theta)
+    
 # --------------------------------------------------------------------------  #
 class L2:
     """ Regularization for Ridge Regression """
-    def __init__(self, alpha=1):
+    def __init__(self, alpha=0.0001):
         self.alpha = alpha
+        self.name = "Ridge (L2) Regularization"
     
     def __call__(self, theta):
-        return self.alpha * 0.5 *  theta.T.dot(theta)
+        return self.alpha * 0.5 * theta.T.dot(theta)
 
     def gradient(self, theta):
         return self.alpha * theta
 # --------------------------------------------------------------------------  #
 class L1_L2:
     """ Regularization for Elastic Net Regression """
-    def __init__(self, alpha=1, ratio=0.5):
+    def __init__(self, alpha=0.001, ratio=0.5):
         self.alpha = alpha
         self.ratio = ratio
+        self.name = "Elasticnet (L1_L2) Regularization"
 
     def __call__(self, theta):
-        l1_contr = self.ratio * np.linalg.norm(theta)
-        l2_contr = (1 - self.ratio) * 0.5 * theta.T.dot(theta) 
+        l1_contr = self.ratio * np.linalg.norm(theta, 1)
+        l2_contr = (1 - self.ratio) * 0.5 * theta.T.dot(theta)
         return self.alpha * (l1_contr + l2_contr)
 
     def gradient(self, theta):

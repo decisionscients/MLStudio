@@ -25,11 +25,27 @@ import copy
 import numpy as np
 
 from mlstudio.supervised.callbacks.base import Callback
-
-# --------------------------------------------------------------------------- #
-#                              EARLY STOP                                     #
+from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
 class EarlyStop(Callback):
+    """Abstract base class for all early stop callbacks."""
+    @abstractmethod
+    def __init__(self, val_size=0.3, epsilon=0.0001):
+        self.val_size = val_size    
+        self.epsilon = epsilon
+
+    @abstractmethod
+    def on_train_begin(self, logs=None):    
+        validate_zero_to_one(self.val_size)
+        validate_zero_to_one(self.epsilon)
+
+    @abstractmethod
+    def on_epoch_end(self, epoch, logs=None):
+        pass
+
+
+# --------------------------------------------------------------------------- #
+class Performance(Callback):
     """Stops training if performance hasn't improved.
     
     Stops training if performance hasn't improved. Improvement is measured 
@@ -40,8 +56,8 @@ class EarlyStop(Callback):
 
     Parameters
     ----------
-    monitor : str, optional (default='val_score')
-        Specifies which statistic to monitor for evaluation purposes.
+    metric : str, optional (default='val_score')
+        Specifies which statistic to metric for evaluation purposes.
 
         'train_cost': Training set costs
         'train_score': Training set scores based upon the model's metric parameter
@@ -51,7 +67,7 @@ class EarlyStop(Callback):
     val_size : float
         The proportion of the dataset to allocate to validation set.        
 
-    precision : float, optional (default=0.01)
+    epsilon : float, optional (default=0.01)
         The factor by which performance is considered to have improved. For 
         instance, a value of 0.01 means that performance must have improved
         by a factor of 1% to be considered an improvement.
@@ -61,12 +77,12 @@ class EarlyStop(Callback):
         stop training.    
     """
 
-    def __init__(self, monitor='val_score', val_size=0.3, precision=1e-3, patience=5):
-        super(EarlyStop, self).__init__()
-        self.name = "Early Stop"
-        self.monitor = monitor
+    def __init__(self, metric='val_cost', val_size=0.3, epsilon=1e-6, patience=50):
+        super(Performance, self).__init__()
+        self.name = "Performance"
+        self.metric = metric
         self.val_size = val_size
-        self.precision = precision
+        self.epsilon = epsilon
         self.patience = patience
         self.n_iter_ = 0
         self.converged_ = False
@@ -79,18 +95,9 @@ class EarlyStop(Callback):
         
 
     def _validate(self):
-        if self.monitor not in ['train_cost', 'train_score', 'val_cost', 'val_score']:
-            raise ValueError("monitor must be in ['train_cost', 'train_score', 'val_cost', 'val_score']")
-        elif not isinstance(self.precision, float):
-            raise TypeError("precision must be a float.")
-        elif self.precision < 0 or self.precision > 1:
-            raise ValueError("precision must be between 0 and 1. A good default is 0.01 or 1%.")
-        elif not isinstance(self.patience, (int)):
-            raise TypeError("patience must be an integer.")
-        elif 'score' in self.monitor and self.model.scorer is None:
-            raise ValueError("'score' has been selected for evaluation; however"
-                             " no scorer has been designated for the model. "
-                             "Monitor cost or add a scorer to the estimator.")
+        if self.metric not in ['train_cost', 'train_score', 'val_cost', 'val_score']:
+            raise ValueError("metric must be in ['train_cost', 'train_score', 'val_cost', 'val_score']")
+        validate_zero_to_one(self.epsilon)       
 
 
     def on_train_begin(self, logs=None):        
@@ -101,26 +108,26 @@ class EarlyStop(Callback):
         log : dict
             Contains no information
         """
-        super(EarlyStop, self).on_train_begin()
+        super(Performance, self).on_train_begin(logs)
         logs = logs or {}
         self._validate()
         # We evaluate improvement against the prior metric plus or minus a
-        # margin given by precision * the metric. Whether we add or subtract the margin
+        # margin given by epsilon * the metric. Whether we add or subtract the margin
         # is based upon the metric. For metrics that increase as they improve
         # we add the margin, otherwise we subtract the margin.  Each metric
-        # has a bit called a precision factor that is -1 if we subtract the 
-        # margin and 1 if we add it. The following logic extracts the precision
-        # factor for the metric and multiplies it by the precision for the 
+        # has a bit called a epsilon factor that is -1 if we subtract the 
+        # margin and 1 if we add it. The following logic extracts the epsilon
+        # factor for the metric and multiplies it by the epsilon for the 
         # improvement calculation.
-        if 'score' in self.monitor:
+        if 'score' in self.metric:
             scorer = copy.copy(self.model.scorer)
             self._better = scorer.better
             self.best_performance_ = scorer.worst
-            self.precision *= scorer.precision_factor
+            self.epsilon *= scorer.epsilon_factor
         else:
             self._better = np.less
             self.best_performance_ = np.Inf
-            self.precision *= -1 # Bit always -1 since it improves negatively
+            self.epsilon *= -1 # Bit always -1 since it improves negatively
 
     def on_epoch_end(self, epoch, logs=None):
         """Determines whether convergence has been achieved.
@@ -139,10 +146,10 @@ class EarlyStop(Callback):
         Bool if True convergence has been achieved. 
 
         """
-        
+        super(Performance, self).on_epoch_end(epoch, logs)        
         logs = logs or {}
         # Obtain current cost or score
-        current = logs.get(self.monitor)
+        current = logs.get(self.metric)
 
         # Handle the first iteration
         if self.best_performance_ in [np.Inf,-np.Inf]:
@@ -153,7 +160,7 @@ class EarlyStop(Callback):
         # Evaluate performance
         elif self._better(current, 
                             (self.best_performance_+self.best_performance_ \
-                                *self.precision)):            
+                                *self.epsilon)):            
             self._iter_no_improvement = 0
             self.best_performance_ = current
             self.best_weights_ = logs.get('theta')
@@ -164,9 +171,100 @@ class EarlyStop(Callback):
                 self.converged_ = True            
         self.model.converged = self.converged_                     
 
+# --------------------------------------------------------------------------- #
+class Stability(Callback):
+    """Stops when performance becomes stable.
 
+    Stability is measured in the relative change in a metric i.e. the norm
+    of the gradient or the validation score. 
 
+    Parameters
+    ----------
+    metric : str (default = 'gradient')
+        The metric to metric. Valid values include: 'gradient', 'theta',
+        'val_cost', 'val_score'
+    val_size : float (default=0.3)
+        The proportion of training set to allocate to the validation set.
 
+    epsilon : float Default 0.001
+        The lower bound allowed for the percent change in the gradient norm.
 
+    """
 
-# %%
+    def __init__(self, metric='val_cost', val_size = 0.3, epsilon=0.0001):        
+        super(Stability, self).__init__()
+        self.name = "Stability" 
+        self.metric = metric 
+        self.val_size = val_size
+        self.epsilon = epsilon
+        self._previous = None
+
+    def on_train_begin(self, logs=None):
+        super(Stability, self).on_train_begin(logs)
+        if self.metric not in ['gradient', 'theta', 'train_cost', 'train_score',\
+                               'val_cost', 'val_score']:
+            msg = "Metric {m} is not supported. Valid values include: 'gradient',\
+                 'theta', 'train_cost', 'train_score', 'val_cost', 'val_score.".format(m=self.metric)
+            raise ValueError(msg)
+
+    def on_epoch_end(self, epoch, logs=None):        
+        """Stops when relative change in the metric is below epsilon"""
+        super(Stability, self).on_epoch_end(epoch, logs)
+        if self.metric in ['gradient', 'theta']:
+            current = np.linalg.norm(logs.get(self.metric)) 
+        else:
+            current = logs.get(self.metric)
+
+        if self._previous is None:
+            self._previous = current
+        elif (current - self._previous) \
+            / self._previous * 100 < self.epsilon:
+            self.model.converged = True
+        else:
+            self._previous = current
+
+# --------------------------------------------------------------------------- #
+class BCN1(Callback):
+    """Stopping Criteria #1: Based upon Bottou-Curtis-Nocedal Functions.
+
+    Let :math:'\epsilon' > 0. Let :math: '{T_j}' be a sequence of positive-
+    valued, strictly increasing, finite stopping times with respect to
+    :math: '{F_k}'. Then, the SGD iterates are stopped at iterate 
+    :math: 'T_j' where:
+
+        :math: 'J = \text{min}\bigg\{j \ge 1: \lVert F(\Beta T_j)\rVert_2\le\epsilon\bigg}.'
+
+    Parameters
+    ----------
+    val_size : float (default=0.3)
+        The proportion of training set to allocate to the validation set.
+
+    epsilon : float Default 0.0001
+        The lower bound allowed for the percent change in the gradient norm.
+
+    Reference: https://arxiv.org/abs/2004.00475
+
+    """
+
+    def __init__(self, n_size = 100, val_size = 0.3, epsilon=0.0001):        
+        super(BCN1, self).__init__()
+        self.name = "BCN1"                 
+        self.val_size = val_size
+        self.epsilon = epsilon     
+
+    def on_train_begin(self, logs=None):
+        super(BCN1, self).on_train_begin(logs)
+        j 
+
+    def on_epoch_end(self, epoch, logs=None):        
+        """Stops the epoch the L2 norm of the gradient drops below epsilon"""
+        super(BCN1, self).on_epoch_end(epoch, logs)
+        batch = logs.get('batch')
+        norm_g = np.linalg.norm(logs.get('gradient')) 
+        if norm_g <= self.epsilon and batch >= 1:
+            J = np.min(batch, norm_g)
+            if J == batch:
+                self.model.converged = True
+   
+
+                self.model.converged = True

@@ -211,7 +211,7 @@ class PolynomialDecay(Callback):
         logs: dict
             Dictionary containing the data, cost, batch size and current weights
         """
-        decay = (1 - (epoch / float(model.epochs))) ** self.power                
+        decay = (1 - (epoch / float(self.model.epochs))) ** self.power                
         self.model.eta = self.eta0 * decay
 
 # --------------------------------------------------------------------------  #
@@ -247,7 +247,7 @@ class ExponentialSchedule(Callback):
         logs: dict
             Dictionary containing the data, cost, batch size and current weights
         """                
-        self.model.eta = self.eta0 * 10**(-epoch / model.epochs)
+        self.model.eta = self.eta0 * 10**(-epoch / self.model.epochs)
 
 # --------------------------------------------------------------------------  #
 class PowerSchedule(Callback):

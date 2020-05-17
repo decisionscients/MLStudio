@@ -25,6 +25,7 @@ from itertools import combinations_with_replacement
 from math import ceil, floor
 import numpy as np
 from numpy.random import RandomState
+from scipy.sparse import isspmatrix_coo
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils import shuffle
 from sklearn.utils.validation import check_is_fitted
@@ -316,6 +317,11 @@ def data_split(X, y, test_size=0.3, shuffle=False, stratify=False, random_state=
     y_test : array_like
         Targets for X_test 
     """
+    if isspmatrix_coo(X):
+        X = X.tocsr()
+    if isspmatrix_coo(y):
+        y = y.tocsr()
+        
     if X.shape[0] != y.shape[0]:
         raise ValueError("X and y have incompatible shapes. Expected "
                          "X.shape[0]=y.shape[0] however X.shape[0] = %d "

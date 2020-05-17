@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod
 import dill as pickle
 import numpy as np
 
-from mlstudio.supervised.core.regularization import L0
+from mlstudio.supervised.core.regularization import Nill
 # --------------------------------------------------------------------------  #
 class Cost(ABC):
     """Base class for all cost classes."""
@@ -32,7 +32,7 @@ class Cost(ABC):
     @abstractmethod
     def __init__(self, regularization=None):        
         if not regularization:
-            self.regularization = L0()
+            self.regularization = Nill()
         else:
             self.regularization = regularization
 
@@ -69,9 +69,10 @@ class MSE(Cost):
         cost : The quadratic cost 
 
         """
+        m = y.shape[0]
         J = np.mean(0.5 * (y-y_out)**2) 
         # Add regularization of weights (not bias)
-        J += self.regularization(theta)
+        J += self.regularization(theta)  / m
         return J
 
     def gradient(self, X, y, y_out, theta):
@@ -100,7 +101,7 @@ class MSE(Cost):
         dZ = y_out-y
         dW = float(1./n_samples) * X.T.dot(dZ) 
         # Add the gradient of regularization of weights (not bias)
-        dW += self.regularization.gradient(theta)
+        dW += self.regularization.gradient(theta) / n_samples
         return(dW)        
 
 # --------------------------------------------------------------------------  #
@@ -110,7 +111,7 @@ class CrossEntropy(Cost):
         super(CrossEntropy, self).__init__(regularization)
 
     def __call__(self, y, y_out, theta):
-        """Computes the mean squared error cost.
+        """Computes cross entropy cost.
 
         Parameters
         ----------
@@ -134,11 +135,11 @@ class CrossEntropy(Cost):
         J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + \
             np.multiply(1-y, np.log(1-y_out))) 
         # Add regularization of weights (not bias)
-        J += self.regularization(theta)
+        J += self.regularization(theta) / n_samples
         return J   
 
     def gradient(self, X, y, y_out, theta):
-        """Computes quadratic costs gradient with respect to weights.
+        """Computes cross entropy cost  gradient with respect to weights.
         
         Parameters
         ----------
@@ -163,7 +164,7 @@ class CrossEntropy(Cost):
         dZ = y_out-y
         dW = float(1./n_samples) * X.T.dot(dZ) 
         # Add the gradient of regularization of weights (not bias)
-        dW += self.regularization.gradient(theta)
+        dW += self.regularization.gradient(theta) / n_samples
         return(dW)          
 
 # --------------------------------------------------------------------------  #
@@ -173,7 +174,7 @@ class CategoricalCrossEntropy(Cost):
         super(CategoricalCrossEntropy, self).__init__(regularization)
 
     def __call__(self, y, y_out, theta):
-        """Computes the mean squared error cost.
+        """Computes categorical cross entropy cost.
 
         Parameters
         ----------
@@ -198,11 +199,11 @@ class CategoricalCrossEntropy(Cost):
         # Obtain unregularized cost
         J = np.mean(-np.sum(np.log(y_out) * y, axis=1))
         # Add regularization of weights (not bias)
-        J = J + self.regularization(theta[1])
+        J += self.regularization(theta) / n_samples
         return J 
 
     def gradient(self, X, y, y_out, theta):
-        """Computes quadratic costs gradient with respect to weights.
+        """Computes gradient of cross-entropy cost with respect to weights.
         
         Parameters
         ----------
@@ -227,5 +228,5 @@ class CategoricalCrossEntropy(Cost):
         dZ =y_out-y
         dW = 1/n_samples * X.T.dot(dZ)
         # Add regularization of weights (not bias)
-        dW += self.regularization.gradient(theta)
+        dW += self.regularization.gradient(theta) / n_samples
         return(dW)                  

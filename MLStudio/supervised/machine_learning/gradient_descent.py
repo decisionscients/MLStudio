@@ -35,7 +35,7 @@ from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 
 from mlstudio.supervised.callbacks.base import CallbackList, Callback
 from mlstudio.supervised.callbacks.debugging import GradientCheck
-from mlstudio.supervised.callbacks.early_stop import EarlyStop
+from mlstudio.supervised.callbacks.early_stop import Performance, Stability
 from mlstudio.supervised.callbacks.learning_rate import Constant
 from mlstudio.supervised.callbacks.monitor import BlackBox, Progress, summary
 from mlstudio.supervised.core.activation import Sigmoid, Softmax
@@ -43,7 +43,7 @@ from mlstudio.supervised.core.optimizer import Standard
 from mlstudio.supervised.core.cost import MSE, CrossEntropy, CategoricalCrossEntropy
 from mlstudio.supervised.core.scorers import R2, Accuracy
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
-from mlstudio.utils.validation import check_y
+
 # --------------------------------------------------------------------------- #
 #                          GRADIENT DESCENT                                   #
 # --------------------------------------------------------------------------- #
@@ -64,10 +64,9 @@ class GradientDescent(ABC, BaseEstimator):
             variant = 'Minibatch Gradient Descent'
         return variant
 
-    @property
+    @abstractmethod
     def description(self):
-        """Returns the estimator description."""
-        return self.algorithm.name + ' with ' + self.variant    
+        pass
 
     @property
     def eta(self):
@@ -95,11 +94,19 @@ class GradientDescent(ABC, BaseEstimator):
                                                  estimator=self)
         # Add a column of ones to create the X design matrix                                         
         if sparse.issparse(self.X_train_):         
+            # If COO matrix, convert to CSR
+            if sparse.isspmatrix_coo(self.X_train_):
+                self.X_train_ = self.X_train_.tocsr()                        
             ones = np.ones((self.X_train_.shape[0],1))
             bias_term = sparse.csr_matrix(ones, dtype=float)
             self.X_train_ = sparse.hstack((bias_term, self.X_train_))
         else:
             self.X_train_ = np.insert(self.X_train_, 0, 1.0, axis=1)
+
+        # If y is COO convert to CSR
+        if sparse.isspmatrix_coo(self.y_train_):
+            self.y_train_ = self.y_train_.tocsr()
+
         self.n_features_ = self.X_train_.shape[1]      
 
     @abstractmethod
@@ -110,11 +117,19 @@ class GradientDescent(ABC, BaseEstimator):
                            estimator=self)
         # Add a column of ones to create the X design matrix
         if sparse.issparse(X):         
+        # If COO matrix, convert to CSR
+            if sparse.isspmatrix_coo(X):
+                X = X.tocsr()            
             ones = np.ones((X.shape[0],1))
             bias_term = sparse.csr_matrix(ones, dtype=float)
             X = sparse.hstack((bias_term, X))
         else:
             X = np.insert(X, 0, 1.0, axis=1)                           
+
+        # If y is COO convert to CSR
+        if y is not None: 
+            if sparse.isspmatrix_coo(y):
+                y = y.tocsr()                
         
         return X, y 
 
@@ -124,9 +139,11 @@ class GradientDescent(ABC, BaseEstimator):
         pass
 
     @abstractmethod
-    def _compute_output(self, X):
+    def _compute_output(self, X, theta=None):
         """Computes output of the model."""
-        return X.dot(self.theta_)
+        if theta is None:
+            theta = self.theta_
+        return X.dot(theta)
 
     def _evaluate_epoch(self, log=None):
         """Computes training costs, and optionally scores, for each epoch."""
@@ -164,7 +181,7 @@ class GradientDescent(ABC, BaseEstimator):
             self._cbks.append(copy.copy(self.early_stop))
         # Add gradient checking if object injected.
         if self.gradient_check:
-            self._cbks.append(copy.copy(self.gradient_check))        
+            self._cbks.append(GradientCheck())        
         # Initialize all callbacks.
         self._cbks.set_params(self.get_params())
         self._cbks.set_model(self)
@@ -203,8 +220,9 @@ class GradientDescent(ABC, BaseEstimator):
         log = log or {}
         # Update log with current learning rate and parameters theta
         log['epoch'] = self._epoch
-        log['learning_rate'] = self.learning_rate
+        log['learning_rate'] = self._eta
         log['theta'] = self.theta_.copy()     
+        log['gradient'] = self._gradient.copy()
         # Compute performance statistics for epoch and post to history
         log = self._evaluate_epoch(log)
         # Call 'on_epoch_end' methods on callbacks.
@@ -249,15 +267,16 @@ class GradientDescent(ABC, BaseEstimator):
                 # Compute costs
                 J = self._cost(y_batch, y_out, self.theta_)                
                 
-                # Format batch log with weights and cost
-                batch_log = {'batch': self._batch, 'batch_size': X_batch.shape[0],
-                             'theta': self.theta_.copy(), 'train_cost': J}
-
                 # Compute gradient
-                gradient = self._cost.gradient(X_batch, y_batch, y_out, self.theta_)
+                self._gradient = self._cost.gradient(X_batch, y_batch, y_out, self.theta_)
+
+                # Format batch log with weights, gradient and cost
+                batch_log = {'batch': self._batch, 'batch_size': X_batch.shape[0],
+                             'theta': self.theta_.copy(), 'train_cost': J,
+                             'gradient': self._gradient}
 
                 # Update parameters.
-                self.theta_ = self._optimizer(self.theta_, gradient, self._eta)
+                self.theta_ = self._optimizer(self.theta_, self._gradient, self._eta)
 
                 # Update batch log
                 self._end_batch(batch_log)
@@ -269,9 +288,9 @@ class GradientDescent(ABC, BaseEstimator):
         return self         
 
     @abstractmethod
-    def _predict(self, X):
+    def _predict(self, X, theta=None):
         """Predict function used in training and testing."""
-        return X.dot(self.theta_)
+        return self._compute_output(X, theta)            
 
     def predict(self, X):
         """Computes prediction for test data.
@@ -342,6 +361,17 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
         self.random_state = random_state
         self.gradient_check = gradient_check   
 
+    @property
+    def description(self):
+        """Returns the estimator description."""                   
+        regularization = self._cost.regularization.__class__.__name__       
+        if regularization == "L0":
+            return "Linear Regression with "  + self.variant    
+        else:
+            return "Linear Regression (" + self._cost.regularization.name + ") with " + self.variant                     
+
+
+
     def _prepare_training_data(self, X, y):
         """Creates the X design matrix and saves data as attributes."""
         super(GradientDescentRegressor, self)._prepare_training_data(X,y)
@@ -368,13 +398,13 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
             rng = np.random.RandomState(self.random_state)                
             self.theta_ = rng.randn(self.X_train_.shape[1])      
 
-    def _compute_output(self, X):
+    def _compute_output(self, X, theta=None):
         """Computes output as linear combination of inputs and weights."""      
-        return super(GradientDescentRegressor,self)._compute_output(X) 
+        return super(GradientDescentRegressor,self)._compute_output(X, theta) 
 
-    def _predict(self, X):
+    def _predict(self, X, theta=None):
         """Computes predictions for use during training and validation."""
-        return super(GradientDescentRegressor,self)._predict(X) 
+        return super(GradientDescentRegressor,self)._predict(X, theta) 
 
     def _score(self, X, y):
         """Computes scores for cross-validation and testing."""
@@ -403,6 +433,18 @@ class GradientDescentClassifier(GradientDescent, ClassifierMixin):
         self.checkpoint = checkpoint
         self.random_state = random_state
         self.gradient_check = gradient_check   
+
+    @property
+    def description(self):
+        """Returns the estimator description."""                   
+        cost_function = self._cost.__class__.__name__
+        regularization = self._cost.regularization.__class__.__name__
+        task = {'CrossEntropy': "Logistic Regression",
+                'CategoricalCrossEntropy': "Multinomial Logistic Regression"}
+        if regularization == "L0":
+            return task[cost_function] + " with " + self.variant    
+        else:
+            return task[cost_function] +  "(" + self._cost.regularization.name + ") with " + self.variant               
 
     def _compile(self):
         super(GradientDescentClassifier, self)._compile()
@@ -473,40 +515,27 @@ class GradientDescentClassifier(GradientDescent, ClassifierMixin):
         else:
             self._init_weights_multiclass()
 
-    def _compute_output_binary(self, X):
-        """Computes sigmoid output."""
-        z = X.dot(self.theta_)
-        return self._sigmoid(z)
-
-    def _compute_output_multiclass(self, X):
-        """Computes softmax output."""
-        z = X.dot(self.theta_)
-        return self._softmax(z)        
-
-    def _compute_output(self, X):
+    def _compute_output(self, X, theta=None):
         """Computes output as sigmoid or softmax result."""
+        if not theta:
+            theta = self.theta_
+        z = X.dot(theta)
+
         if self.n_classes_ == 2:
-            o = self._compute_output_binary(X)
+            o = self._sigmoid(z)
         else:
-            o = self._compute_output_multiclass(X)
+            o = self._softmax(z)
 
         return o
 
-    def _predict_binary(self, X):
-        """Predicts binary output using sigmoid activation."""
-        o = self._compute_output_binary(X)
-        return np.round(o).astype(int)
-
-    def _predict_multiclass(self, X):
-        """Predicts multiclass output using softmax activation."""
-        return o.argmax(axis=1)
-
-    def _predict(self, X):
+    def _predict(self, X, theta=None):
         """Computes prediction of class labels."""
+        o = self._compute_output(X, theta)
         if self.n_classes_ == 2:
-            y_pred = self._predict_binary(X)
+            y_pred = np.round(o).astype(int)
         else:
-            y_pred = self._predict_multiclass(X)
+            y_pred = o.argmax(axis=1)
+        return y_pred
 
     def _score(self, X, y):
         """Computes scores for cross-validation and testing."""

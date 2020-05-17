@@ -22,6 +22,7 @@
 import numpy as np
 import pandas as pd
 
+from scipy.sparse import issparse
 from mlstudio.supervised.callbacks.base import Callback
 
 # --------------------------------------------------------------------------- #
@@ -34,7 +35,6 @@ class GradientCheck(Callback):
         super(GradientCheck, self).__init__()
         self.epsilon = epsilon
         self.iterations = iterations
-        self._algorithm = None
         
     def on_train_begin(self, logs=None):        
         """Initializes gradient check parameters.
@@ -44,8 +44,7 @@ class GradientCheck(Callback):
         log : dict
             Contains no information
         """
-        super(GradientCheck, self).on_train_begin()
-        self._algorithm = self.model.algorithm
+        super(GradientCheck, self).on_train_begin()        
         self._n = 0
         self._iteration = []
         self._gradients = []
@@ -83,18 +82,18 @@ class GradientCheck(Callback):
                     theta_plus[i] = theta_plus[i] + self.epsilon
                     theta_minus[i] = theta_minus[i] - self.epsilon
                     # Compute associated costs
-                    y_pred = self._algorithm.predict(X, theta_plus)
-                    J_plus = self._algorithm.compute_cost(y, y_pred, theta_plus)
-                    y_pred = self._algorithm.predict(X, theta_minus)
-                    J_minus = self._algorithm.compute_cost(y, y_pred, theta_minus)
+                    y_pred = self.model._predict(X, theta_plus)
+                    J_plus = self.model._cost(y, y_pred, theta_plus)
+                    y_pred = self.model._predict(X, theta_minus)
+                    J_minus = self.model._cost(y, y_pred, theta_minus)
 
                     # Estimate the gradient
                     grad_approx_i = (J_plus - J_minus) / (2 * self.epsilon)         
                     grad_approx.append(grad_approx_i)
                 
                 # Compute gradient via back-propagation
-                y_pred = self._algorithm.predict(X, theta)
-                grad = self._algorithm.compute_gradient(X, y, y_pred, theta) 
+                y_pred = self.model._predict(X, theta)
+                grad = self.model._cost.gradient(X, y, y_pred, theta) 
 
                 grad = np.array(grad)
                 grad_approx = np.array(grad_approx)
@@ -110,20 +109,32 @@ class GradientCheck(Callback):
                 self._iteration.append(self._n)
                 self._gradients.append(grad)
                 self._approximations.append(grad_approx)
-                self._differences.append(difference)
+                self._differences.append(difference)                
                 self._results.append(result)
 
     def on_train_end(self, logs=None):
         d = {"Iteration": self._iteration, "Difference": self._differences,
-             "Result": self._results}
+             "Result": self._results, "Gradient": self._gradients,
+             "Approximation": self._approximations}
         df = pd.DataFrame(d)
         failures = len(df[df['Result']== False])
         successes = len(df[df['Result']== True])
         avg_difference = df['Difference'].mean(axis=0)
         print("\n","* ",40*"=", " *")
+        print("Is X sparse? {s}".format(s=str(issparse(self.model.X_train_))))
         print("Gradient Checks for {desc}".format(desc=self.model.description))
         print("  Num Failures : {failures}".format(failures=failures))
         print(" Num Successes : {successes}".format(successes=successes))
         print(" Pct Successes : {pct}".format(pct=successes/(self._n)*100))
         print("Avg Difference : {diff}".format(diff=avg_difference))
+        if successes / self._n * 100 < 100.0:
+            def condition(x): return x > 10**(-3)
+            problems = [idx for idx, element in enumerate(self._differences) if condition(element)]
+            for p in problems:
+                print("\n  Iteration: {i} Gradient: {g}".format(i=str(p), \
+                    g=self._gradients[p]))
+                print("  Iteration: {i} Approximation {a}".format(i=str(p), \
+                    a=self._approximations[p]))
+
+
         
