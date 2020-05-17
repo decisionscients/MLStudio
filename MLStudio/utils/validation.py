@@ -22,7 +22,7 @@
 import numpy as np
 
 # --------------------------------------------------------------------------  #
-def validate_zero_to_one(self, p, left='open', right='open'):
+def validate_zero_to_one(p, left='open', right='open'):
     """Validates a parameter whose values should be [0,1]."""
     assert isinstance(p, (int,float)), "Regularization hyperparameter must be numeric."
     if left == 'open' and right == 'open':

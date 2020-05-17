@@ -23,10 +23,11 @@ import numpy as np
 # --------------------------------------------------------------------------  #
 class Nill:
     """ No Regularization """
+    def __init__(self):
+        self.name = "No Regularization"
     
     def __call__(self, theta):
-        return 0
-        self.name = "No Regularization"
+        return 0        
     
     def gradient(self, theta):
         return np.zeros(theta.shape)

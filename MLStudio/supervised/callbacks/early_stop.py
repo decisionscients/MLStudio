@@ -36,8 +36,8 @@ class EarlyStop(Callback):
 
     @abstractmethod
     def on_train_begin(self, logs=None):    
-        validate_zero_to_one(self.val_size)
-        validate_zero_to_one(self.epsilon)
+        validate_zero_to_one(p=self.val_size)
+        validate_zero_to_one(p=self.epsilon)
 
     @abstractmethod
     def on_epoch_end(self, epoch, logs=None):
@@ -97,7 +97,7 @@ class Performance(Callback):
     def _validate(self):
         if self.metric not in ['train_cost', 'train_score', 'val_cost', 'val_score']:
             raise ValueError("metric must be in ['train_cost', 'train_score', 'val_cost', 'val_score']")
-        validate_zero_to_one(self.epsilon)       
+        validate_zero_to_one(p = self.epsilon)       
 
 
     def on_train_begin(self, logs=None):        
@@ -191,7 +191,7 @@ class Stability(Callback):
 
     """
 
-    def __init__(self, metric='val_cost', val_size = 0.3, epsilon=0.0001):        
+    def __init__(self, metric='val_cost', val_size = 0.3, epsilon=0.01):        
         super(Stability, self).__init__()
         self.name = "Stability" 
         self.metric = metric 
@@ -246,7 +246,7 @@ class BCN1(Callback):
 
     """
 
-    def __init__(self, n_size = 100, val_size = 0.3, epsilon=0.0001):        
+    def __init__(self, n_size = 100, val_size = 0.3, epsilon=0.01):        
         super(BCN1, self).__init__()
         self.name = "BCN1"                 
         self.val_size = val_size

@@ -79,7 +79,7 @@ class SSR(RegressionScorer):
         self.best = np.min
         self.better = np.less
         self.worst = np.Inf
-        self.precision_factor = -1
+        self.epsilon_factor = -1
 
     
     def __call__(self, y, y_pred):
@@ -97,7 +97,7 @@ class SST(RegressionScorer):
         self.best = np.min
         self.better = np.less
         self.worst = np.Inf
-        self.precision_factor = -1
+        self.epsilon_factor = -1
 
     
     def __call__(self, y, y_pred):
@@ -116,7 +116,7 @@ class R2(RegressionScorer):
         self.best = np.max
         self.better = np.greater
         self.worst = -np.Inf
-        self.precision_factor = 1
+        self.epsilon_factor = 1
 
     
     def __call__(self, y, y_pred):
@@ -136,7 +136,7 @@ class VarExplained(RegressionScorer):
         self.best = np.max
         self.better = np.greater
         self.worst = -np.Inf
-        self.precision_factor = 1
+        self.epsilon_factor = 1
 
     
     def __call__(self, y, y_pred):
@@ -154,7 +154,7 @@ class MAE(RegressionScorer):
         self.best = np.min
         self.better = np.less
         self.worst = np.Inf
-        self.precision_factor = -1
+        self.epsilon_factor = -1
     
     def __call__(self, y, y_pred):
         e = abs(y-y_pred)
@@ -172,7 +172,7 @@ class MSE(RegressionScorer):
         self.best = np.min
         self.better = np.less
         self.worst = np.Inf
-        self.precision_factor = -1
+        self.epsilon_factor = -1
     
     def __call__(self, y, y_pred):        
         e = y - y_pred
@@ -189,7 +189,7 @@ class NMSE(RegressionScorer):
         self.best = np.max
         self.better = np.greater
         self.worst = -np.Inf
-        self.precision_factor = 1
+        self.epsilon_factor = 1
 
     
     def __call__(self, y, y_pred):        
@@ -207,7 +207,7 @@ class RMSE(RegressionScorer):
         self.best = np.min
         self.better = np.less
         self.worst = np.Inf
-        self.precision_factor = -1
+        self.epsilon_factor = -1
     
     def __call__(self, y, y_pred):
         e = y-y_pred
@@ -224,7 +224,7 @@ class NRMSE(RegressionScorer):
         self.best = np.max
         self.better = np.greater
         self.worst = -np.Inf
-        self.precision_factor = 1
+        self.epsilon_factor = 1
 
     
     def __call__(self, y, y_pred):
@@ -242,7 +242,7 @@ class MSLE(RegressionScorer):
         self.best = np.min
         self.better = np.less
         self.worst = np.Inf
-        self.precision_factor = -1
+        self.epsilon_factor = -1
     
     def __call__(self, y, y_pred):
         e = np.log(y+1)-np.log(y_pred+1)
@@ -262,7 +262,7 @@ class RMSLE(RegressionScorer):
         self.best = np.min
         self.better = np.less
         self.worst = np.Inf
-        self.precision_factor = -1
+        self.epsilon_factor = -1
     
     def __call__(self, y, y_pred):
         y = np.clip(y, 1e-15, 1-1e-15)    
@@ -281,7 +281,7 @@ class MEDAE(RegressionScorer):
         self.best = np.min
         self.better = np.less
         self.worst = np.Inf
-        self.precision_factor = -1
+        self.epsilon_factor = -1
     
     def __call__(self, y, y_pred):        
         return np.median(np.abs(y_pred-y))
@@ -297,7 +297,7 @@ class MAPE(RegressionScorer):
         self.best = np.min
         self.better = np.less
         self.worst = np.Inf
-        self.precision_factor = -1
+        self.epsilon_factor = -1
     
     def __call__(self, y, y_pred):        
         return 100*np.mean(np.abs((y-y_pred)/y))
@@ -317,7 +317,7 @@ class Accuracy(ClassificationScorer):
         self.best = np.max
         self.better = np.greater
         self.worst = -np.Inf
-        self.precision_factor = 1
+        self.epsilon_factor = 1
     
     def __call__(self, y, y_pred):
         """Computes accuracy as correct over total."""

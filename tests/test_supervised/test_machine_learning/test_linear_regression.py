@@ -111,7 +111,8 @@ def test_regression_early_stop_II(get_regression_data, get_regression_data_featu
         est.summary(features=get_regression_data_features)
         early_stop = est.early_stop.__class__.__name__
         metric = est.early_stop.metric
-        msg = "Early stop didn't work for " + early_stop + " monitoring " + metric
+        msg = "Early stop didn't work for " + early_stop + " monitoring " + metric\
+            + " with epsilon = " + str(est.early_stop.epsilon) 
         assert est.blackbox_.total_epochs < est.epochs, msg
 
 # --------------------------------------------------------------------------  #
