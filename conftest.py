@@ -30,14 +30,14 @@ import warnings
 warnings.filterwarnings('ignore')
 warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
 
-from mlstudio.supervised.estimator.gradient import GradientDescentRegressor
-from mlstudio.supervised.estimator.gradient import GradientDescentClassifier
-from mlstudio.supervised.logistic_regression import LogisticRegression
-from mlstudio.supervised.softmax_regression import SoftmaxRegression
-from mlstudio.supervised.regression import LinearRegression
-from mlstudio.supervised.regression import LassoRegression
-from mlstudio.supervised.regression import RidgeRegression
-from mlstudio.supervised.regression import ElasticNetRegression
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentClassifier
+from mlstudio.supervised.machine_learning.logistic_regression import LogisticRegression
+from mlstudio.supervised.machine_learning.softmax_regression import SoftmaxRegression
+from mlstudio.supervised.machine_learning.linear_regression import LinearRegression
+from mlstudio.supervised.machine_learning.linear_regression import LassoRegression
+from mlstudio.supervised.machine_learning.linear_regression import RidgeRegression
+from mlstudio.supervised.machine_learning.linear_regression import ElasticNetRegression
 
 # ============================================================================ #
 #                                  DATA                                        #

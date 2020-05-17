@@ -23,11 +23,11 @@ from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.base import ClassifierMixin
 
-from mlstudio.supervised.base_model import BaseModel
+from mlstudio.supervised.machine_learning.base import BaseRegressor
 # --------------------------------------------------------------------------- #
 #                          LOGISTIC REGRESSION                                #
 # --------------------------------------------------------------------------- #            
-class LogisticRegression(BaseModel, ClassifierMixin):
+class LogisticRegression(BaseRegressor, ClassifierMixin):
     """Logistic Regression Algorithm"""
 
     def __init__(self):
@@ -142,8 +142,8 @@ class LogisticRegression(BaseModel, ClassifierMixin):
 class LassoLogisticRegression(LogisticRegression):
     """Logistic Regression Algorithm with Lasso Regularization"""
 
-    def __init__(self, alpha=1):
-        self.alpha = alpha
+    def __init__(self, lambda_reg=0.01):
+        self.lambda_reg = lambda_reg
 
     @property
     def name(self):
@@ -172,12 +172,12 @@ class LassoLogisticRegression(LogisticRegression):
         cost : The binary cross-entropy cost 
 
         """
-        self._validate_hyperparam(self.alpha)
+        self._validate_hyperparam(self.lambda_reg)
         n_samples = y.shape[0]
         # Prevent division by zero
         y_out = np.clip(y_out, 1e-15, 1-1e-15)        
         # Compute regularization
-        J_reg = (self.alpha / n_samples) * np.linalg.norm(theta, ord=1)
+        J_reg = (self.lambda_reg / n_samples) * np.linalg.norm(theta, ord=1)
         # Compute lasso regularized cost
         J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + \
             np.multiply(1-y, np.log(1-y_out))) + J_reg
@@ -207,7 +207,7 @@ class LassoLogisticRegression(LogisticRegression):
         """
         n_samples = y.shape[0]
         dZ = y_out-y
-        dW = 1/n_samples * (X.T.dot(dZ) + self.alpha * np.sign(theta))
+        dW = 1/n_samples * (X.T.dot(dZ) + self.lambda_reg * np.sign(theta))
         return(dW)                     
 
 # --------------------------------------------------------------------------- #
@@ -216,8 +216,8 @@ class LassoLogisticRegression(LogisticRegression):
 class RidgeLogisticRegression(LogisticRegression):
     """Logistic Regression Algorithm with Ridge Regularization"""
 
-    def __init__(self, alpha=1):
-        self.alpha = alpha
+    def __init__(self, lambda_reg=0.01):
+        self.lambda_reg = lambda_reg
 
     @property
     def name(self):
@@ -246,12 +246,12 @@ class RidgeLogisticRegression(LogisticRegression):
         cost : The binary cross-entropy cost 
 
         """
-        self._validate_hyperparam(self.alpha)
+        self._validate_hyperparam(self.lambda_reg)
         n_samples = y.shape[0]
         # Prevent division by zero
         y_out = np.clip(y_out, 1e-15, 1-1e-15)        
         # Compute regularization
-        J_reg = (self.alpha / (2*n_samples)) * np.linalg.norm(theta)**2
+        J_reg = (self.lambda_reg / (2*n_samples)) * np.linalg.norm(theta)**2
         # Compute ridge regularized cost
         J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + \
             np.multiply(1-y, np.log(1-y_out))) + J_reg
@@ -281,7 +281,7 @@ class RidgeLogisticRegression(LogisticRegression):
         """
         n_samples = y.shape[0]
         dZ = y_out-y
-        dW = 1/n_samples * (X.T.dot(dZ) + self.alpha * theta)
+        dW = 1/n_samples * (X.T.dot(dZ) + self.lambda_reg * theta)
         return(dW)                             
 
 # --------------------------------------------------------------------------- #
@@ -290,8 +290,8 @@ class RidgeLogisticRegression(LogisticRegression):
 class ElasticNetLogisticRegression(LogisticRegression):
     """Logistic Regression Algorithm with ElasticNet Regularization"""
 
-    def __init__(self, alpha=1, ratio=0.5):
-        self.alpha=alpha
+    def __init__(self, lambda_reg=0.01, ratio=0.5):
+        self.lambda_reg=lambda_reg
         self.ratio=ratio
 
     @property
@@ -321,7 +321,7 @@ class ElasticNetLogisticRegression(LogisticRegression):
         cost : The binary cross-entropy cost 
 
         """
-        self._validate_hyperparam(self.alpha)
+        self._validate_hyperparam(self.lambda_reg)
         self._validate_hyperparam(self.ratio)
 
         n_samples = y.shape[0]
@@ -330,7 +330,7 @@ class ElasticNetLogisticRegression(LogisticRegression):
         # Compute regularization
         l1_contr = self.ratio * np.linalg.norm(theta, ord=1)
         l2_contr = (1 - self.ratio) * 0.5 * np.linalg.norm(theta)**2        
-        J_reg = float(1./n_samples) * self.alpha * (l1_contr + l2_contr)
+        J_reg = float(1./n_samples) * self.lambda_reg * (l1_contr + l2_contr)
         # Compute elasticnet regularized cost
         J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + \
             np.multiply(1-y, np.log(1-y_out))) + J_reg
@@ -361,7 +361,7 @@ class ElasticNetLogisticRegression(LogisticRegression):
         n_samples = y.shape[0]
         l1_contr = self.ratio * np.sign(theta)
         l2_contr = (1 - self.ratio) * theta        
-        alpha = np.asarray(self.alpha, dtype='float64')     
+        lambda_reg = np.asarray(self.lambda_reg, dtype='float64')     
         dZ = y_out-y
-        dW = 1/n_samples  * (X.T.dot(dZ) + np.multiply(alpha, np.add(l1_contr, l2_contr)))
+        dW = 1/n_samples  * (X.T.dot(dZ) + np.multiply(lambda_reg, np.add(l1_contr, l2_contr)))
         return(dW)                       

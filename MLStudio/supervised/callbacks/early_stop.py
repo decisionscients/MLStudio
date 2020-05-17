@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod, ABCMeta
 import copy
 import numpy as np
 
-from mlstudio.supervised.estimator.callbacks import Callback
+from mlstudio.supervised.callbacks.base import Callback
 
 # --------------------------------------------------------------------------- #
 #                              EARLY STOP                                     #
@@ -61,7 +61,7 @@ class EarlyStop(Callback):
         stop training.    
     """
 
-    def __init__(self, monitor='val_score', val_size=0.3, precision=0.001, patience=10):
+    def __init__(self, monitor='val_score', val_size=0.3, precision=1e-3, patience=5):
         super(EarlyStop, self).__init__()
         self.name = "Early Stop"
         self.monitor = monitor
@@ -162,7 +162,7 @@ class EarlyStop(Callback):
             self._iter_no_improvement += 1
             if self._iter_no_improvement == self.patience:
                 self.converged_ = True            
-        self.model.converged_ = self.converged_                     
+        self.model.converged = self.converged_                     
 
 
 

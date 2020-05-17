@@ -36,7 +36,7 @@ from mlstudio.analysis.model_validation import standardized_residuals
 from mlstudio.analysis.model_validation import studentized_residuals, quantile
 from mlstudio.analysis.model_validation import leverage, cooks_distance
 from mlstudio.visual import COLORS
-from mlstudio.supervised.regression import LinearRegression
+from mlstudio.supervised.machine_learning.linear_regression import LinearRegression
 from mlstudio.utils.format import proper        
 # --------------------------------------------------------------------------  #
 #                              RESIDUALS                                      #

@@ -24,10 +24,10 @@ from pytest import mark
 import shutil
 from sklearn.model_selection import ShuffleSplit
 
-from mlstudio.supervised.estimator.gradient import GradientDescentRegressor
-from mlstudio.supervised.estimator.scorers import R2, RMSE
-from mlstudio.supervised.regression import LinearRegression, LassoRegression
-from mlstudio.supervised.regression import RidgeRegression, ElasticNetRegression
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.core.scorers import R2, RMSE
+from mlstudio.supervised.machine_learning.linear_regression import LinearRegression, LassoRegression
+from mlstudio.supervised.machine_learning.linear_regression import RidgeRegression, ElasticNetRegression
 from mlstudio.visual.model_selection import CostCurve, LearningCurve
 from mlstudio.visual.model_selection import ModelScalability
 from mlstudio.visual.model_selection import ModelLearningPerformance

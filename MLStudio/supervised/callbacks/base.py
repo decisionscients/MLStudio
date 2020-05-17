@@ -23,7 +23,7 @@
 Note: The CallbackList and Callback abstract base classes were inspired by
 the Keras implementation.  
 """
-import abc as ABC
+from abc import ABC, abstractmethod, ABCMeta
 
 import datetime
 import numpy as np
@@ -31,7 +31,7 @@ import types
 # --------------------------------------------------------------------------- #
 #                             CALLBACK LIST                                   #
 # --------------------------------------------------------------------------- #
-class CallbackList(object):
+class CallbackList:
     """Container of callbacks."""
 
     def __init__(self, callbacks=None):
@@ -174,7 +174,7 @@ class CallbackList(object):
 # --------------------------------------------------------------------------- #
 #                             CALLBACK CLASS                                  #
 # --------------------------------------------------------------------------- #
-class Callback(object):
+class Callback(ABC):
     """Abstract base class used to build new callbacks."""
     def __init__(self):
         """Callback class constructor."""

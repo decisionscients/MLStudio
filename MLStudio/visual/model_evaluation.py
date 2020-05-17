@@ -30,8 +30,8 @@ from sklearn.model_selection import ParameterGrid, learning_curve
 from sklearn.model_selection import validation_curve
 
 from .base import ModelVisualatrix
-from mlstudio.supervised.regression import LinearRegression
-from mlstudio.supervised.ols_regression import OLSRegression
+from mlstudio.supervised.machine_learning.linear_regression import LinearRegression
+from mlstudio.supervised.machine_learning.ols_regression import OLSRegression
 from mlstudio.utils.format import proper
 
 # ---------------------------------------------------------------------------- #

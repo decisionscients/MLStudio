@@ -39,7 +39,7 @@ import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 
-from mlstudio.supervised.estimator.scorers import R2
+from mlstudio.supervised.core.scorers import R2
 from mlstudio.utils.data_manager import StandardScaler
 
 # --------------------------------------------------------------------------- #

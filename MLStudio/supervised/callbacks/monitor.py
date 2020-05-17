@@ -26,7 +26,7 @@ import numpy as np
 import types
 from collections import OrderedDict 
 
-from mlstudio.supervised.estimator.callbacks import Callback
+from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.utils.print import Printer
 
 # --------------------------------------------------------------------------- #

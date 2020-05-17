@@ -24,12 +24,12 @@ import numpy as np
 from sklearn.base import ClassifierMixin
 from sklearn.utils.validation import check_array
 
-from mlstudio.supervised.base_model import BaseModel
+from mlstudio.supervised.machine_learning.base import BaseRegressor
 
 # --------------------------------------------------------------------------- #
 #                           SOFTMAX REGRESSION                                #
 # --------------------------------------------------------------------------- #            
-class SoftmaxRegression(BaseModel, ClassifierMixin):
+class SoftmaxRegression(BaseRegressor, ClassifierMixin):
     """Softmax Regression Algorithm"""
 
     def __init__(self):
@@ -151,8 +151,8 @@ class SoftmaxRegression(BaseModel, ClassifierMixin):
 class LassoSoftmaxRegression(SoftmaxRegression):
     """Softmax Regression Algorithm"""
 
-    def __init__(self, alpha=1):
-        self.alpha = alpha        
+    def __init__(self, lambda_reg=0.0001):
+        self.lambda_reg = lambda_reg        
 
     @property
     def name(self):
@@ -177,14 +177,14 @@ class LassoSoftmaxRegression(SoftmaxRegression):
         cost : The softmax cross-entropy cost 
 
         """
-        self._validate_hyperparam(self.alpha)
+        self._validate_hyperparam(self.lambda_reg)
         n_samples = y.shape[0]
         # Prevent division by zero
         y_out = np.clip(y_out, 1e-15, 1-1e-15)    
         # Obtain unregularized cost
         J = super(LassoSoftmaxRegression, self).compute_cost(y, y_out, theta)    
         # Compute regularization
-        J_reg = (self.alpha / n_samples) * np.linalg.norm(theta, ord=1)
+        J_reg = (self.lambda_reg / n_samples) * np.linalg.norm(theta, ord=1)
         # Compute lasso regularized cost
         J = J + J_reg
         return J        
@@ -213,7 +213,7 @@ class LassoSoftmaxRegression(SoftmaxRegression):
         """
         n_samples = y.shape[0]
         dZ =y_out-y
-        dW = 1/n_samples * (X.T.dot(dZ) + self.alpha * np.sign(theta))
+        dW = 1/n_samples * (X.T.dot(dZ) + self.lambda_reg * np.sign(theta))
         return(dW)                     
 
 # --------------------------------------------------------------------------- #
@@ -222,8 +222,8 @@ class LassoSoftmaxRegression(SoftmaxRegression):
 class RidgeSoftmaxRegression(SoftmaxRegression):
     """Softmax Regression Algorithm"""
 
-    def __init__(self, alpha=1):
-        self.alpha = alpha
+    def __init__(self, lambda_reg=0.0001):
+        self.lambda_reg = lambda_reg
         
     @property
     def name(self):
@@ -248,14 +248,14 @@ class RidgeSoftmaxRegression(SoftmaxRegression):
         cost : The softmax cross-entropy cost 
 
         """
-        self._validate_hyperparam(self.alpha)
+        self._validate_hyperparam(self.lambda_reg)
         n_samples = y.shape[0]
         # Prevent division by zero
         y_out = np.clip(y_out, 1e-15, 1-1e-15)
         # Compute unregularized cost.
         J = super(RidgeSoftmaxRegression, self).compute_cost(y, y_out, theta)             
         # Compute regularization
-        J_reg = (self.alpha / (2*n_samples)) * np.linalg.norm(theta)**2
+        J_reg = (self.lambda_reg / (2*n_samples)) * np.linalg.norm(theta)**2
         # Compute ridge regularized cost
         J = J + J_reg
         return J        
@@ -284,7 +284,7 @@ class RidgeSoftmaxRegression(SoftmaxRegression):
         """
         n_samples = y.shape[0]
         dZ =y_out-y
-        dW = 1/n_samples * (X.T.dot(dZ) + self.alpha * theta)
+        dW = 1/n_samples * (X.T.dot(dZ) + self.lambda_reg * theta)
         return(dW)                             
 
 # --------------------------------------------------------------------------- #
@@ -293,8 +293,8 @@ class RidgeSoftmaxRegression(SoftmaxRegression):
 class ElasticNetSoftmaxRegression(SoftmaxRegression):
     """Softmax Regression Algorithm"""
 
-    def __init__(self, alpha=1, ratio=0.5):
-        self.alpha=alpha
+    def __init__(self, lambda_reg=0.0001, ratio=0.5):
+        self.lambda_reg=lambda_reg
         self.ratio=ratio
 
     @property
@@ -320,7 +320,7 @@ class ElasticNetSoftmaxRegression(SoftmaxRegression):
         cost : The softmax cross-entropy cost 
 
         """
-        self._validate_hyperparam(self.alpha)
+        self._validate_hyperparam(self.lambda_reg)
         self._validate_hyperparam(self.ratio)
 
         n_samples = y.shape[0]
@@ -331,7 +331,7 @@ class ElasticNetSoftmaxRegression(SoftmaxRegression):
         # Compute regularization
         l1_contr = self.ratio * np.linalg.norm(theta, ord=1)
         l2_contr = (1 - self.ratio) * 0.5 * np.linalg.norm(theta)**2        
-        J_reg = float(1./n_samples) * self.alpha * (l1_contr + l2_contr)
+        J_reg = float(1./n_samples) * self.lambda_reg * (l1_contr + l2_contr)
         # Compute elasticnet regularized cost
         J = J + J_reg
         return J        
@@ -361,7 +361,7 @@ class ElasticNetSoftmaxRegression(SoftmaxRegression):
         n_samples = y.shape[0]
         l1_contr = self.ratio * np.sign(theta)
         l2_contr = (1 - self.ratio) * theta        
-        alpha = np.asarray(self.alpha, dtype='float64')     
+        lambda_reg = np.asarray(self.lambda_reg, dtype='float64')     
         dZ =y_out-y
-        dW = 1/n_samples  * (X.T.dot(dZ) + np.multiply(alpha, np.add(l1_contr, l2_contr)))
+        dW = 1/n_samples  * (X.T.dot(dZ) + np.multiply(lambda_reg, np.add(l1_contr, l2_contr)))
         return(dW)                       

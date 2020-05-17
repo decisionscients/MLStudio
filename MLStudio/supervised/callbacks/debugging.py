@@ -22,7 +22,7 @@
 import numpy as np
 import pandas as pd
 
-from mlstudio.supervised.estimator.callbacks import Callback
+from mlstudio.supervised.callbacks.base import Callback
 
 # --------------------------------------------------------------------------- #
 #                              GRADIENT CHECK                                 #

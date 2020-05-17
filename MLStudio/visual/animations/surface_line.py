@@ -136,8 +136,7 @@ class SurfaceLine:
         fig.update(frames=frames)
         fig.update_layout(
             xaxis=dict(range=[theta0_min, theta0_max], autorange=False, zeroline=False),
-            yaxis=dict(range=[theta1_min, theta1_max], autorange=False, zeroline=False),
-            title_text="Linear Regression by Gradient Descent", hovermode="closest",
+            yaxis=dict(range=[theta1_min, theta1_max], autorange=False, zeroline=False),            
             title=dict(xanchor='center', yanchor='top', x=0.5, y=0.9),        
             font=dict(family="Open Sans"),    
             updatemenus=updatemenus, 

@@ -40,11 +40,11 @@ import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_array
 
-from mlstudio.supervised.base_model import BaseModel
+from mlstudio.supervised.machine_learning.base import BaseRegressor
 # --------------------------------------------------------------------------- #
 #                          LINEAR REGRESSION                                  #
 # --------------------------------------------------------------------------- #    
-class LinearRegression(BaseModel, RegressorMixin):
+class LinearRegression(BaseRegressor, RegressorMixin):
     """Linear Regression algorithm."""
 
     def __init__(self):
@@ -157,8 +157,8 @@ class LinearRegression(BaseModel, RegressorMixin):
 class LassoRegression(LinearRegression):
     """Lasso Regression algorithm."""
     
-    def __init__(self, alpha=1):
-        self.alpha = alpha
+    def __init__(self, lambda_reg=0.0001):
+        self.lambda_reg = lambda_reg
 
     @property
     def name(self):
@@ -183,9 +183,9 @@ class LassoRegression(LinearRegression):
         cost : The quadratic cost         
 
         """
-        self._validate_hyperparam(self.alpha)
+        self._validate_hyperparam(self.lambda_reg)
         n_samples = y.shape[0]
-        J_reg = (self.alpha / n_samples) * np.linalg.norm(theta, ord=1)
+        J_reg = (self.lambda_reg / n_samples) * np.linalg.norm(theta, ord=1)
         J = np.mean(0.5 * (y-y_out)**2) + J_reg
         return J
 
@@ -213,7 +213,7 @@ class LassoRegression(LinearRegression):
         """
         n_samples = X.shape[0]
         dZ = y_out-y
-        dW = 1/n_samples  * (X.T.dot(dZ) + self.alpha * np.sign(theta))
+        dW = 1/n_samples  * (X.T.dot(dZ) + self.lambda_reg * np.sign(theta))
         return(dW)           
 
 # --------------------------------------------------------------------------- #
@@ -222,8 +222,8 @@ class LassoRegression(LinearRegression):
 class RidgeRegression(LinearRegression):
     """Ridge Regression algorithm."""
     
-    def __init__(self, alpha=1):
-        self.alpha=alpha
+    def __init__(self, lambda_reg=0.0001):
+        self.lambda_reg=lambda_reg
 
     @property
     def name(self):
@@ -248,9 +248,9 @@ class RidgeRegression(LinearRegression):
         cost : The quadratic cost 
 
         """
-        self._validate_hyperparam(self.alpha)
+        self._validate_hyperparam(self.lambda_reg)
         n_samples = y.shape[0]
-        J_reg = (self.alpha / (2*n_samples)) * np.linalg.norm(theta)**2
+        J_reg = (self.lambda_reg / (2*n_samples)) * np.linalg.norm(theta)**2
         J = np.mean(0.5 * (y-y_out)**2) + J_reg
         return J
 
@@ -278,7 +278,7 @@ class RidgeRegression(LinearRegression):
         """
         n_samples = X.shape[0]
         dZ = y_out-y
-        dW = 1/n_samples  * (X.T.dot(dZ) + self.alpha * theta)
+        dW = 1/n_samples  * (X.T.dot(dZ) + self.lambda_reg * theta)
         return(dW)                         
 
 # --------------------------------------------------------------------------- #
@@ -287,8 +287,8 @@ class RidgeRegression(LinearRegression):
 class ElasticNetRegression(LinearRegression):
     """Elastic Net Regression algorithm."""
     
-    def __init__(self, alpha=1, ratio=0.5):
-        self.alpha=alpha
+    def __init__(self, lambda_reg=0.0001, ratio=0.15):
+        self.lambda_reg=lambda_reg
         self.ratio=ratio
 
     @property
@@ -315,11 +315,11 @@ class ElasticNetRegression(LinearRegression):
 
         """
         n_samples = y.shape[0]
-        self._validate_hyperparam(self.alpha)
+        self._validate_hyperparam(self.lambda_reg)
         self._validate_hyperparam(self.ratio)
         l1_contr = self.ratio * np.linalg.norm(theta, ord=1)
         l2_contr = (1 - self.ratio) * 0.5 * np.linalg.norm(theta)**2        
-        J_reg = float(1./n_samples) * self.alpha * (l1_contr + l2_contr)
+        J_reg = float(1./n_samples) * self.lambda_reg * (l1_contr + l2_contr)
         J = np.mean(0.5 * (y-y_out)**2) + J_reg
         return J
 
@@ -348,7 +348,7 @@ class ElasticNetRegression(LinearRegression):
         n_samples = X.shape[0]
         l1_contr = self.ratio * np.sign(theta)
         l2_contr = (1 - self.ratio) * theta
-        alpha = np.asarray(self.alpha, dtype='float64')         
+        lambda_reg = np.asarray(self.lambda_reg, dtype='float64')         
         dZ = y_out-y
-        dW = 1/n_samples  * (X.T.dot(dZ) + np.multiply(alpha, np.add(l1_contr, l2_contr)))
+        dW = 1/n_samples  * (X.T.dot(dZ) + np.multiply(lambda_reg, np.add(l1_contr, l2_contr)))
         return(dW)               

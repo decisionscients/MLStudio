@@ -38,10 +38,10 @@ from sklearn.model_selection import ParameterGrid, learning_curve
 from sklearn.model_selection import validation_curve
 from sklearn.preprocessing import StandardScaler
 
-from mlstudio.supervised.regression import LinearRegression
-from mlstudio.supervised.regression import LassoRegression
-from mlstudio.supervised.regression import RidgeRegression
-from mlstudio.supervised.regression import ElasticNetRegression
+from mlstudio.supervised.machine_learning.linear_regression import LinearRegression
+from mlstudio.supervised.machine_learning.linear_regression import LassoRegression
+from mlstudio.supervised.machine_learning.linear_regression import RidgeRegression
+from mlstudio.supervised.machine_learning.linear_regression import ElasticNetRegression
 
 # =========================================================================== #
 #                           LEARNING CURVE                                    #

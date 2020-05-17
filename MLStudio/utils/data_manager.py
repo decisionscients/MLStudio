@@ -26,6 +26,7 @@ from math import ceil, floor
 import numpy as np
 from numpy.random import RandomState
 from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.utils import shuffle
 from sklearn.utils.validation import check_is_fitted
 
 import pandas as pd
@@ -217,7 +218,7 @@ class StandardScaler(TransformerMixin, BaseEstimator):
 # --------------------------------------------------------------------------- #
 #                            SHUFFLE DATA                                     #
 # --------------------------------------------------------------------------- #
-def shuffle_data(X, y=None):
+def shuffle_data(X, y=None, random_state=None):
     """ Random shuffle of the samples in X and y.
     
     Shuffles data
@@ -235,11 +236,8 @@ def shuffle_data(X, y=None):
     Shuffled X, and y
     
     """    
-    idx = np.arange(X.shape[0])
-    np.random.shuffle(idx)
-    X = np.array(X)
-    y = np.array(y)
-    return X[idx], y[idx]
+    X, y = shuffle(X, y, random_state=random_state)
+    return X, y
 
 # --------------------------------------------------------------------------- #
 #                              SAMPLE                                         #

@@ -31,8 +31,8 @@ site.addsitedir(PROJECT_DIR)
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 
-from mlstudio.supervised.regression import LinearRegression
-from mlstudio.supervised.estimator.gradient import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.linear_regression import LinearRegression
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 
 # --------------------------------------------------------------------------- #
 #                                  DATA                                       #
