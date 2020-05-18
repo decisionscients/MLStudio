@@ -25,16 +25,44 @@ import dill as pickle
 import numpy as np
 
 from mlstudio.supervised.core.regularization import Nill
+from mlstudio.utils.data_manager import Normalize
 # --------------------------------------------------------------------------  #
 class Cost(ABC):
     """Base class for all cost classes."""
     
-    @abstractmethod
-    def __init__(self, regularization=None):        
+    def __init__(self, regularization=None,  clip_threshold=1e-10):        
+        """Initialize regularization, and gradient clipping.
+        
+        Initializes the regularization object, a normalization object,
+        and sets the gradient clipping threshold as the exponent to which
+        one should be raised.
+
+        Parameters
+        ----------
+        clip_threshold : int (default=10)
+            The power of 1 representing the absolute value of the 
+            lower bound on the magnitudes of the gradients.  
+
+        regularization : Regularization class
+            Either None, L1, L2, or L1_l2 regularization.        
+        
+        """
+
+        self.clip_threshold = clip_threshold
+        
         if not regularization:
             self.regularization = Nill()
         else:
             self.regularization = regularization
+
+        self._normalizer = Normalize()
+
+    def _check_gradient(self, X):
+        """Checks the gradient for underflow and normalizes it if necessary."""        
+        r_x = np.linalg.norm(X) 
+        if r_x < self.clip_threshold or r_x > self.clip_threshold ** -1:
+            return self._normalizer.fit_transform(X)
+        return X
 
     @abstractmethod
     def __call__(self, y, y_out, theta):
@@ -47,8 +75,8 @@ class Cost(ABC):
 # --------------------------------------------------------------------------  #
 class MSE(Cost):
 
-    def __init__(self, regularization=None):
-        super(MSE, self).__init__(regularization)
+    def __init__(self, regularization=None,  clip_threshold=1e-10):      
+        super(MSE, self).__init__(regularization, clip_threshold)
 
     def __call__(self, y, y_out, theta):
         """Computes the mean squared error cost.
@@ -69,10 +97,10 @@ class MSE(Cost):
         cost : The quadratic cost 
 
         """
-        m = y.shape[0]
-        J = np.mean(0.5 * (y-y_out)**2) 
-        # Add regularization of weights (not bias)
-        J += self.regularization(theta)  / m
+        n_samples = y.shape[0]
+        J = 0.5 * np.mean((y-y_out)**2) 
+        # Add regularization of weights
+        J += self.regularization(theta)  / n_samples
         return J
 
     def gradient(self, X, y, y_out, theta):
@@ -99,16 +127,18 @@ class MSE(Cost):
         """
         n_samples = X.shape[0]
         dZ = y_out-y
-        dW = float(1./n_samples) * X.T.dot(dZ) 
-        # Add the gradient of regularization of weights (not bias)
-        dW += self.regularization.gradient(theta) / n_samples
+        dW = float(1. / n_samples) * X.T.dot(dZ) 
+        # Check gradient before normalizing it with n_samples
+        dW = self._check_gradient(dW)
+        # Add the gradient of regularization of weights 
+        dW += self.regularization.gradient(theta) / n_samples        
         return(dW)        
 
 # --------------------------------------------------------------------------  #
 class CrossEntropy(Cost):
 
-    def __init__(self, regularization=None):
-        super(CrossEntropy, self).__init__(regularization)
+    def __init__(self, regularization=None,  clip_threshold=1e-10):      
+        super(CrossEntropy, self).__init__(regularization, clip_threshold)
 
     def __call__(self, y, y_out, theta):
         """Computes cross entropy cost.
@@ -134,8 +164,8 @@ class CrossEntropy(Cost):
         y_out = np.clip(y_out, 1e-15, 1-1e-15)        
         J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + \
             np.multiply(1-y, np.log(1-y_out))) 
-        # Add regularization of weights (not bias)
-        J += self.regularization(theta) / n_samples
+        # Add regularization of weights 
+        J += self.regularization(theta) / n_samples        
         return J   
 
     def gradient(self, X, y, y_out, theta):
@@ -162,16 +192,17 @@ class CrossEntropy(Cost):
         """
         n_samples = X.shape[0]
         dZ = y_out-y
-        dW = float(1./n_samples) * X.T.dot(dZ) 
-        # Add the gradient of regularization of weights (not bias)
-        dW += self.regularization.gradient(theta) / n_samples
+        dW = float(1./n_samples) * X.T.dot(dZ)         
+        # Check gradient before normalizing it with n_samples
+        dW = self._check_gradient(dW)
+        dW += self.regularization.gradient(theta) / n_samples        
         return(dW)          
 
 # --------------------------------------------------------------------------  #
 class CategoricalCrossEntropy(Cost):
 
-    def __init__(self, regularization=None):
-        super(CategoricalCrossEntropy, self).__init__(regularization)
+    def __init__(self, regularization=None,  clip_threshold=1e-10):      
+        super(CategoricalCrossEntropy, self).__init__(regularization, clip_threshold)
 
     def __call__(self, y, y_out, theta):
         """Computes categorical cross entropy cost.
@@ -198,7 +229,7 @@ class CategoricalCrossEntropy(Cost):
         y_out = np.clip(y_out, 1e-15, 1-1e-15)    
         # Obtain unregularized cost
         J = np.mean(-np.sum(np.log(y_out) * y, axis=1))
-        # Add regularization of weights (not bias)
+        # Add regularization of weights 
         J += self.regularization(theta) / n_samples
         return J 
 
@@ -227,6 +258,8 @@ class CategoricalCrossEntropy(Cost):
         n_samples = y.shape[0]
         dZ =y_out-y
         dW = 1/n_samples * X.T.dot(dZ)
-        # Add regularization of weights (not bias)
-        dW += self.regularization.gradient(theta) / n_samples
+        # Check gradient before normalizing it with n_samples
+        dW = self._check_gradient(dW)        
+        # Add regularization of weights 
+        dW += self.regularization.gradient(theta) / n_samples        
         return(dW)                  

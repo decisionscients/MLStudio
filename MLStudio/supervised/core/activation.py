@@ -29,7 +29,10 @@ class Sigmoid:
     """Sigmoid activation function."""
 
     def __call__(self, x):
-        return 1 / (1 + np.exp(-x))
+        if x >= 0:            
+            return 1 / (1 + np.exp(-x))
+        else:
+            return np.exp(x) / (1 + np.exp(x))    
 
     def gradient(self, x):
         return self.__call__(x) * (1 - self.__call__(x))

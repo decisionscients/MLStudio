@@ -31,6 +31,7 @@ from sklearn.base import BaseEstimator
 from sklearn.base import RegressorMixin, ClassifierMixin
 from sklearn.utils.validation import check_array
 from sklearn.utils.validation import check_X_y, check_is_fitted
+from sklearn.utils.testing import ignore_warnings
 from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 
 from mlstudio.supervised.callbacks.base import CallbackList, Callback
@@ -84,6 +85,21 @@ class GradientDescent(ABC, BaseEstimator):
     def converged(self, x):
         self._converged = x
 
+    def _handle_no_validation_data(self):
+        """Issues warning if validation set could not be created due to training set size."""
+        # If no validation data (training samples < 2), then warn user
+        # and change the cross-validation metric to train-cost.
+        if self.X_val_ is None:            
+            if 'val' in self.early_stop.metric:
+                self.early_stop.metric = "train_cost"         
+                warnings.warn("Validation set could not be created. Training set \
+                    only has {s} observations. Changing cross-validation metric \
+                        to 'train_cost'.\
+                        ".format(s=str(self.X_train_.shape[0])), UserWarning)        
+            else:
+                warnings.warn("Validation set could not be created. Training set \
+                    only has {s} observations.".format(s=str(self.X_train_.shape[0])), UserWarning)                        
+
     @abstractmethod
     def _prepare_training_data(self, X, y):
         """Prepares X and y data for training."""
@@ -120,11 +136,13 @@ class GradientDescent(ABC, BaseEstimator):
         # If COO matrix, convert to CSR
             if sparse.isspmatrix_coo(X):
                 X = X.tocsr()            
+            # Add bias term 
             ones = np.ones((X.shape[0],1))
             bias_term = sparse.csr_matrix(ones, dtype=float)
             X = sparse.hstack((bias_term, X))
         else:
-            X = np.insert(X, 0, 1.0, axis=1)                           
+            # Add bias term
+            X = np.insert(X, 0, 1.0, axis=1)      
 
         # If y is COO convert to CSR
         if y is not None: 
@@ -155,7 +173,7 @@ class GradientDescent(ABC, BaseEstimator):
         log['train_score'] = self._scorer(self.y_train_orig_, y_pred)
 
         # If early stop object is provided, get validation cost and score
-        if self.early_stop:
+        if self.early_stop and self.y_val_ is not None:
             if self.early_stop.val_size:
                 y_out_val = self._compute_output(self.X_val_)
                 log['val_cost'] = self._cost(self.y_val_, y_out_val, self.theta_)        
@@ -376,13 +394,16 @@ class GradientDescentRegressor(GradientDescent, RegressorMixin):
         """Creates the X design matrix and saves data as attributes."""
         super(GradientDescentRegressor, self)._prepare_training_data(X,y)
         # If early stopping, set aside a proportion of the data for the validation set    
-        if self.early_stop:            
+        if self.early_stop and self.X_train_.shape[0] > 1:            
             if self.early_stop.val_size:                
                 self.X_train_, self.X_val_, self.y_train_, self.y_val_ = \
                     data_split(self.X_train_, self.y_train_, stratify=False,
-                    test_size=self.early_stop.val_size, random_state=self.random_state)   
+                    test_size=self.early_stop.val_size, random_state=self.random_state)                   
+                if self.X_val_ is None:
+                    self._handle_no_validation_data()                                    
+        
         self.y_train_orig_ = self.y_train_
-        self.y_val_orig_ = self.y_val_
+        self.y_val_orig_ = self.y_val_        
 
     def _prepare_test_data(self, X, y=None):
         """Prepares test data for prediction and scoring."""
@@ -441,7 +462,7 @@ class GradientDescentClassifier(GradientDescent, ClassifierMixin):
         regularization = self._cost.regularization.__class__.__name__
         task = {'CrossEntropy': "Logistic Regression",
                 'CategoricalCrossEntropy': "Multinomial Logistic Regression"}
-        if regularization == "L0":
+        if regularization == "Nill":
             return task[cost_function] + " with " + self.variant    
         else:
             return task[cost_function] +  "(" + self._cost.regularization.name + ") with " + self.variant               
@@ -466,13 +487,21 @@ class GradientDescentClassifier(GradientDescent, ClassifierMixin):
                     data_split(X, y, stratify=True,
                     test_size=self.early_stop.val_size, random_state=self.random_state)
 
-                self.y_train_ = self._encoder.fit_transform(self.y_train_)                    
-                self.y_val_ = self._encoder.transform(self.y_val_)
-                self.y_train_orig_ = self.y_train_
-                self.y_val_orig_ = self.y_val_
-                if self.n_classes_ > 2:
-                    self.y_train_ = self._binarizer.fit_transform(self.y_train_)
-                    self.y_val_ = self._binarizer.transform(self.y_val_)                    
+                if self.X_val_ is None:
+                    self._handle_no_validation_data()
+                    self.y_train_ = self._encoder.fit_transform(self.y_train_)                    
+                    self.y_train_orig_ = self.y_train_
+                    if self.n_classes_ > 2:
+                        self.y_train_ = self._binarizer.fit_transform(self.y_train_)
+
+                else:
+                    self.y_train_ = self._encoder.fit_transform(self.y_train_)                    
+                    self.y_val_ = self._encoder.transform(self.y_val_)
+                    self.y_train_orig_ = self.y_train_
+                    self.y_val_orig_ = self.y_val_
+                    if self.n_classes_ > 2:
+                        self.y_train_ = self._binarizer.fit_transform(self.y_train_)
+                        self.y_val_ = self._binarizer.transform(self.y_val_)                    
         else:
             self.y_train_ = self._encoder.fit_transform(self.y_train_)
             self.y_train_orig_ = self.y_train_            

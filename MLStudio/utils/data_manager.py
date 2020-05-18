@@ -35,6 +35,86 @@ import pandas as pd
 # --------------------------------------------------------------------------- #
 #                               TRANSFORMERS                                  #
 # --------------------------------------------------------------------------- #
+class Normalize(TransformerMixin, BaseEstimator):
+    """Normalizes a vector to unit length.  
+
+    Scaling a sample 'x' to 0-1 is calculated as:
+
+        X_new = X/ X.norm
+
+    Note: Works for dense matrices only.
+
+    Attributes
+    ----------
+    r : float
+        The magnitude of the vector
+
+    """        
+
+    def __init__(self):        
+        pass
+
+    def fit(self, X, y=None):
+        """Computes the Frobenius norm of the input vector
+        
+        Parameters
+        ----------
+        X : array-like, shape [n_features,]
+            The data used to compute the mean and standard deviation
+            used for centering and scaling.
+
+        y : Ignored
+
+        """
+        self.r = np.linalg.norm(X)
+
+    def transform(self, X):
+        """Scales features to have a norm of 1
+
+        Parameters
+        ----------
+        X : array-like, shape [n_features,]
+            The data to scale
+
+        Returns
+        -------
+        Xt : array-like of same shape as X
+        """
+        X = np.divide(X, self.r)               
+        return X
+
+    def fit_transform(self, X):
+        """Combines fit and transform methods.
+        
+        Parameters
+        ----------
+        X : array-like, shape [n_features,]
+            The data to scale
+        
+        Returns
+        -------
+        Xt : array-like of same shape as X
+        """
+        self.fit(X)
+        return self.transform(X)
+
+    def inverse_transform(self, X):
+        """Inverses the standardization process.
+
+        Parameters
+        ----------
+        X : array-like, shape [n_samples, n_features]
+            The centered and scaled data.
+
+        Returns
+        -------
+        array-like of same shape as X, with data returned to original
+        un-standardized values.
+        """
+        X = X * self.r        
+        return X
+# --------------------------------------------------------------------------- #
+
 class MinMaxScaler(TransformerMixin, BaseEstimator):
     """Scales each feature to values between 0 and 1.
 
@@ -358,8 +438,14 @@ def data_split(X, y, test_size=0.3, shuffle=False, stratify=False, random_state=
         train_idx = np.concatenate(train_idx).ravel()
         test_idx = np.concatenate(test_idx).ravel()
         # Slice and dice.
-        X_train, X_test = X[train_idx], X[test_idx]
         y_train, y_test = y[train_idx], y[test_idx]
+
+    if X_train.shape[0] == 0:
+        raise Exception("Training set has zero observations\
+            The validation set has {s} observations".format(s=str(X_test.shape[0])))
+    if X_test.shape[0] == 0:        
+        raise Exception("Validation set has zero observations.\
+            The training set has {s} observations".format(s=str(X_train.shape[0])))
     
     return X_train, X_test, y_train, y_test
 

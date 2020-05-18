@@ -33,6 +33,7 @@ from mlstudio.supervised.callbacks.early_stop import Performance, Stability
 from mlstudio.supervised.callbacks.learning_rate import Constant, TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, PowerSchedule
+from mlstudio.supervised.callbacks.learning_rate import BottouSchedule
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.supervised.core.cost import MSE
@@ -43,10 +44,10 @@ from mlstudio.supervised.core.regularization import L1, L2, L1_L2
 #                         REGULARIZATION TESTING                              #
 # --------------------------------------------------------------------------  #
 scenarios = [
-    GradientDescentRegressor(cost=MSE()),
-    GradientDescentRegressor(cost=MSE(regularization=L1())),
-    GradientDescentRegressor(cost=MSE(regularization=L2())),
-    GradientDescentRegressor(cost=MSE(regularization=L1_L2()))
+    GradientDescentRegressor(cost=MSE(clip_threshold=1e-15)),
+    GradientDescentRegressor(cost=MSE(regularization=L1(), clip_threshold=1e-15)),
+    GradientDescentRegressor(cost=MSE(regularization=L2(), clip_threshold=1e-15)),
+    GradientDescentRegressor(cost=MSE(regularization=L1_L2(), clip_threshold=1e-15))
 ]
 
 @mark.regression
@@ -61,7 +62,8 @@ def test_regression_regularization_II(get_regression_data_split, get_regression_
     X_train, X_val, y_train, y_val = get_regression_data_split
     for est in scenarios:
         est.fit(X_train, y_train)            
-        regularization = est.cost.regularization.__class__.__name__        
+        regularization = est.cost.regularization.__class__.__name__     
+        print("Processing " + est.cost.regularization.__class__.__name__)   
         msg = "Poor score from " + regularization + ' on ' + str(X_train.shape[0]) + ' observations.'
         score = est.score(X_val, y_val)
         assert score > 0.5, msg
@@ -69,9 +71,6 @@ def test_regression_regularization_II(get_regression_data_split, get_regression_
 # --------------------------------------------------------------------------  #
 #                          TEST GRADIENTS                                     #
 # --------------------------------------------------------------------------  #
-scenarios = [
-    GradientDescentRegressor(cost=MSE(), gradient_check=True)
-]
 
 @mark.regression
 @mark.regression_gradients
@@ -84,7 +83,7 @@ def test_regression_gradients(estimator, check):
 #                              TEST EARLYSTOP                                 #
 # --------------------------------------------------------------------------  #
 scenarios_early_stop = [
-    GradientDescentRegressor(cost=MSE(), early_stop=Performance(metric='val_cost')),
+    GradientDescentRegressor(cost=MSE(), early_stop=Performance()),
     GradientDescentRegressor(cost=MSE(regularization=L1()), early_stop=Performance(metric='val_score')),
     GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Performance(metric='train_score')),
     GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='train_cost')),
@@ -93,18 +92,13 @@ scenarios_early_stop = [
     GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Stability(metric='train_cost')),
     GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='train_score')),
     GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Stability(metric='val_cost')),
-    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='val_score')),        
-]        
+    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='val_score'))            
+]   
+
+
 @mark.regression
 @mark.regression_early_stop
-@parametrize_with_checks(scenarios_early_stop)
-def test_regression_early_stop(estimator, check):
-    check(estimator)
-
-
-@mark.regression
-@mark.regression_early_stop_II
-def test_regression_early_stop_II(get_regression_data, get_regression_data_features):
+def test_regression_early_stop(get_regression_data, get_regression_data_features):
     X, y = get_regression_data
     for est in scenarios_early_stop:
         est.fit(X, y)    
@@ -119,13 +113,14 @@ def test_regression_early_stop_II(get_regression_data, get_regression_data_featu
 #                              TEST LEARNING RATES                            #
 # --------------------------------------------------------------------------  #
 scenarios = [
-    GradientDescentRegressor(cost=MSE(), learning_rate=Constant()),
-    GradientDescentRegressor(cost=MSE(regularization=L1()), learning_rate=TimeDecay()),
-    GradientDescentRegressor(cost=MSE(regularization=L2()), learning_rate=SqrtTimeDecay()),
-    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), learning_rate=ExponentialDecay()),
-    GradientDescentRegressor(cost=MSE(), learning_rate=PolynomialDecay()),
-    GradientDescentRegressor(cost=MSE(regularization=L1()), learning_rate=ExponentialSchedule()),
-    GradientDescentRegressor(cost=MSE(regularization=L2()), learning_rate=PowerSchedule())    
+    GradientDescentRegressor(cost=MSE(), learning_rate=Constant(), epochs=3000),
+    GradientDescentRegressor(cost=MSE(regularization=L1()), learning_rate=TimeDecay(), epochs=3000),
+    GradientDescentRegressor(cost=MSE(regularization=L2()), learning_rate=SqrtTimeDecay(), epochs=3000),
+    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), learning_rate=ExponentialDecay(), epochs=3000),
+    GradientDescentRegressor(cost=MSE(), learning_rate=PolynomialDecay(), epochs=3000),
+    GradientDescentRegressor(cost=MSE(regularization=L1()), learning_rate=ExponentialSchedule(), epochs=3000),
+    GradientDescentRegressor(cost=MSE(regularization=L2()), learning_rate=PowerSchedule(), epochs=3000),    
+    GradientDescentRegressor(cost=MSE(regularization=L2()), learning_rate=BottouSchedule(), epochs=3000)
 ]        
 @mark.regression
 @mark.regression_learning_rates
@@ -135,30 +130,64 @@ def test_regression_learning_rates(estimator, check):
 
 @mark.regression
 @mark.regression_learning_rates_II
-def test_regression_learning_rates_II(get_regression_data, get_regression_data_features):
-    X, y = get_regression_data
+def test_regression_learning_rates_II(get_regression_data_split, get_regression_data_features):
+    X_train, X_test, y_train, y_test = get_regression_data_split
     for est in scenarios:
-        est.fit(X, y)            
+        est.fit(X_train, y_train)            
+        score = est.score(X_test, y_test)
         learning_rate = est.learning_rate.__class__.__name__
         if learning_rate != 'Constant':
             msg = "Learning rate decay didn't work for " + learning_rate
             l0 = est.blackbox_.epoch_log.get('learning_rate')[0]
             l9 = est.blackbox_.epoch_log.get('learning_rate')[-1]
             assert l0 > l9, msg
+        msg = est.learning_rate.__class__.__name__ + " received a poor score of " + str(score)
+        assert score > 0.5, msg
+        
 # --------------------------------------------------------------------------  #
 #                              TEST SGD                                       #
 # --------------------------------------------------------------------------  #
+scenarios_sgd = [
+    GradientDescentRegressor(cost=MSE(), early_stop=Performance(), batch_size=1),
+    GradientDescentRegressor(cost=MSE(regularization=L1()), early_stop=Performance(metric='val_score'), batch_size=1),
+    GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Performance(metric='train_score'), batch_size=1),
+    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='train_cost'), batch_size=1),
+    GradientDescentRegressor(cost=MSE(regularization=L2()), learning_rate=BottouSchedule(), batch_size=1)    
+]   
+
+
 @mark.regression
 @mark.regression_sgd
-@parametrize_with_checks([GradientDescentRegressor(batch_size=1)])
-def test_regression_sgd(estimator, check):
-    check(estimator)
+def test_regression_sgd(get_regression_data_split, get_regression_data_features):
+    X_train, X_test, y_train, y_test = get_regression_data_split
+    for est in scenarios_sgd:
+        est.fit(X_train, y_train)            
+        score = est.score(X_test, y_test)
+        est.summary(features=get_regression_data_features)
+        msg = est.learning_rate.__class__.__name__ + " received a poor score of " + str(score)
+        assert score > 0.5, msg
 
 # --------------------------------------------------------------------------  #
-#                              TEST MBGD                                      #
+#                              TEST SGD                                       #
 # --------------------------------------------------------------------------  #
+scenarios_MBGD = [
+    GradientDescentRegressor(cost=MSE(), batch_size=64, epochs=2000),
+    GradientDescentRegressor(cost=MSE(),early_stop=Performance(epsilon=0.0001, patience=100), batch_size=64, epochs=2000),
+    GradientDescentRegressor(cost=MSE(regularization=L1()), early_stop=Performance(metric='val_score'), batch_size=64),
+    GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Performance(metric='train_score'), batch_size=64),
+    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), learning_rate=BottouSchedule(), early_stop=Stability(metric='val_cost'), batch_size=64, epochs=2000),
+    GradientDescentRegressor(cost=MSE(regularization=L2()), learning_rate=BottouSchedule(), batch_size=64)    
+]   
+
+
 @mark.regression
 @mark.regression_mbgd
-@parametrize_with_checks([GradientDescentRegressor(batch_size=64)])
-def test_regression_mbgd(estimator, check):
-    check(estimator)    
+def test_regression_MBGD(get_regression_data_split, get_regression_data_features):
+    X_train, X_test, y_train, y_test = get_regression_data_split
+    for est in scenarios_MBGD:
+        est.fit(X_train, y_train)            
+        score = est.score(X_test, y_test)
+        est.summary(features=get_regression_data_features)
+        msg = est.cost.regularization.__class__.__name__ + " received a poor score of " + str(score)\
+            + " after " + str(est.epochs) + " iterations"
+        assert score > 0.5, msg        

@@ -47,7 +47,7 @@ class L1:
 # --------------------------------------------------------------------------  #
 class L2:
     """ Regularization for Ridge Regression """
-    def __init__(self, alpha=0.0001):
+    def __init__(self, alpha=0.01):
         self.alpha = alpha
         self.name = "Ridge (L2) Regularization"
     
@@ -59,7 +59,7 @@ class L2:
 # --------------------------------------------------------------------------  #
 class L1_L2:
     """ Regularization for Elastic Net Regression """
-    def __init__(self, alpha=0.001, ratio=0.5):
+    def __init__(self, alpha=0.01, ratio=0.5):
         self.alpha = alpha
         self.ratio = ratio
         self.name = "Elasticnet (L1_L2) Regularization"

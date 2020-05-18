@@ -284,3 +284,39 @@ class PowerSchedule(Callback):
             Dictionary containing the data, cost, batch size and current weights
         """                
         self.model.eta = self.eta0 * (1 + epoch/self.model.epochs)**(-self.power)
+
+# --------------------------------------------------------------------------  #
+class BottouSchedule(Callback):
+    """ Learning rate schedule as described in:
+
+    https://cilvr.cs.nyu.edu/diglib/lsml/bottou-sgd-tricks-2012.pdf
+
+    Parameters
+    ----------
+    eta0 : float (default=0.01)
+        The initial learning rate
+
+    power : float (default=1)
+        The factor by which the learning rate is decayed
+
+    """
+
+    def __init__(self, eta0=0.01, alpha=0.01):
+        """Callback class constructor."""        
+        self.params = None
+        self.model = None
+        self.alpha = alpha        
+        self.eta0 = eta0
+
+    def on_epoch_begin(self, epoch, logs=None):
+        """Logic executed at the beginning of each epoch.
+        
+        Parameters
+        ----------
+        epoch : int
+            Current epoch
+        
+        logs: dict
+            Dictionary containing the data, cost, batch size and current weights
+        """                
+        self.model.eta = self.eta0 * (1 + self.eta0 * self.alpha * epoch)**(-1)
