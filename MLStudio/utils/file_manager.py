@@ -30,6 +30,10 @@ import plotly.offline as py
 
 from  mlstudio.utils.format import snake
 
+def check_directory(directory):    
+    if not os.path.exists(directory):
+        os.makedirs(directory)                
+
 def save_fig(fig, directory, filename):
     if os.path.exists(directory):
         path = os.path.join(os.path.abspath(directory), filename)
@@ -62,7 +66,7 @@ def save_numpy(a, directory, filename):
         np.save(file=path, arr=a)
     else:
         os.makedirs(directory)                
-        np.save(file=path, arr=a)
+        np.save(file=path, arr=a)        
 
 def save_plotly(a, directory, filename):
     path = os.path.join(os.path.abspath(directory), filename)

@@ -21,7 +21,6 @@
 """Cost functions and their gradients."""
 from abc import ABC, abstractmethod
 
-import dill as pickle
 import numpy as np
 
 from mlstudio.supervised.core.regularization import Nill

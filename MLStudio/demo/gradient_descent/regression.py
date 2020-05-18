@@ -26,11 +26,12 @@ import sys
 import pandas as pd
 import numpy as np
 homedir = str(Path(__file__).parents[3])
+demodir = str(Path(__file__).parents[1])
 sys.path.append(homedir)
 
-from mlstudio.supervised.estimator.gradient import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.utils.data_manager import StandardScaler
-from mlstudio.visual.animations.surface_line import SurfaceLine
+from mlstudio.visual.animations.surface_line1 import SurfaceLine1
 
 # --------------------------------------------------------------------------  #
 # Designate file locations
@@ -47,8 +48,13 @@ scaler = StandardScaler()
 X = scaler.fit_transform(X)
 # --------------------------------------------------------------------------  #
 # Train model
-est = GradientDescentRegressor(theta_init=np.array([0,0]))
-est.fit(X,y)
+gd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500)
+sgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, batch_size=1)
+mbgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, batch_size=64)
+gd.fit(X,y)
+sgd.fit(X,y)
+mbgd.fit(X,y)
+est = [gd, sgd, mbgd]
 # --------------------------------------------------------------------------  #
-v = SurfaceLine()
-v.animate(est)
+v = SurfaceLine1()
+v.animate(models=est, directory=demodir)

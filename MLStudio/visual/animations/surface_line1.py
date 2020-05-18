@@ -20,6 +20,8 @@
 # =========================================================================== #
 """Animates gradient descent with surface and line plots."""
 import os
+from pathlib import Path
+import sys
 
 import numpy as np
 import pandas as pd
@@ -31,8 +33,9 @@ import plotly.offline as py
 from plotly.subplots import make_subplots
 
 from mlstudio.utils.data_manager import todf
+from mlstudio.utils.file_manager import check_directory
 # --------------------------------------------------------------------------  #
-class SurfaceLine:
+class SurfaceLine1:
     """Animates gradient descent with a surface and line plot."""
     def __init__(self):
         pass
@@ -93,32 +96,49 @@ class SurfaceLine:
                 yy.append(np.linspace(ym, yM))      
             lines[est[i]] = yy
     
-        # Initialize figure with 2 subplots
         fig = make_subplots(rows=1, cols=2, subplot_titles=("Gradient Descent", "Linear Regression"),
                             specs=[[{'type': "surface"}, {"type": "scatter"}]])      
 
-        # Add surface and scatter plot
+        # Subplot 1, Trace 1: Gradient descent path
         fig.add_trace(
-            go.Surface(x=theta0, y=theta1, z=Js, colorscale="YlGnBu", showscale=False),
-            row=1, col=1)
+            go.Scatter3d(x=[theta0[:1]], y=[theta1[:1]], z=[cost[:1]],
+                         name="Batch Gradient Descent", 
+                         showlegend=False, 
+                         mode='lines', line=dict(color="red")),
+                         row=1, col=1)            
 
+        # Subplot 2, Trace 2: BGD Line
         fig.add_trace(
-            go.Scatter(x=X_train_[:,1], y=y_train_,
-                       name="points2",
-                       mode="markers",
-                       marker=dict(color="#1560bd")), row=1, col=2)                       
+            go.Scatter(x=xx, y=lines['BGD'][0], 
+                       name="Batch Gradient Descent",
+                       mode="lines", marker=dict(color="red", size=0.5)),
+                       row=1, col=2)
+
+         # Subplot 2, Trace 3: SGD Line
+        fig.add_trace(
+            go.Scatter(x=xx, y=lines['SGD'][0], 
+                       name="Stochastic Gradient Descent",
+                       mode="lines", marker=dict(color="green", size=0.5)),
+                       row=1, col=2)                        
+        
+        # Subplot 2, Trace 4: MBGD Line
+        fig.add_trace(
+            go.Scatter(x=xx, y=lines['MBGD'][0], 
+                       name="Minibatch Gradient Descent",
+                       mode="lines", marker=dict(color="orange", size=0.5)),
+                       row=1, col=2)
 
         # Create frames definition                       
         frames = [go.Frame(
             dict(
                 name = k,
                 data = [                    
-                    go.Scatter3d(x=[theta0[k]], y=[theta1[k]], z=[cost[k]], mode='markers', marker=dict(color="red", size=10)),
+                    go.Scatter3d(x=[theta0[:k+2]], y=[theta1[:k+2]], z=[cost[:k+2]], mode='lines', line=dict(color="red")),
                     go.Scatter(x=xx, y=lines['BGD'][k], mode="lines", marker=dict(color="red")),
                     go.Scatter(x=xx, y=lines['SGD'][k], mode="lines", marker=dict(color="green")),
                     go.Scatter(x=xx, y=lines['MBGD'][k], mode="lines", marker=dict(color="orange")),
                 ],
-                traces=[0,1,2,3])
+                traces=[1, 2, 3, 4])
             ) for k in range(n_frames)]
 
         # Update the menus
@@ -153,30 +173,49 @@ class SurfaceLine:
             title=dict(xanchor='center', yanchor='top', x=0.5, y=0.9),        
             font=dict(family="Open Sans"),    
             updatemenus=updatemenus, 
-            showlegend=False,
+            showlegend=True,
             sliders=sliders, 
             template='plotly_white')
 
+        # Surface plot. Had to add twice; otherwise, the trace disappears after play.
+        fig.add_trace(
+            go.Surface(x=theta0, y=theta1, z=Js, colorscale="YlGnBu", 
+                       showscale=False, showlegend=False),
+                       row=1, col=1)                    
 
         fig.add_trace(
-            go.Scatter(x=X_train_[:,1], y=y_train_,
-                       name="points2",
-                       mode="markers",
-                       marker=dict(color="#1560bd")), row=1, col=2)   
+            go.Surface(x=theta0, y=theta1, z=Js, colorscale="YlGnBu", 
+                       showscale=False, showlegend=False),
+                       row=1, col=1)            
 
-        fig.add_trace(
-            go.Surface(x=theta0, y=theta1, z=Js, colorscale="YlGnBu", showscale=False),
-            row=1, col=1)         
-                                                   
+        # Scatterplot. Had to add twice; otherwise, the trace disappears after play.
         fig.add_trace(
             go.Scatter(x=X_train_[:,1], y=y_train_,
-                       name="points2",
+                       name="Ames Data",
                        mode="markers",
+                       showlegend=True,
+                       marker=dict(color="#1560bd")), row=1, col=2)                    
+         
+        fig.add_trace(
+            go.Scatter(x=X_train_[:,1], y=y_train_,
+                       name="Ames Data",
+                       mode="markers",
+                       showlegend=False,
                        marker=dict(color="#1560bd")), row=1, col=2)
 
-        fig.add_trace(
-            go.Surface(x=theta0, y=theta1, z=Js, colorscale="YlGnBu", showscale=False),
-            row=1, col=1)     
+        # Save plotting data.        
+        filepath = os.path.join(directory, "data/gradient_descent_demo.npz")
+        check_directory(os.path.dirname(filepath))
+        np.savez_compressed(filepath, xx=xx, n_frames=n_frames, theta0=theta0, theta1=theta1, cost=cost, 
+                            lines=lines, theta0_min=theta0_min, 
+                            theta1_min=theta1_min, theta0_max=theta0_max,
+                            theta1_max=theta1_max, Js=Js, X_train_=X_train_,
+                            y_train_=y_train_)     
+        # Test save
+        loaded = np.load(filepath)
+        assert np.array_equal(theta0, loaded['theta0']), "Savez_compressed error."                     
+        assert n_frames == loaded['n_frames'], "Savez compressed error on scaler"
+        assert np.array_equal(X_train_, loaded['X_train_']), "Savez_compressed error."                     
 
         if directory and filename:
             filepath = os.path.join(directory, filename)
