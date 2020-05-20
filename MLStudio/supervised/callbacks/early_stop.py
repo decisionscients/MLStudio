@@ -27,7 +27,27 @@ import numpy as np
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
-class Stability(Callback):
+#                          EARLY STOP BASE CLASS                              #
+# --------------------------------------------------------------------------- #
+class EarlyStop(Callback, ABC):
+    """Abstract base class for all early stop classes."""
+
+    @abstractmethod
+    def __init__(self):
+        super(EarlyStop, self).__init__()
+
+    @abstractmethod
+    def on_train_begin(self, logs=None):
+        pass
+
+    @abstractmethod
+    def on_epoch_end(self, epoch, logs=None):
+        pass
+
+# --------------------------------------------------------------------------- #
+#                             STABILITY                                       #
+# --------------------------------------------------------------------------- #
+class Stability(EarlyStop):
     """Stops training if performance hasn't improved.
     
     Stops training if performance hasn't improved. Improvement is measured 
@@ -184,7 +204,7 @@ class Stability(Callback):
         self.model.converged = self.converged_       
 
 # --------------------------------------------------------------------------- #
-class BCN1(Callback):
+class BCN1(EarlyStop):
     """Stopping Criteria #1: Based upon Bottou-Curtis-Nocedal Functions.
 
     Let :math:'\epsilon' > 0. Let :math: '{T_j}' be a sequence of positive-

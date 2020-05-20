@@ -41,39 +41,109 @@ from mlstudio.supervised.machine_learning.gradient_descent import GradientDescen
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.supervised.core.objectives import MSE
 from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
+from mlstudio.utils.data_manager import VectorScaler
 
 
 # --------------------------------------------------------------------------  #
-#                         REGULARIZATION TESTING                              #
+#                               Q&D TEST                                      #
 # --------------------------------------------------------------------------  #
 scenarios = [
-    GradientDescentRegressor(task=LinearRegression(), objective=MSE(clip_threshold=1e-15)),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1(), clip_threshold=1e-15)),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L2(), clip_threshold=1e-15)),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1_L2(), clip_threshold=1e-15))
+    GradientDescentRegressor(task=LinearRegression(), objective=MSE()),
+    GradientDescentRegressor(task=LinearRegression(), 
+                             objective=MSE(gradient_scaler=VectorScaler())),
+    GradientDescentRegressor(task=LinearRegression(), 
+                             objective=MSE(regularizer=L1_L2())),
+    GradientDescentRegressor(task=LinearRegression(),gradient_check=GradientCheck()),
+    GradientDescentRegressor(task=LinearRegression(), early_stop=Stability()),                                           
+    GradientDescentRegressor(task=LinearRegression(), learning_rate=BottouSchedule()),                                           
+
 ]
 
 @mark.regression
-@mark.regression_regularization
+@mark.regression_qnd
 @parametrize_with_checks(scenarios)
-def test_regression_regularization(estimator, check):
+def test_regression_qnd(estimator, check):
+    check(estimator)
+# --------------------------------------------------------------------------  #
+#                        REGULARIZATION TESTING                               #
+# --------------------------------------------------------------------------  #
+scenarios = [
+    GradientDescentRegressor(task=LinearRegression(), objective=MSE()),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1())),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2())),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()))
+]
+
+@mark.regression
+@mark.regression_regularizer
+@parametrize_with_checks(scenarios)
+def test_regression_regularizer(estimator, check):
     check(estimator)
 
 @mark.regression
-@mark.regression_regularization_II
-def test_regression_regularization_II(get_regression_data_split, get_regression_data_features):
+@mark.regression_regularizer
+@mark.regression_regularizer_II
+def test_regression_regularizer_II(get_regression_data_split, get_regression_data_features):
     X_train, X_val, y_train, y_val = get_regression_data_split
     for est in scenarios:
         est.fit(X_train, y_train)            
-        regularization = est.objective.regularization.__class__.__name__     
-        msg = "Poor score from " + regularization + ' on ' + str(X_train.shape[0]) + ' observations.'
+        regularizer = est.objective.regularizer.__class__.__name__     
+        msg = "Poor score from " + regularizer + ' on ' + str(X_train.shape[0]) + ' observations.'
         score = est.score(X_val, y_val)
         assert score > 0.5, msg
 
 # --------------------------------------------------------------------------  #
+#                REGULARIZATION TESTING w/ VECTOR SCALING                     #
+# --------------------------------------------------------------------------  #
+scenarios = [
+    GradientDescentRegressor(task=LinearRegression(), 
+                             objective=MSE(gradient_scaler=VectorScaler(method='c'))),
+    GradientDescentRegressor(task=LinearRegression(),
+                             objective=MSE(regularizer=L1(),gradient_scaler=VectorScaler(method='c'))),
+    GradientDescentRegressor(task=LinearRegression(),
+                             objective=MSE(regularizer=L2(),gradient_scaler=VectorScaler(method='c'))),                             
+    GradientDescentRegressor(task=LinearRegression(),
+                             objective=MSE(regularizer=L1_L2(),gradient_scaler=VectorScaler(method='c'))),
+    GradientDescentRegressor(task=LinearRegression(), 
+                             objective=MSE(gradient_scaler=VectorScaler(method='n'))),
+    GradientDescentRegressor(task=LinearRegression(),
+                             objective=MSE(regularizer=L1(),gradient_scaler=VectorScaler(method='n'))),
+    GradientDescentRegressor(task=LinearRegression(),
+                             objective=MSE(regularizer=L2(),gradient_scaler=VectorScaler(method='n'))),                             
+    GradientDescentRegressor(task=LinearRegression(),
+                             objective=MSE(regularizer=L1_L2(),gradient_scaler=VectorScaler(method='n')))                             
+]
+
+@mark.regression
+@mark.regression_regularizer
+@mark.regression_gradient_scaling
+@parametrize_with_checks(scenarios)
+def test_regression_regularizer_gradient_scaling(estimator, check):
+    check(estimator)
+
+@mark.regression
+@mark.regression_regularizer
+@mark.regression_gradient_scaling
+@mark.regression_gradient_scaling_II
+def test_regression_regularizer_gradient_scaling_II(get_regression_data_split, get_regression_data_features):
+    X_train, X_val, y_train, y_val = get_regression_data_split
+    for est in scenarios:
+        est.fit(X_train, y_train)            
+        regularizer = est.objective.regularizer.__class__.__name__     
+        msg = "Poor score from " + regularizer + ' on ' + str(X_train.shape[0]) + ' observations.'
+        score = est.score(X_val, y_val)
+        assert score > 0.5, msg
+
+
+
+# --------------------------------------------------------------------------  #
 #                          TEST GRADIENTS                                     #
 # --------------------------------------------------------------------------  #
-
+scenarios = [
+    GradientDescentRegressor(task=LinearRegression(), 
+                             objective=MSE(), 
+                             gradient_check=True)
+]
 @mark.regression
 @mark.regression_gradients
 @parametrize_with_checks(scenarios)
@@ -86,13 +156,13 @@ def test_regression_gradients(estimator, check):
 # --------------------------------------------------------------------------  #
 scenarios_early_stop = [
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(), early_stop=Stability()),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1()), early_stop=Stability(metric='val_cost')),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L2(alpha=0.0001)), early_stop=Stability(metric='train_score')),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1_L2()), early_stop=Stability(metric='train_cost')),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), early_stop=Stability(metric='val_cost')),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2(alpha=0.0001)), early_stop=Stability(metric='train_score')),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), early_stop=Stability(metric='train_cost')),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(), early_stop=Stability(metric='gradient')),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1()), early_stop=Stability(metric='theta')),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L2()), early_stop=Stability(metric='gradient')),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1_L2()), early_stop=Stability(metric='theta'))
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), early_stop=Stability(metric='theta')),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), early_stop=Stability(metric='gradient')),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), early_stop=Stability(metric='theta'))
 ]   
 
 
@@ -104,14 +174,14 @@ def test_regression_early_stop(get_regression_data_split, get_regression_data_fe
         est.fit(X_train, y_train)    
         est.summary(features=get_regression_data_features)
         score = est.score(X_test, y_test)        
-        msg = "Early stop didn't work for linear regression with " + est.objective.regularization.name + \
-            " regularization, and " + est.early_stop.__class__.__name__ + \
+        msg = "Early stop didn't work for linear regression with " + est.objective.regularizer.name + \
+            " regularizer, and " + est.early_stop.__class__.__name__ + \
                 " early stopping, monitoring " + est.early_stop.metric +\
                     " with epsilon = " + str(est.early_stop.epsilon) 
         if est.blackbox_.total_epochs == est.epochs:
             warnings.warn(msg)
-        msg = "Early stop for linear regression with " + est.objective.regularization.name + \
-            " regularization, and " + est.early_stop.__class__.__name__ + \
+        msg = "Early stop for linear regression with " + est.objective.regularizer.name + \
+            " regularizer, and " + est.early_stop.__class__.__name__ + \
                 " early stopping, monitoring " + est.early_stop.metric +\
                     " with epsilon = " + str(est.early_stop.epsilon) +\
                         " received a poor score of " + str(score)
@@ -123,13 +193,13 @@ def test_regression_early_stop(get_regression_data_split, get_regression_data_fe
 # --------------------------------------------------------------------------  #
 scenarios = [
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(), learning_rate=Constant(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1()), learning_rate=TimeDecay(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L2()), learning_rate=SqrtTimeDecay(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1_L2()), learning_rate=ExponentialDecay(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), learning_rate=TimeDecay(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), learning_rate=SqrtTimeDecay(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), learning_rate=ExponentialDecay(), epochs=3000),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(), learning_rate=PolynomialDecay(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1()), learning_rate=ExponentialSchedule(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L2()), learning_rate=PowerSchedule(), epochs=3000),    
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L2()), learning_rate=BottouSchedule(), epochs=3000)
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), learning_rate=ExponentialSchedule(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), learning_rate=PowerSchedule(), epochs=3000),    
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), learning_rate=BottouSchedule(), epochs=3000)
 ]        
 @mark.regression
 @mark.regression_learning_rates
@@ -158,10 +228,10 @@ def test_regression_learning_rates_II(get_regression_data_split, get_regression_
 # --------------------------------------------------------------------------  #
 scenarios_sgd = [
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(), early_stop=Stability(), batch_size=1),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1()), early_stop=Stability(metric='val_score'), batch_size=1),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L2()), early_stop=Stability(metric='train_score'), batch_size=1),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1_L2()), early_stop=Stability(metric='gradient'), batch_size=1),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L2()), learning_rate=BottouSchedule(), batch_size=1)    
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), early_stop=Stability(metric='val_score'), batch_size=1),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), early_stop=Stability(metric='train_score'), batch_size=1),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), early_stop=Stability(metric='gradient'), batch_size=1),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), learning_rate=BottouSchedule(), batch_size=1)    
 ]   
 
 
@@ -182,10 +252,10 @@ def test_regression_sgd(get_regression_data_split, get_regression_data_features)
 scenarios_MBGD = [
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(), batch_size=64, epochs=2000),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(),early_stop=Stability(epsilon=0.0001, patience=100), batch_size=64, epochs=2000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1()), early_stop=Stability(metric='val_score'), batch_size=64),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L2()), early_stop=Stability(metric='train_score'), batch_size=64),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L1_L2()), learning_rate=BottouSchedule(), early_stop=Stability(metric='val_cost'), batch_size=64, epochs=2000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularization=L2()), learning_rate=BottouSchedule(), batch_size=64)    
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), early_stop=Stability(metric='val_score'), batch_size=64),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), early_stop=Stability(metric='train_score'), batch_size=64),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), learning_rate=BottouSchedule(), early_stop=Stability(metric='val_cost'), batch_size=64, epochs=2000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), learning_rate=BottouSchedule(), batch_size=64)    
 ]   
 
 
@@ -197,6 +267,6 @@ def test_regression_MBGD(get_regression_data_split, get_regression_data_features
         est.fit(X_train, y_train)            
         score = est.score(X_test, y_test)
         est.summary(features=get_regression_data_features)
-        msg = est.objective.regularization.__class__.__name__ + " received a poor score of " + str(score)\
+        msg = est.objective.regularizer.__class__.__name__ + " received a poor score of " + str(score)\
             + " after " + str(est.epochs) + " iterations"
         assert score > 0.5, msg        

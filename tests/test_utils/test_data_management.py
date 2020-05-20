@@ -26,7 +26,40 @@ from pytest import mark
 import scipy.sparse as sp
 
 from mlstudio.datasets import load_urls
-from mlstudio.utils.data_manager import MinMaxScaler, data_split
+from mlstudio.utils.data_manager import MinMaxScaler, data_split, VectorScaler
+# --------------------------------------------------------------------------  #
+#                        TEST VECTOR SCALER                                   #
+# --------------------------------------------------------------------------  #  
+clip_norm = [1,2,10]
+low = [1e-16, 1e15, 1e-16]
+high = [1e-15, 1e16, 1e-15] 
+@mark.utils
+@mark.data_manager
+@mark.vector_scaler
+def test_vector_scaler_normalize():            
+    for s in zip(clip_norm, low, high):
+        X = np.random.default_rng().uniform(low=s[1], high=s[2], size=20)
+        scaler = VectorScaler(method="n", clip_lower=s[1], clip_upper=s[2], clip_norm=s[0])
+        X_new = scaler.fit_transform(X)
+        assert np.isclose(np.linalg.norm(X_new),s[0]), "Normalization didn't work"
+        X_old = scaler.inverse_transform(X_new)
+        assert np.allclose(X, X_old), "Denormalization didn't work"
+
+@mark.utils
+@mark.data_manager
+@mark.vector_scaler
+def test_vector_scaler_clip():      
+    for s in zip(clip_norm, low, high):
+        X = np.random.default_rng().uniform(low=s[1], high=s[2], size=20)
+        scaler = VectorScaler(method="c", clip_lower=s[1], clip_upper=s[2], clip_norm=s[0])
+        X_new = scaler.fit_transform(X)
+        assert len(X_new[X_new < s[1]])==0, "Clipping didn't work"
+        assert len(X_new[X_new > s[2]])==0, "Clipping didn't work"
+
+
+
+    
+
 # --------------------------------------------------------------------------  #
 #                       TEST MINMAX SCALER                                    #
 # --------------------------------------------------------------------------  #
@@ -66,3 +99,6 @@ def test_data_split():
 
 
 
+
+
+# %%

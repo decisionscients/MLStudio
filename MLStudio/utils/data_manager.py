@@ -51,8 +51,9 @@ class Normalize(TransformerMixin, BaseEstimator):
 
     """        
 
-    def __init__(self):        
-        pass
+    def __init__(self, clip_norm=1):        
+        self.clip_norm = clip_norm
+        self.r_ = None
 
     def fit(self, X, y=None):
         """Computes the Frobenius norm of the input vector
@@ -66,7 +67,7 @@ class Normalize(TransformerMixin, BaseEstimator):
         y : Ignored
 
         """
-        self.r = np.linalg.norm(X)
+        self.r_= np.linalg.norm(X)
 
     def transform(self, X):
         """Scales features to have a norm of 1
@@ -80,7 +81,7 @@ class Normalize(TransformerMixin, BaseEstimator):
         -------
         Xt : array-like of same shape as X
         """
-        X = np.divide(X, self.r)               
+        X = np.divide(X, self.r_) * self.clip_norm               
         return X
 
     def fit_transform(self, X):
@@ -111,7 +112,7 @@ class Normalize(TransformerMixin, BaseEstimator):
         array-like of same shape as X, with data returned to original
         un-standardized values.
         """
-        X = X * self.r        
+        X = X * self.r_ / self.clip_norm    
         return X
 # --------------------------------------------------------------------------- #
 
@@ -295,7 +296,94 @@ class StandardScaler(TransformerMixin, BaseEstimator):
         self.fit(X)
         return self.transform(X)
 
+# --------------------------------------------------------------------------  #
+#                           VECTOR SCALING                                    #        
+# --------------------------------------------------------------------------  #        
+class VectorScaler(BaseEstimator, TransformerMixin):
+    """Scales vector by normalizing or clipping.
 
+    This class is primarily used to avoid vanishing or exploding gradients. 
+    
+    Parameters
+    ----------
+    method : str (default='c')
+        The method used to scale the vector. Choices are 'n' for normalize and
+        'c' for clipping.
+
+    clip_lower : float (default=1e-15)
+        The lower threshold for the magnitude of the vector.
+
+    clip_upper : float (default=1e15)
+        The upper threshold for the magnitude of the vector.   
+
+    clip_norm : float (default=1)
+        If method is 'n' for normalize, vectors with magnitudes below clip_lower
+        or above clip_upper will be normalized to have magnitudes of this value.  
+
+    """
+
+    def __init__(self, method='c', clip_lower=1e-15, clip_upper=1e15, clip_norm=1): 
+        self.method = method
+        self.clip_lower  = clip_lower
+        self.clip_upper = clip_upper
+        self.clip_norm = clip_norm
+        self.normalizer_ = None
+
+    def fit(self, X, y=None):
+        """Fits the transformer to the data. """
+        if self.method == "n":
+            self.normalizer_ = Normalize(clip_norm=self.clip_norm)        
+
+    def transform(self, X):
+        """Transforms the data."""
+        r_x = np.linalg.norm(X) 
+        if r_x < self.clip_lower or r_x > self.clip_upper:
+            if self.method == 'n':
+                X = self.normalizer_.fit_transform(X)                  
+            else:
+                X = np.clip(X, self.clip_lower, self.clip_upper)   
+        return X
+
+    def fit_transform(self, X):
+        """Performs fit and transform."""
+        self.fit(X)
+        return self.transform(X)
+
+    def inverse_transform(self, X):
+        """Apply the inverse transformation. Only works for normalized data."""
+        if self.method == 'c':
+            raise ValueError("Inverse transform is limited to normalized data.")
+        else:
+            return self.normalizer_.inverse_transform(X)
+
+# --------------------------------------------------------------------------- #
+#                              VALID ARRAY                                    #
+# --------------------------------------------------------------------------- #
+def valid_array(x, lower=1e-10, upper=1e10):
+    """Checks whether a vector or matrix norm is within lower and upper bounds.
+    
+    Parameters
+    ----------
+    x : array-like
+        The data to be checked
+
+    lower : float (default = 1e-10)
+        The lower bound vector or matrix norm.
+
+    upper : float (default = 1e10)
+        The upper bound vector or matrix norm.
+
+    Returns
+    -------
+    bools : True if greater than lower and less than upper, False otherwise.
+    """
+    r = np.linalg.norm(x)
+    if r > lower and r < upper:
+        return True
+    else:
+        return False
+
+    
 # --------------------------------------------------------------------------- #
 #                            SHUFFLE DATA                                     #
 # --------------------------------------------------------------------------- #
@@ -439,13 +527,6 @@ def data_split(X, y, test_size=0.3, shuffle=False, stratify=False, random_state=
         test_idx = np.concatenate(test_idx).ravel()
         # Slice and dice.
         y_train, y_test = y[train_idx], y[test_idx]
-
-    if X_train.shape[0] == 0:
-        raise Exception("Training set has zero observations\
-            The validation set has {s} observations".format(s=str(X_test.shape[0])))
-    if X_test.shape[0] == 0:        
-        raise Exception("Validation set has zero observations.\
-            The training set has {s} observations".format(s=str(X_train.shape[0])))
     
     return X_train, X_test, y_train, y_test
 

@@ -39,3 +39,27 @@ from mlstudio.supervised.core.objectives import Adjiman, BartelsConn, SumSquares
 from mlstudio.supervised.core.objectives import GoldsteinPrice, Himmelblau, Leon
 from mlstudio.supervised.core.objectives import Rosenbrock, StyblinskiTank
 from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
+
+# --------------------------------------------------------------------------  #
+#                             GRADIENT CHECK                                  #
+# --------------------------------------------------------------------------  #
+scenarios = [
+    GradientDescent(objective=Adjiman(), epochs=10000, gradient_check=GradientCheck()),
+    GradientDescent(objective=BartelsConn(), gradient_check=GradientCheck()),
+    GradientDescent(objective=SumSquares(), gradient_check=GradientCheck()),
+    GradientDescent(objective=GoldsteinPrice(), gradient_check=GradientCheck()),
+    GradientDescent(objective=Himmelblau(), gradient_check=GradientCheck()),
+    GradientDescent(objective=Leon(), gradient_check=GradientCheck()),
+    GradientDescent(objective=Rosenbrock(), gradient_check=GradientCheck()),
+    GradientDescent(objective=StyblinskiTank(), gradient_check=GradientCheck())
+    
+]
+
+@mark.benchmarks
+@mark.benchmarks_gradients
+def test_benchmark_gradients():    
+    for est in scenarios:
+        est.fit()            
+        msg = est.objective.name + ' failed convergence. True minimum: {t}.   Empirical minimum: {e}.'.\
+            format(t=str(est.objective.minimum), e=str(est.theta_)) 
+        assert np.allclose(est.objective.minimum, est.theta_), msg
