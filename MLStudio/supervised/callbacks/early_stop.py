@@ -87,15 +87,15 @@ class Stability(Callback):
         log : dict
             Contains no information
         """
+        super(Stability, self).on_train_begin(logs)
         # Attributes
         self.best_performance_ = None
         self.converged_ = False
         self.best_weights_ = None        
         # Instance variables
         self._iter_no_improvement = 0
-        self._better = None    
+        self._better = None            
         
-        super(Stability, self).on_train_begin(logs)
         logs = logs or {}
         self._validate()
         # Obtain the 'better' function from the scorer.
@@ -152,8 +152,12 @@ class Stability(Callback):
         """
         super(Stability, self).on_epoch_end(epoch, logs)        
         logs = logs or {}
-        # Obtain current cost or score
-        current = logs.get(self.metric)
+        # Obtain current cost or score if possible.
+        try:
+            current = logs.get(self.metric)
+        except:
+            raise ValueError("{m} is not a valid metric for this optimization."\
+                .format(m=self.metric))        
 
         # If the metric is 'gradient' or 'theta', get the magnitude 
         if self.metric in ['gradient', 'theta']:

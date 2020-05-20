@@ -58,7 +58,8 @@ class Momentum(Optimizer):
     
     def __call__(self, theta, gradient, learning_rate, **kwargs):
         self._velocity = gamma * self._velocity + learning_rate * gradient
-        return theta - self._velocity
+        grad = theta - self._velocity
+        return theta, grad
 
 # --------------------------------------------------------------------------  #
 # class Nesterov(Optimizer):
