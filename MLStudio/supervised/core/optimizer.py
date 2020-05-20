@@ -20,10 +20,54 @@
 # =========================================================================== #
 """Gradient descent optimization algorithms."""
 from abc import ABC, abstractmethod
-import numpy as np
-# --------------------------------------------------------------------------  #
-class Standard(ABC):
-    """Standard gradient descent optimizer."""
-    def __call__(self, theta, gradient, learning_rate, **kwargs):
-        return theta - learning_rate * gradient
 
+import numpy as np
+from sklearn.base import BaseEstimator  
+# --------------------------------------------------------------------------  #
+class Optimizer(ABC, BaseEstimator):
+    """Base class for all optimizers."""
+
+    @abstractmethod
+    def __init__(self):
+        raise NotImplementedError("This base class is not implemented.")
+
+    @abstractmethod
+    def update(self, gradient, theta, learning_rate, **kwargs):
+        """Updates the parameters theta and returns theta and gradient."""
+        pass
+
+# --------------------------------------------------------------------------  #
+class Standard(Optimizer):
+    """Standard gradient descent optimizer."""
+
+    def __init__(self):
+        pass
+    
+    def update(self, gradient, theta, learning_rate, **kwargs):
+        grad = gradient(theta, **kwargs)
+        theta = theta - learning_rate * grad
+        return theta, grad
+
+# --------------------------------------------------------------------------  #
+class Momentum(Optimizer):
+    """Standard gradient descent optimizer."""
+
+    def __init__(self, gamma=0.9):
+        self.gamma = gamma
+        self._velocity = 0
+    
+    def __call__(self, theta, gradient, learning_rate, **kwargs):
+        self._velocity = gamma * self._velocity + learning_rate * gradient
+        return theta - self._velocity
+
+# --------------------------------------------------------------------------  #
+# class Nesterov(Optimizer):
+#     """Standard gradient descent optimizer."""
+
+#     def __init__(self, gamma=0.9):
+#         self.gamma = gamma
+#         self._velocity = 0
+    
+#     def __call__(self, theta, gradient, learning_rate, **kwargs):
+#         self._velocity = gamma * self._velocity + learning_rate * (gradient
+#         return theta - self._velocity

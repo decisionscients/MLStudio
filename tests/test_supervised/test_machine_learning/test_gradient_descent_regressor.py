@@ -18,6 +18,8 @@
 # License : BSD                                                               #
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
+import warnings
+
 import math
 import numpy as np
 import pandas as pd
@@ -29,7 +31,7 @@ from sklearn.utils.estimator_checks import check_estimator
 
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.callbacks.debugging import GradientCheck
-from mlstudio.supervised.callbacks.early_stop import Performance, Stability
+from mlstudio.supervised.callbacks.early_stop import Stability
 from mlstudio.supervised.callbacks.learning_rate import Constant, TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, PowerSchedule
@@ -83,31 +85,38 @@ def test_regression_gradients(estimator, check):
 #                              TEST EARLYSTOP                                 #
 # --------------------------------------------------------------------------  #
 scenarios_early_stop = [
-    GradientDescentRegressor(cost=MSE(), early_stop=Performance()),
-    GradientDescentRegressor(cost=MSE(regularization=L1()), early_stop=Performance(metric='val_score')),
-    GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Performance(metric='train_score')),
+    GradientDescentRegressor(cost=MSE(), early_stop=Stability()),
+    GradientDescentRegressor(cost=MSE(regularization=L1()), early_stop=Stability(metric='val_cost')),
+    GradientDescentRegressor(cost=MSE(regularization=L2(alpha=0.0001)), early_stop=Stability(metric='train_score')),
     GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='train_cost')),
     GradientDescentRegressor(cost=MSE(), early_stop=Stability(metric='gradient')),
     GradientDescentRegressor(cost=MSE(regularization=L1()), early_stop=Stability(metric='theta')),
-    GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Stability(metric='train_cost')),
-    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='train_score')),
-    GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Stability(metric='val_cost')),
-    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='val_score'))            
+    GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Stability(metric='gradient')),
+    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='theta'))
 ]   
 
 
 @mark.regression
 @mark.regression_early_stop
-def test_regression_early_stop(get_regression_data, get_regression_data_features):
-    X, y = get_regression_data
+def test_regression_early_stop(get_regression_data_split, get_regression_data_features):
+    X_train, X_test, y_train, y_test = get_regression_data_split
     for est in scenarios_early_stop:
-        est.fit(X, y)    
+        est.fit(X_train, y_train)    
         est.summary(features=get_regression_data_features)
-        early_stop = est.early_stop.__class__.__name__
-        metric = est.early_stop.metric
-        msg = "Early stop didn't work for " + early_stop + " monitoring " + metric\
-            + " with epsilon = " + str(est.early_stop.epsilon) 
-        assert est.blackbox_.total_epochs < est.epochs, msg
+        score = est.score(X_test, y_test)        
+        msg = "Early stop didn't work for linear regression with " + est.cost.regularization.name + \
+            " regularization, and " + est.early_stop.__class__.__name__ + \
+                " early stopping, monitoring " + est.early_stop.metric +\
+                    " with epsilon = " + str(est.early_stop.epsilon) 
+        if est.blackbox_.total_epochs == est.epochs:
+            warnings.warn(msg)
+        msg = "Early stop for linear regression with " + est.cost.regularization.name + \
+            " regularization, and " + est.early_stop.__class__.__name__ + \
+                " early stopping, monitoring " + est.early_stop.metric +\
+                    " with epsilon = " + str(est.early_stop.epsilon) +\
+                        " received a poor score of " + str(score)
+        if score < 0.5:
+            warnings.warn(msg)
 
 # --------------------------------------------------------------------------  #
 #                              TEST LEARNING RATES                            #
@@ -148,10 +157,10 @@ def test_regression_learning_rates_II(get_regression_data_split, get_regression_
 #                              TEST SGD                                       #
 # --------------------------------------------------------------------------  #
 scenarios_sgd = [
-    GradientDescentRegressor(cost=MSE(), early_stop=Performance(), batch_size=1),
-    GradientDescentRegressor(cost=MSE(regularization=L1()), early_stop=Performance(metric='val_score'), batch_size=1),
-    GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Performance(metric='train_score'), batch_size=1),
-    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='train_cost'), batch_size=1),
+    GradientDescentRegressor(cost=MSE(), early_stop=Stability(), batch_size=1),
+    GradientDescentRegressor(cost=MSE(regularization=L1()), early_stop=Stability(metric='val_score'), batch_size=1),
+    GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Stability(metric='train_score'), batch_size=1),
+    GradientDescentRegressor(cost=MSE(regularization=L1_L2()), early_stop=Stability(metric='gradient'), batch_size=1),
     GradientDescentRegressor(cost=MSE(regularization=L2()), learning_rate=BottouSchedule(), batch_size=1)    
 ]   
 
@@ -172,9 +181,9 @@ def test_regression_sgd(get_regression_data_split, get_regression_data_features)
 # --------------------------------------------------------------------------  #
 scenarios_MBGD = [
     GradientDescentRegressor(cost=MSE(), batch_size=64, epochs=2000),
-    GradientDescentRegressor(cost=MSE(),early_stop=Performance(epsilon=0.0001, patience=100), batch_size=64, epochs=2000),
-    GradientDescentRegressor(cost=MSE(regularization=L1()), early_stop=Performance(metric='val_score'), batch_size=64),
-    GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Performance(metric='train_score'), batch_size=64),
+    GradientDescentRegressor(cost=MSE(),early_stop=Stability(epsilon=0.0001, patience=100), batch_size=64, epochs=2000),
+    GradientDescentRegressor(cost=MSE(regularization=L1()), early_stop=Stability(metric='val_score'), batch_size=64),
+    GradientDescentRegressor(cost=MSE(regularization=L2()), early_stop=Stability(metric='train_score'), batch_size=64),
     GradientDescentRegressor(cost=MSE(regularization=L1_L2()), learning_rate=BottouSchedule(), early_stop=Stability(metric='val_cost'), batch_size=64, epochs=2000),
     GradientDescentRegressor(cost=MSE(regularization=L2()), learning_rate=BottouSchedule(), batch_size=64)    
 ]   

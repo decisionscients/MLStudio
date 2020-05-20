@@ -22,11 +22,11 @@
 from abc import ABC, abstractmethod
 
 import numpy as np
-
+from sklearn.base import BaseEstimator
 from mlstudio.supervised.core.regularization import Nill
 from mlstudio.utils.data_manager import Normalize
 # --------------------------------------------------------------------------  #
-class Cost(ABC):
+class Cost(ABC, BaseEstimator):
     """Base class for all cost classes."""
     
     def __init__(self, regularization=None,  clip_threshold=1e-10):        
@@ -64,11 +64,11 @@ class Cost(ABC):
         return X
 
     @abstractmethod
-    def __call__(self, y, y_out, theta):
+    def __call__(self, theta, y, y_out):
         pass
 
     @abstractmethod
-    def gradient(self, X, y, y_out, theta):
+    def gradient(self, theta, X, y, y_out):
         pass
 
 # --------------------------------------------------------------------------  #
@@ -77,7 +77,7 @@ class MSE(Cost):
     def __init__(self, regularization=None,  clip_threshold=1e-10):      
         super(MSE, self).__init__(regularization, clip_threshold)
 
-    def __call__(self, y, y_out, theta):
+    def __call__(self, theta, y, y_out):
         """Computes the mean squared error cost.
 
         Parameters
@@ -102,7 +102,7 @@ class MSE(Cost):
         J += self.regularization(theta)  / n_samples
         return J
 
-    def gradient(self, X, y, y_out, theta):
+    def gradient(self, theta, X, y, y_out):
         """Computes quadratic costs gradient with respect to weights.
         
         Parameters
@@ -139,7 +139,7 @@ class CrossEntropy(Cost):
     def __init__(self, regularization=None,  clip_threshold=1e-10):      
         super(CrossEntropy, self).__init__(regularization, clip_threshold)
 
-    def __call__(self, y, y_out, theta):
+    def __call__(self, theta, y, y_out):
         """Computes cross entropy cost.
 
         Parameters
@@ -167,7 +167,7 @@ class CrossEntropy(Cost):
         J += self.regularization(theta) / n_samples        
         return J   
 
-    def gradient(self, X, y, y_out, theta):
+    def gradient(self, theta, X, y, y_out):
         """Computes cross entropy cost  gradient with respect to weights.
         
         Parameters
@@ -203,7 +203,7 @@ class CategoricalCrossEntropy(Cost):
     def __init__(self, regularization=None,  clip_threshold=1e-10):      
         super(CategoricalCrossEntropy, self).__init__(regularization, clip_threshold)
 
-    def __call__(self, y, y_out, theta):
+    def __call__(self, theta, y, y_out):
         """Computes categorical cross entropy cost.
 
         Parameters
@@ -232,7 +232,7 @@ class CategoricalCrossEntropy(Cost):
         J += self.regularization(theta) / n_samples
         return J 
 
-    def gradient(self, X, y, y_out, theta):
+    def gradient(self, theta, X, y, y_out):
         """Computes gradient of cross-entropy cost with respect to weights.
         
         Parameters

@@ -46,16 +46,16 @@ class SurfaceLine1:
     def animate(self, models, directory=None, filename=None):
 
         # Extract model blackbox
-        gd = models[0].blackbox_
+        bgd = models[0].blackbox_
         sgd = models[1].blackbox_
         mbgd = models[2].blackbox_
 
         # Extract the theta, x=theta0, y=theta1 and cost history
-        theta = gd.epoch_log.get('theta')
-        weights = todf(gd.epoch_log['theta'], stub='theta_')        
+        theta = bgd.epoch_log.get('theta')
+        weights = todf(bgd.epoch_log['theta'], stub='theta_')        
         theta0 = np.array(weights['theta_0'])
         theta1 = np.array(weights['theta_1'])
-        cost = gd.epoch_log.get('train_cost')
+        cost = bgd.epoch_log.get('train_cost')
 
         # Establish boundaries of plot
         theta0_min = min(theta0)
@@ -133,7 +133,7 @@ class SurfaceLine1:
             dict(
                 name = k,
                 data = [                    
-                    go.Scatter3d(x=[theta0[:k+2]], y=[theta1[:k+2]], z=[cost[:k+2]], mode='lines', line=dict(color="red")),
+                    go.Scatter3d(x=[theta0[:k+2]], y=[theta1[:k+2]], z=[cost[:k+2]], mode='lines', marker=dict(size=10, color="red")),
                     go.Scatter(x=xx, y=lines['BGD'][k], mode="lines", marker=dict(color="red")),
                     go.Scatter(x=xx, y=lines['SGD'][k], mode="lines", marker=dict(color="green")),
                     go.Scatter(x=xx, y=lines['MBGD'][k], mode="lines", marker=dict(color="orange")),

@@ -203,8 +203,8 @@ class SingleModelFit2D:
 
         # Unpack model results
         params = model.get_params()         
-        X = model.X
-        y = model.y        
+        X = model.X_train_
+        y = model.y_train_        
 
         # Create index for n <= maxframes number of points
         iterations = np.arange(1, model.blackbox_.total_epochs+1)
@@ -395,8 +395,8 @@ class MultiModelSearch3D(animation.FuncAnimation):
             paths.append(np.array(v.blackbox_.epoch_log.get('theta')).T)
             zpaths.append(np.array(v.blackbox_.epoch_log.get('train_cost'))) 
             methods.append(k)  
-            X = v.X_design_
-            y = v.y_
+            X = v.X_train_
+            y = v.y_train_
         return(X, y, paths, zpaths, methods)
 
     def search(self, models, frames=100, directory=None, filename=None, fps=5,
@@ -480,8 +480,8 @@ class MultiModelFit2D(animation.FuncAnimation):
         for k, v in models.items():    
             paths.append(np.array(v.blackbox_.batch_log.get('theta')).T)
             methods.append(k)  
-            self.X = v.X_design_
-            self.y = v.y_
+            self.X = v.X_train_
+            self.y = v.y_train_
 
         return paths, methods
     def fit(self, models, frames=100, x_label=None, y_label=None, 

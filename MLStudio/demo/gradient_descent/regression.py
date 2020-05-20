@@ -32,11 +32,13 @@ sys.path.append(homedir)
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.utils.data_manager import StandardScaler
 from mlstudio.visual.animations.surface_line1 import SurfaceLine1
+from mlstudio.visual.animations.gradient import MultiModelSearch3D
 
 # --------------------------------------------------------------------------  #
 # Designate file locations
 datadir = os.path.join(homedir,"mlstudio/data/Ames/")
 filepath = os.path.join(datadir, "train.csv")
+figures = os.path.join(demodir, "figures")
 # --------------------------------------------------------------------------  #
 # Obtain and scale data
 cols = ["GrLivArea", "SalePrice"]
@@ -48,13 +50,18 @@ scaler = StandardScaler()
 X = scaler.fit_transform(X)
 # --------------------------------------------------------------------------  #
 # Train model
-gd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500)
+bgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500)
 sgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, batch_size=1)
 mbgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, batch_size=64)
-gd.fit(X,y)
+bgd.fit(X,y)
 sgd.fit(X,y)
 mbgd.fit(X,y)
-est = [gd, sgd, mbgd]
+models = [bgd, sgd, mbgd]
+# models = {'Batch Gradient Descent': bgd, 'Stochastic Gradient Descent': sgd,
+#           'Minibatch Gradient Descent': mbgd}
+
 # --------------------------------------------------------------------------  #
 v = SurfaceLine1()
-v.animate(models=est, directory=demodir)
+v.animate(models=models, directory=demodir)
+# v = MultiModelSearch3D()
+# ani = v.search(models, frames=None, directory=figures)

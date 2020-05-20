@@ -27,6 +27,7 @@ from abc import ABC, abstractmethod, ABCMeta
 
 import datetime
 import numpy as np
+from sklearn.base import BaseEstimator
 import types
 # --------------------------------------------------------------------------- #
 #                             CALLBACK LIST                                   #
@@ -174,7 +175,7 @@ class CallbackList:
 # --------------------------------------------------------------------------- #
 #                             CALLBACK CLASS                                  #
 # --------------------------------------------------------------------------- #
-class Callback(ABC):
+class Callback(ABC, BaseEstimator):
     """Abstract base class used to build new callbacks."""
     def __init__(self):
         """Callback class constructor."""

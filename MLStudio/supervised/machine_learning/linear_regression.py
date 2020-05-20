@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # =========================================================================== #
-# Project : MLStudio                                                          #
+# Project : ML Studio                                                         #
 # Version : 0.1.0                                                             #
-# File    : regression.py                                                     #
+# File    : linear_regression.py                                              #
 # Python  : 3.8.2                                                             #
 # --------------------------------------------------------------------------  #
 # Author  : John James                                                        #
@@ -11,15 +11,14 @@
 # Email   : jjames@decisionscients.com                                        #
 # URL     : https://github.com/decisionscients/MLStudio                       #
 # --------------------------------------------------------------------------  #
-# Created       : Wednesday, March 18th 2020, 4:34:57 am                      #
-# Last Modified : Monday, March 23rd 2020, 10:31:37 am                        #
+# Created       : Tuesday, May 19th 2020, 5:19:25 pm                          #
+# Last Modified : Tuesday, May 19th 2020, 5:19:25 pm                          #
 # Modified By   : John James (jjames@decisionscients.com)                     #
 # --------------------------------------------------------------------------  #
 # License : BSD                                                               #
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
 """Regression algorithms.
-
 This class encapsulates the core behaviors for regression classes. Currently,
 the following regression classes are supported.
     
@@ -27,13 +26,10 @@ the following regression classes are supported.
     * Lasso Regression
     * Ridge Regression
     * ElasticNet Regression
-
 The core behaviors exposed for each class include:
-
     * predict : Predicts outputs as linear combination of inputs and weights.
     * compute_cost : Computes cost associated with predictions
     * compute_gradient : Computes the derivative of loss w.r.t. to weights
-
 """
 from abc import ABC, abstractmethod
 import numpy as np
@@ -60,16 +56,13 @@ class LinearRegression(BaseRegressor, RegressorMixin):
 
     def compute_output(self, X, theta):
         """Computes output based upon inputs and model parameters.
-
         Parameters
         ----------
         X : array of shape [n_samples, n_features]
             The model inputs. Note the number of features includes the coefficient
             for the bias term
-
         theta : array of shape [n_features,] or [n_features, n_classes]
             Model parameters
-
         Returns
         -------
         output : Model output            
@@ -79,22 +72,17 @@ class LinearRegression(BaseRegressor, RegressorMixin):
 
     def predict(self, X, theta):
         """Computes the prediction as linear combination of inputs and parameters.        
-
         Parameter
         ---------
         X : array of shape [n_samples, n_features]
             The model inputs. 
-
         theta : array of shape [n_features,] 
             Model parameters
-
         Note: n_features may or may not include the bias term added prior to 
         training, so we will need to accommodate X of either dimension.
-
         Returns
         -------
         prediction : Linear combination of inputs.
-
         """         
         if X.shape[1] == len(theta):
             y_pred = X.dot(theta)
@@ -104,22 +92,17 @@ class LinearRegression(BaseRegressor, RegressorMixin):
 
     def compute_cost(self, y, y_out, theta):
         """Computes the mean squared error cost.
-
         Parameters
         ----------
         y : array of shape (n_features,)
             Ground truth target values
-
         y_out : array of shape (n_features,)
             Output from the model 
-
         theta : array of shape (n_features,)  
             The model parameters            
-
         Returns
         -------
         cost : The quadratic cost 
-
         """
         J = np.mean(0.5 * (y-y_out)**2)
         return J
@@ -131,20 +114,15 @@ class LinearRegression(BaseRegressor, RegressorMixin):
         ----------
         X : array of shape (m_observations, n_features)
             Input data
-
         y : array of shape (n_features,)
             Ground truth target values
-
         y_out : array of shape (n_features,)
             Output from the model 
-
         theta : array of shape (n_features,)  
             The model parameters                        
-
         Returns
         -------
         gradient of the cost function w.r.t. the parameters.
-
         """
         n_samples = X.shape[0]
         dZ = y_out-y
@@ -166,22 +144,17 @@ class LassoRegression(LinearRegression):
 
     def compute_cost(self, y, y_out, theta):
         """Computes the mean squared error cost.
-
         Parameters
         ----------
         y : array of shape (n_features,)
             Ground truth target values
-
         y_out : array of shape (n_features,)
             Output from the model 
-
         theta : array of shape (n_features,)  
             The model parameters            
-
         Returns
         -------
         cost : The quadratic cost         
-
         """
         self._validate_hyperparam(self.lambda_reg)
         n_samples = y.shape[0]
@@ -196,20 +169,15 @@ class LassoRegression(LinearRegression):
         ----------
         X : array of shape (m_observations, n_features)
             Input data
-
         y : array of shape (n_features,)
             Ground truth target values
-
         y_out : array of shape (n_features,)
             Output from the model 
-
         theta : array of shape (n_features,)  
             The model parameters                        
-
         Returns
         -------
         gradient of the cost function w.r.t. the parameters.
-
         """
         n_samples = X.shape[0]
         dZ = y_out-y
@@ -231,22 +199,17 @@ class RidgeRegression(LinearRegression):
 
     def compute_cost(self, y, y_out, theta):
         """Computes the mean squared error cost.
-
         Parameters
         ----------
         y : array of shape (n_features,)
             Ground truth target values
-
         y_out : array of shape (n_features,)
             Output from the model 
-
         theta : array of shape (n_features,)  
             The model parameters            
-
         Returns
         -------
         cost : The quadratic cost 
-
         """
         self._validate_hyperparam(self.lambda_reg)
         n_samples = y.shape[0]
@@ -261,20 +224,15 @@ class RidgeRegression(LinearRegression):
         ----------
         X : array of shape (m_observations, n_features)
             Input data
-
         y : array of shape (n_features,)
             Ground truth target values
-
         y_out : array of shape (n_features,)
             Output from the model 
-
         theta : array of shape (n_features,)  
             The model parameters                        
-
         Returns
         -------
         gradient of the cost function w.r.t. the parameters.
-
         """
         n_samples = X.shape[0]
         dZ = y_out-y
@@ -297,22 +255,17 @@ class ElasticNetRegression(LinearRegression):
 
     def compute_cost(self, y, y_out, theta):
         """Computes the mean squared error cost.
-
         Parameters
         ----------
         y : array of shape (n_features,)
             Ground truth target values
-
         y_out : array of shape (n_features,)
             Output from the model 
-
         theta : array of shape (n_features,)  
             The model parameters            
-
         Returns
         -------
         cost : The quadratic cost 
-
         """
         n_samples = y.shape[0]
         self._validate_hyperparam(self.lambda_reg)
@@ -330,20 +283,15 @@ class ElasticNetRegression(LinearRegression):
         ----------
         X : array of shape (m_observations, n_features)
             Input data
-
         y : array of shape (n_features,)
             Ground truth target values
-
         y_out : array of shape (n_features,)
             Output from the model 
-
         theta : array of shape (n_features,)  
             The model parameters                        
-
         Returns
         -------
         gradient of the cost function w.r.t. the parameters.
-
         """
         n_samples = X.shape[0]
         l1_contr = self.ratio * np.sign(theta)
@@ -351,4 +299,4 @@ class ElasticNetRegression(LinearRegression):
         lambda_reg = np.asarray(self.lambda_reg, dtype='float64')         
         dZ = y_out-y
         dW = 1/n_samples  * (X.T.dot(dZ) + np.multiply(lambda_reg, np.add(l1_contr, l2_contr)))
-        return(dW)               
+        return(dW)     

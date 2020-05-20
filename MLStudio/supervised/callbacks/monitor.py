@@ -176,7 +176,7 @@ def summary(history, features=None):
                 k = o.__class__.__name__ + '__' + k
                 hyperparameters[k] = str(v)
             else:
-                pass
+                get_params(v)
     get_params(history.model)
     printer.print_dictionary(hyperparameters, "Model HyperParameters")
 

@@ -21,6 +21,7 @@
 # %%
 import numpy as np
 import pandas as pd
+import pytest
 from pytest import fixture
 
 from sklearn import datasets
@@ -32,12 +33,11 @@ warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
 
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentClassifier
-from mlstudio.supervised.machine_learning.logistic_regression import LogisticRegression
-from mlstudio.supervised.machine_learning.softmax_regression import SoftmaxRegression
-from mlstudio.supervised.machine_learning.linear_regression import LinearRegression
-from mlstudio.supervised.machine_learning.linear_regression import LassoRegression
-from mlstudio.supervised.machine_learning.linear_regression import RidgeRegression
-from mlstudio.supervised.machine_learning.linear_regression import ElasticNetRegression
+
+# ============================================================================ #
+#                               FILES TO SKIP                                  #
+# ============================================================================ #
+collect_ignore_glob = ["/test_visual/test_model*.py"]
 
 # ============================================================================ #
 #                                  DATA                                        #

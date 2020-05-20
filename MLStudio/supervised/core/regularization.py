@@ -19,9 +19,26 @@
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
 """Classes used to regularize cost and gradient computations."""
+from abc import ABC, abstractmethod
 import numpy as np
+from sklearn.base import BaseEstimator
 # --------------------------------------------------------------------------  #
-class Nill:
+class Regularization(ABC, BaseEstimator):
+    """Base class for regularization classes."""
+    @abstractmethod
+    def __init__(self):
+        raise NotImplementedError("This base class is not implemented.")
+
+    @abstractmethod
+    def __call__(self, theta):
+        pass
+
+    @abstractmethod
+    def gradient(self, theta):
+        pass
+
+# --------------------------------------------------------------------------  #
+class Nill(Regularization):
     """ No Regularization """
     def __init__(self):
         self.name = "No Regularization"
@@ -32,7 +49,7 @@ class Nill:
     def gradient(self, theta):
         return np.zeros(theta.shape)
 # --------------------------------------------------------------------------  #
-class L1:
+class L1(Regularization):
     """ Regularization for Lasso Regression """
     def __init__(self, alpha=0.1):
         self.alpha = alpha
@@ -45,7 +62,7 @@ class L1:
         return self.alpha * np.sign(theta)
     
 # --------------------------------------------------------------------------  #
-class L2:
+class L2(Regularization):
     """ Regularization for Ridge Regression """
     def __init__(self, alpha=0.01):
         self.alpha = alpha
@@ -57,7 +74,7 @@ class L2:
     def gradient(self, theta):
         return self.alpha * theta
 # --------------------------------------------------------------------------  #
-class L1_L2:
+class L1_L2(Regularization):
     """ Regularization for Elastic Net Regression """
     def __init__(self, alpha=0.01, ratio=0.5):
         self.alpha = alpha
