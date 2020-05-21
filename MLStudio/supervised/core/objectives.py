@@ -385,8 +385,8 @@ class Adjiman(Benchmark):
 
     def gradient(self, theta):
         """Computes the gradient of the objective function."""
-        dfdx = -np.sin(theta[0])*np.sin(theta[1])-(1/theta[1]**2)
-        dfdy = 2*theta[0]/theta[1]**3 + np.cos(theta[0])*np.cos(theta[1])
+        dfdx = -(1/(theta[1]**2+1))*((theta[1]**2+1)*np.sin(theta[0])*np.sin(theta[1])+1)
+        dfdy = 2*theta[0]*theta[1] /(theta[1]**2+1)**2 + np.cos(theta[0])*np.cos(theta[1])
         return np.array([dfdx, dfdy])
 
 # --------------------------------------------------------------------------  #

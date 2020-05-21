@@ -166,12 +166,14 @@ class GradientCheck(Callback):
         def condition(x): return x > self.epsilon
         problems = [idx for idx, element in enumerate(self._differences) if condition(element)]
         for p in problems:
-            print("\n  Iteration: {i} Theta: {t}".format(i=str(p), \
+            print("\n\n  Iteration: {i} Theta: {t}".format(i=str(p), \
                 t=self._theta[p]))
             print("  Iteration: {i} Gradient: {g}".format(i=str(p), \
                 g=self._gradients[p]))
             print("  Iteration: {i} Approximation {a}".format(i=str(p), \
                 a=self._approximations[p]))
+            print("  Iteration: {i} Difference {a}".format(i=str(p), \
+                a=self._differences[p]))                
         msg = "Gradient check failed for " + self.model.objective.name 
         if hasattr(self.model.objective, 'regularization'):
             if not isinstance(self.model.objective.regularization, Nill):        

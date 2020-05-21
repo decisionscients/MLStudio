@@ -44,7 +44,9 @@ from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 #                             GRADIENT CHECK                                  #
 # --------------------------------------------------------------------------  #
 scenarios = [
-    GradientDescent(objective=Adjiman(), epochs=10000, gradient_check=GradientCheck()),
+    GradientDescent(objective=Adjiman(), epochs=10000, 
+                                         learning_rate=TimeDecay(eta0=0.003),
+                                         gradient_check=GradientCheck()),
     GradientDescent(objective=BartelsConn(), gradient_check=GradientCheck()),
     GradientDescent(objective=SumSquares(), gradient_check=GradientCheck()),
     GradientDescent(objective=GoldsteinPrice(), gradient_check=GradientCheck()),

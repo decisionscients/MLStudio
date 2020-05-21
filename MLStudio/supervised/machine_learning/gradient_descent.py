@@ -205,7 +205,8 @@ class GradientDescent(BaseEstimator):
 
             cost = self._objective(self.theta_)
             self.theta_, gradient = self._optimizer.update(gradient=self._objective.gradient, \
-                    theta=self.theta_, learning_rate=self._eta)
+                    theta=copy.deepcopy(self.theta_), learning_rate=copy.copy(self._eta))
+
             epoch_log = {'epoch': self._epoch, 'learning_rate': self._eta, 'train_cost': cost,
                    'theta': self.theta_, 'gradient': gradient}
 
@@ -459,8 +460,8 @@ class GradientDescentEstimator(ABC, GradientDescent):
                 
                 # Compute the parameter updates.
                 self.theta_, gradient = self._optimizer.update(gradient=self._objective.gradient, \
-                    theta=self.theta_, learning_rate=self._eta, X=X_batch, y=y_batch,\
-                        y_out=y_out)
+                    theta=copy.deepcopy(self.theta_), learning_rate=copy.copy(self._eta), X=X_batch, y=y_batch,\
+                        y_out=copy.copy(y_out))
 
                 # Update batch log
                 self._end_batch(copy.deepcopy(batch_log))
