@@ -22,6 +22,14 @@
 import numpy as np
 
 # --------------------------------------------------------------------------  #
+def check_y(y):
+    """Returns the number of outputs."""
+    y = np.array(y) 
+    if y.ndim == 1:
+        return 1
+    else:
+        return y.shape[1]
+# --------------------------------------------------------------------------  #
 def validate_zero_to_one(p, left='open', right='open'):
     """Validates a parameter whose values should be [0,1]."""
     assert isinstance(p, (int,float)), "Regularization hyperparameter must be numeric."

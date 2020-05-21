@@ -20,11 +20,9 @@
 # =========================================================================== #
 """Data analysis helper functions."""
 import numpy as np
-
-def check_y(y):
-    """Returns the number of outputs."""
-    y = np.array(y) 
-    if y.ndim == 1:
-        return 1
-    else:
-        return y.shape[1]
+# --------------------------------------------------------------------------  #
+def cosine(a,b):
+    """Returns the cosine similarity between two vectors."""
+    numerator = a.dot(b)
+    denominator = np.linalg.norm(a) * np.linalg.norm(b)
+    return numerator / denominator

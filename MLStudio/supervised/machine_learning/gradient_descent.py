@@ -38,7 +38,7 @@ from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
 from mlstudio.supervised.core.objectives import MSE, CrossEntropy
 from mlstudio.supervised.core.objectives import CategoricalCrossEntropy
 from mlstudio.supervised.core.objectives import Adjiman
-from mlstudio.supervised.core.optimizers import Standard
+from mlstudio.supervised.core.optimizers import Classic
 from mlstudio.supervised.core.scorers import R2, Accuracy
 from mlstudio.supervised.callbacks.early_stop import EarlyStop
 from mlstudio.supervised.callbacks.debugging import GradientCheck
@@ -53,17 +53,17 @@ from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
 # =========================================================================== #        
 class GradientDescent(BaseEstimator):
     """Performs pure optimization of a 2d objective function."""
-    def __init__(self, optimizer=Standard(), objective=Adjiman(),
-                 learning_rate=Constant(eta0=0.01), 
-                 theta_init=None,  epochs=1000, early_stop=None, 
-                 verbose=False, checkpoint=100,  random_state=None, 
-                 gradient_check=None):
+    def __init__(self, optimizer=Classic(), objective=Adjiman(),
+                 learning_rate=0.01, theta_init=None,  epochs=1000, 
+                 schedule=None, early_stop=None, verbose=False, checkpoint=100,  
+                 random_state=None, gradient_check=None):
 
         self.optimizer = optimizer
         self.objective  = objective
         self.learning_rate = learning_rate
         self.theta_init = theta_init
         self.epochs = epochs
+        self.schedule = schedule
         self.early_stop = early_stop
         self.verbose = verbose
         self.checkpoint = checkpoint
@@ -100,18 +100,22 @@ class GradientDescent(BaseEstimator):
 # --------------------------------------------------------------------------- #    
     def _copy_mutable_parameters(self):
         """Copies mutable parameters to new members for sklearn compatibility."""
+        # Custom objects
         self._optimizer = copy.deepcopy(self.optimizer)
-        self._objective = copy.deepcopy(self.objective)
-        self._learning_rate = copy.deepcopy(self.learning_rate)
+        self._objective = copy.deepcopy(self.objective)        
         self._early_stop = copy.deepcopy(self.early_stop) if self.early_stop \
             else self.early_stop
         self._gradient_check = copy.deepcopy(self.gradient_check) if \
             self.gradient_check else self.gradient_check
+        self._schedule = copy.deepcopy(self.schedule) if \
+            self.schedule else self.schedule            
+        # Parameters that will be updated during training
+        self._eta = copy.copy(self.learning_rate)
 
     def _compile(self):
         """Initializes all callbacks."""
-        # Copy mutable classes to private members in order to comply with
-        # sklearn's API standards.
+        # Copy mutable classes and parameters that will be modified during
+        # training. 
         self._copy_mutable_parameters()  
         # Initialize implicit dependencies. Yeah, yeah I know... But adding these
         # to the constructor seemed a bit much.         
@@ -121,13 +125,14 @@ class GradientDescent(BaseEstimator):
 
         # Add callbacks to callback list         
         self._cbks.append(self.blackbox_)        
-        self._cbks.append(self._learning_rate)        
         if self.verbose:
             self._cbks.append(self._progress)        
         if isinstance(self._early_stop, EarlyStop):
             self._cbks.append(self._early_stop)        
         if isinstance(self._gradient_check, GradientCheck):
             self._cbks.append(self._gradient_check)        
+        if isinstance(self._schedule, LearningRateSchedule):
+            self._cbks.append(self._schedule)        
 
         # Initialize all callbacks.
         self._cbks.set_params(self.get_params())
@@ -205,7 +210,7 @@ class GradientDescent(BaseEstimator):
 
             cost = self._objective(self.theta_)
             self.theta_, gradient = self._optimizer.update(gradient=self._objective.gradient, \
-                    theta=copy.deepcopy(self.theta_), learning_rate=copy.copy(self._eta))
+                    learning_rate=self._eta, theta=copy.deepcopy(self.theta_))
 
             epoch_log = {'epoch': self._epoch, 'learning_rate': self._eta, 'train_cost': cost,
                    'theta': self.theta_, 'gradient': gradient}
@@ -222,9 +227,9 @@ class GradientDescent(BaseEstimator):
 class GradientDescentEstimator(ABC, GradientDescent):
     """Base class gradient descent estimator."""
 
-    def __init__(self, task=LinearRegression(), optimizer=Standard(), 
-                 objective=MSE(), learning_rate=Constant(eta0=0.01), 
-                 batch_size=None, theta_init=None,  epochs=1000, 
+    def __init__(self, task=LinearRegression(), optimizer=Classic(), 
+                 objective=MSE(), learning_rate=0.01, batch_size=None, 
+                 theta_init=None,  epochs=1000, schedule=None,
                  scorer=R2(), early_stop=None, verbose=False, 
                  checkpoint=100, random_state=None, gradient_check=None):
                  
@@ -234,6 +239,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
             learning_rate = learning_rate,
             theta_init = theta_init,
             epochs = epochs,
+            schedule=schedule,
             early_stop = early_stop,
             verbose = verbose,
             checkpoint = checkpoint,
@@ -269,7 +275,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         if regularizer != "Nill":
             regularizer_title = " (" + regularizer + " Regularization) "
 
-        if optimizer != "Standard":
+        if optimizer != "Classic":
             optimizer_title = " (" + optimizer_title + " Optimization) "
         
         return task + regularizer_title + " with " + \
@@ -328,6 +334,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         if sparse.isspmatrix_coo(self.y_train_):
             self.y_train_ = self.y_train_.tocsr()
 
+        self.n_training_observations_ = self.X_train_.shape[0]      
         self.n_features_ = self.X_train_.shape[1]      
 
     def _prepare_test_data(self, X, y=None):
@@ -369,8 +376,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self._compile()      
         self._prepare_training_data(log.get("X"),log.get("y"))
         self._init_weights()            
-        self._cbks.on_train_begin(log)
-        
+        self._cbks.on_train_begin(log)        
 
     def _begin_epoch(self, log=None):
         """Increment the epoch count and shuffle the data."""
@@ -459,9 +465,9 @@ class GradientDescentEstimator(ABC, GradientDescent):
                              'theta': self.theta_, 'train_cost': J}
                 
                 # Compute the parameter updates.
-                self.theta_, gradient = self._optimizer.update(gradient=self._objective.gradient, \
-                    theta=copy.deepcopy(self.theta_), learning_rate=copy.copy(self._eta), X=X_batch, y=y_batch,\
-                        y_out=copy.copy(y_out))
+                self.theta_, gradient = self._optimizer(gradient=self._objective.gradient, \
+                    learning_rate=self._eta, theta=copy.deepcopy(self.theta_),  X=X_batch, y=y_batch,\
+                        y_out=y_out)
 
                 # Update batch log
                 self._end_batch(copy.deepcopy(batch_log))
@@ -524,7 +530,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
 class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
     """Gradient descent estimator for regression."""
 
-    def __init__(self, task=LinearRegression(), optimizer=Standard(), 
+    def __init__(self, task=LinearRegression(), optimizer=Classic(), 
                  objective=MSE(),learning_rate=Constant(eta0=0.01), 
                  batch_size=None, theta_init=None,  epochs=1000, 
                  scorer=R2(), early_stop=None, verbose=False, 
@@ -578,7 +584,7 @@ class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
 class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
     """Gradient descent estimator for classification."""
 
-    def __init__(self, task=LogisticRegression(), optimizer=Standard(), 
+    def __init__(self, task=LogisticRegression(), optimizer=Classic(), 
                  objective=CrossEntropy(),learning_rate=Constant(eta0=0.01), 
                  batch_size=None, theta_init=None,  epochs=1000, 
                  scorer=Accuracy(), early_stop=None, verbose=False, 

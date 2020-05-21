@@ -25,6 +25,7 @@ import copy
 import numpy as np
 
 from mlstudio.supervised.callbacks.base import Callback
+from mlstudio.utils.observers import Performance
 from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
 #                          EARLY STOP BASE CLASS                              #
@@ -108,6 +109,8 @@ class Stability(EarlyStop):
             Contains no information
         """
         super(Stability, self).on_train_begin(logs)
+        self._validate()        
+        self._observer = Performance(metric=self.metric, scorer=self.model.scorer)
         # Attributes
         self.best_performance_ = None
         self.converged_ = False

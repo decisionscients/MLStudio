@@ -19,304 +19,303 @@
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
 """Learning rate schedules."""
+from abc import ABC, abstractmethod
+import math
 import numpy as np
 
 from mlstudio.supervised.callbacks.base import Callback
 # --------------------------------------------------------------------------  #
-class Constant(Callback):
-    """Constant learning rate schedule
+class LearningRateSchedule(Callback):
+    """Base class for learning rate schedules. 
+    
+    Parameters
+    ----------
+    decay_factor : float (default=1) or 'optimal'
+        If 'optimal', the decay rate will be computed based upon the 
+        learning rate and the anticipated number of iterations
+
+    freq : str
+        The unit of time associated with a single iteration. 
+
+    """
+
+    @abstractmethod
+    def __init__(self, decay_factor=1, freq='epoch'):    
+        self.decay_factor = decay_factor
+        self.freq = freq            
+
+    def _default_decay_factor(self):
+        """Computes a default decay factor.
+        
+        The default decay factor is given by:
+        .. math:: \gamma=\frac{\alpha}{epochs}         
+        
+        """
+        return self.model.eta / self.model.epochs
+
+    @abstractmethod
+    def _adjust_learning_rate(self, iteration, logs):
+        pass
+
+    @property
+    def iterations(self):
+        """Computes anticipated number of iterations."""
+        if self.freq == 'epoch':
+            iterations = self.model.epochs
+        else:
+            if self.model.batch_size:                
+                n_observations = self.model.X_train_.shape[0]
+                n_batches_per_epoch = math.ceil(n_observations / \
+                    self.model.batch_size)
+                iterations = n_batches_per_epoch * self.model.epochs    
+            else:
+                iterations = self.model.epochs
+        return iterations
+
+    def on_train_begin(self, logs=None):
+        super(LearningRateSchedule, self).on_train_begin(logs)
+        self._eta0 = self.model.learning_rate
+        if self.decay_factor is 'optimal':
+            self.decay_factor = self._default_decay_factor()
+
+    def on_epoch_begin(self, epoch, logs=None):
+        if self.freq == 'epoch':
+            self._adjust_learning_rate(iteration=epoch, logs)
+    
+    def on_batch_begin(self, batch, logs=None):
+        if self.freq != 'epoch':
+            self._adjust_learning_rate(iteration=batch, logs)
+        
+
+# --------------------------------------------------------------------------  #
+class StepDecay(LearningRateSchedule):
+    """ Time decay learning rate schedule as:
+
+    .. math:: \eta_0 \times \gamma^{\text{floor((1+iteration)/decay_steps)}}
 
     Parameters
     ----------
-    eta0 : float (default=0.01) 
-        The fixed learning rate
+    decay_factor : float (default=1) or 'optimal'
+        If 'optimal', the decay rate will be computed based upon the 
+        learning rate and the anticipated number of iterations
+
+    decay_steps : int (default=1)
+        The number of steps between each update
+
+    freq : str
+        The unit of time associated with a single iteration. 
 
     """
-    def __init__(self, eta0=0.01):
-        """Callback class constructor."""        
-        self.params = None
-        self.model = None
-        self.eta0 = eta0
 
-    def on_epoch_begin(self, epoch, logs=None):
-        """Logic executed at the beginning of each epoch.
-        
-        Parameters
-        ----------
-        epoch : int
-            Current epoch
-        
-        logs: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """                
-        self.model.eta = self.eta0
+    def __init__(self, decay_factor=1, decay_steps, freq='epoch'):        
+        super(StepDecay, self).__init__(
+            decay_factor=decay_factor,
+            freq=freq)              
+        self.decay_steps = decay_steps
+
+    def _adjust_learning_rate(self, iteration, logs):
+        self.model.eta = self._eta0 * np.power(self.decay_factor, math.floor((1+iteration)/self.decay_steps))
 
 # --------------------------------------------------------------------------  #
-class TimeDecay(Callback):
+class TimeDecay(LearningRateSchedule):
     """ Time decay learning rate schedule as:
 
     .. math:: \eta_t=\frac{\eta_0}{1+b\cdot t} 
 
     Parameters
     ----------
-    eta0 : float (default=0.01)
-        The initial learning rate
+    decay_factor : float (default=1) or 'optimal'
+        If 'optimal', the decay rate will be computed based upon the 
+        learning rate and the anticipated number of iterations
 
-    decay_factor : float
-        The factor by which the learning rate is decayed
+    freq : str
+        The unit of time associated with a single iteration. 
 
     """
 
-    def __init__(self, eta0=0.01, decay_factor=None):
-        """Callback class constructor."""        
-        self.params = None
-        self.model = None
-        self.eta0 = eta0
-        self.decay_factor = decay_factor
+    def __init__(self, decay_factor=1, freq='epoch'):        
+        super(TimeDecay, self).__init__(
+            decay_factor=decay_factor,
+            freq=freq)              
 
-    def on_train_begin(self, logs=None):
-        """Sets decay factor"""
-        if not self.decay_factor:
-            self.decay_factor = self.eta0 / self.model.epochs
-
-
-    def on_epoch_begin(self, epoch, logs=None):
-        """Logic executed at the beginning of each epoch.
-        
-        Parameters
-        ----------
-        epoch : int
-            Current epoch
-        
-        logs: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """                
-        self.model.eta = self.eta0 / (1 + self.decay_factor * epoch)
+    def _adjust_learning_rate(self, iteration, logs):
+        self.model.eta = self._eta0 / (1 + self.decay_factor * iteration)
 
 # --------------------------------------------------------------------------  #
-class SqrtTimeDecay(Callback):
+class SqrtTimeDecay(LearningRateSchedule):
     """ Time decay learning rate schedule as:
 
     .. math:: \eta_t=\frac{\eta_0}{1+b\cdot \sqrt{t}} 
 
     Parameters
     ----------
-    eta0 : float (default=0.01)
-        The initial learning rate
+    decay_factor : float (default=1) or 'optimal'
+        If 'optimal', the decay rate will be computed based upon the 
+        learning rate and the anticipated number of iterations
 
-    decay_factor : float
-        The factor by which the learning rate is decayed
+    freq : str
+        The unit of time associated with a single iteration. 
 
     """
+    def __init__(self, decay_factor=1, freq='epoch'):        
+        super(SqrtTimeDecay, self).__init__(
+            decay_factor=decay_factor,
+            freq=freq)              
 
-    def __init__(self, eta0=0.01, decay_factor=None):
-        """Callback class constructor."""        
-        self.params = None
-        self.model = None
-        self.eta0 = eta0
-        self.decay_factor = decay_factor
-
-    def on_train_begin(self, logs=None):
-        """Sets decay factor"""
-        if not self.decay_factor:
-            self.decay_factor = self.eta0 / self.model.epochs
-
-
-    def on_epoch_begin(self, epoch, logs=None):
-        """Logic executed at the beginning of each epoch.
-        
-        Parameters
-        ----------
-        epoch : int
-            Current epoch
-        
-        logs: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """                
-        self.model.eta = self.eta0 / (1 + self.decay_factor * np.sqrt(epoch))        
+    def _adjust_learning_rate(self, iteration, logs):
+        self.model.eta = self._eta0 / (1 + self.decay_factor * \
+            np.sqrt(iteration))        
 
 # --------------------------------------------------------------------------  #
-class ExponentialDecay(Callback):
+class ExponentialDecay(LearningRateSchedule):
     """ Exponential decay learning rate schedule as:
 
     .. math:: \eta_t=\eta_0 \cdot \text{exp}(-b\cdot t)
 
     Parameters
     ----------
-    eta0 : float (default=0.01)
-        The initial learning rate
+    decay_factor : float (default=1) or 'optimal'
+        If 'optimal', the decay rate will be computed based upon the 
+        learning rate and the anticipated number of iterations
 
-    decay_factor : float
-        The factor by which the learning rate is decayed
+    freq : str
+        The unit of time associated with a single iteration. 
 
     """
+    def __init__(self, decay_factor=1, freq='epoch'):        
+        super(ExponentialDecay, self).__init__(
+            decay_factor=decay_factor,
+            freq=freq)   
 
-    def __init__(self, eta0=0.01, decay_factor=None):
-        """Callback class constructor."""        
-        self.params = None
-        self.model = None
-        self.eta0 = eta0
-        self.decay_factor = decay_factor
-
-    def on_train_begin(self, logs=None):
-        """Sets decay factor"""
-        if not self.decay_factor:
-            self.decay_factor = self.eta0 / self.model.epochs
-
-
-    def on_epoch_begin(self, epoch, logs=None):
-        """Logic executed at the beginning of each epoch.
-        
-        Parameters
-        ----------
-        epoch : int
-            Current epoch
-        
-        logs: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """                
-        self.model.eta = self.eta0 * np.exp(-self.decay_factor * epoch)
+    def _adjust_learning_rate(self, iteration, logs):
+        self.model.eta = self._eta0 * np.exp(-self.decay_factor * iteration)
 
 # --------------------------------------------------------------------------  #
-class PolynomialDecay(Callback):
+class PolynomialDecay(LearningRateSchedule):
     """ Polynomial decay learning rate schedule as:
 
     .. math:: \eta_t=\eta_0 \cdot \text{exp}(-b\cdot t)
 
     Parameters
     ----------
-    eta0 : float (default=0.01)
-        The initial learning rate
-
     power : float (default=1)
-        The power/exponential of the polynomial
+        The power to which 
+
+    freq : str
+        The unit of time associated with a single iteration. 
 
     """
 
-    def __init__(self, eta0=0.01, power=1.0):
-        """Callback class constructor."""        
-        self.params = None
-        self.model = None
-        self.eta0 = eta0
+    def __init__(self, power=1.0, freq='epoch'):
+        super(PolynomialDecay, self).__init__(
+            freq=freq
+        )
         self.power = power
 
-    def on_epoch_begin(self, epoch, logs=None):
-        """Logic executed at the beginning of each epoch.
-        
-        Parameters
-        ----------
-        epoch : int
-            Current epoch
-        
-        logs: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """
-        decay = (1 - (epoch / float(self.model.epochs))) ** self.power                
-        self.model.eta = self.eta0 * decay
-
+    def _adjust_learning_rate(self, iteration, logs):
+        decay = (1 - (iteration / float(self.model.epochs))) ** self.power                
+        self.model.eta = self._eta0 * decay
 # --------------------------------------------------------------------------  #
-class ExponentialSchedule(Callback):
+class ExponentialLearningRate(LearningRateSchedule):
+    """ Exponential learning rate schedule as:
+
+    .. math:: \eta_t=(1=\lambda\eta)^{-2t-1}\eta
+
+
+    Reference : https://arxiv.org/abs/1910.07454
+
+    Parameters
+    ----------
+    decay_factor : float (default=1) or 'optimal'
+        If 'optimal', the decay rate will be computed based upon the 
+        learning rate and the anticipated number of iterations
+
+    freq : str
+        The unit of time associated with a single iteration. 
+
+    """
+
+    def __init__(self, decay_factor=1.0, freq='epoch'):   
+        super(ExponentialLearningRate, self).__init__(
+            decay_factor=decay_factor,
+            freq=freq
+        )
+
+    def _adjust_learning_rate(self, iteration, logs):
+        self.model.eta = np.power((1- self.decay_factor*self._eta0), \
+            (-2*iteration-1)) * self._eta0
+# --------------------------------------------------------------------------  #
+class ExponentialSchedule(LearningRateSchedule):
     """ Exponential decay learning rate schedule as:
 
     .. math:: \eta_t=\eta_0 \cdot 10^{\frac{-t}{r}}
 
     Parameters
     ----------
-    eta0 : float (default=0.01)
-        The initial learning rate
-
     decay_factor : float
         The factor by which the learning rate is decayed
 
+    decay_steps : int
+        The number of steps between each update
+
     """
 
-    def __init__(self, eta0=0.01):
-        """Callback class constructor."""        
-        self.params = None
-        self.model = None
-        self.eta0 = eta0
+    def __init__(self, decay_factor=1.0, decay_steps=1, freq='epoch'):   
+        super(ExponentialLearningRate, self).__init__(
+            decay_factor=decay_factor,
+            freq=freq
+        )    
+        self.decay_steps = decay_steps
 
-    def on_epoch_begin(self, epoch, logs=None):
-        """Logic executed at the beginning of each epoch.
-        
-        Parameters
-        ----------
-        epoch : int
-            Current epoch
-        
-        logs: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """                
-        self.model.eta = self.eta0 * 10**(-epoch / self.model.epochs)
+    def _adjust_learning_rate(self, iteration, logs):
+        self.model.eta = self._eta0 * np.power(self.decay_factor, \
+            (iteration / self.decay_steps))
 
 # --------------------------------------------------------------------------  #
-class PowerSchedule(Callback):
+class PowerSchedule(LearningRateSchedule):
     """ Exponential decay learning rate schedule as:
 
-    .. math:: \eta_t=\eta_0 (1+\frac{t}{r})^{-c}
+    .. math:: \eta_t=\eta_0 / (1+\frac{t}{r})^{c}
 
     Parameters
     ----------
-    eta0 : float (default=0.01)
-        The initial learning rate
-
     power : float (default=1)
         The factor by which the learning rate is decayed
 
+    decay_steps : int
+        The number of steps between each update
+
     """
 
-    def __init__(self, eta0=0.01, power=1):
-        """Callback class constructor."""        
-        self.params = None
-        self.model = None
-        self.eta0 = eta0
+    def __init__(self, power=1, decay_steps=1, freq='epoch'):
+        super(PowerSchedule, self).__init__(
+            freq=freq
+        )              
         self.power = power
+        self.decay_steps = decay_steps
 
-    def on_epoch_begin(self, epoch, logs=None):
-        """Logic executed at the beginning of each epoch.
-        
-        Parameters
-        ----------
-        epoch : int
-            Current epoch
-        
-        logs: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """                
-        self.model.eta = self.eta0 * (1 + epoch/self.model.epochs)**(-self.power)
+    def _adjust_learning_rate(self, iteration, logs):
+        self.model.eta = self._eta0 / (1 + iteration/self.decay_steps)**self.power
 
 # --------------------------------------------------------------------------  #
-class BottouSchedule(Callback):
+class BottouSchedule(LearningRateSchedule):
     """ Learning rate schedule as described in:
 
     https://cilvr.cs.nyu.edu/diglib/lsml/bottou-sgd-tricks-2012.pdf
 
     Parameters
     ----------
-    eta0 : float (default=0.01)
-        The initial learning rate
-
-    power : float (default=1)
+    alpha : float (default=1)
         The factor by which the learning rate is decayed
 
     """
 
-    def __init__(self, eta0=0.01, alpha=0.01):
-        """Callback class constructor."""        
-        self.params = None
-        self.model = None
-        self.alpha = alpha        
-        self.eta0 = eta0
+    def __init__(self, decay_rate=0.01, freq="epoch"):
+        super(BottouSchedule, self).__init__(
+            decay_factor==decay_factor,
+            freq=freq
+        )
 
-    def on_epoch_begin(self, epoch, logs=None):
-        """Logic executed at the beginning of each epoch.
-        
-        Parameters
-        ----------
-        epoch : int
-            Current epoch
-        
-        logs: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """                
-        self.model.eta = self.eta0 * (1 + self.eta0 * self.alpha * epoch)**(-1)
+    def _adjust_learning_rate(self, iteration, logs):
+        self.model.eta = self._eta0 * (1 + self._eta0 * \
+            self.decay_factor * iteration)**(-1)
