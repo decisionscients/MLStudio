@@ -24,6 +24,7 @@ import math
 import numpy as np
 
 from mlstudio.supervised.callbacks.base import Callback
+from mlstudio.supervised.core.scorers import MSE
 # --------------------------------------------------------------------------  #
 class LearningRateSchedule(Callback):
     """Base class for learning rate schedules. 
@@ -319,3 +320,107 @@ class BottouSchedule(LearningRateSchedule):
     def _adjust_learning_rate(self, iteration, logs):
         self.model.eta = self._eta0 * (1 + self._eta0 * \
             self.decay_factor * iteration)**(-1)
+
+# --------------------------------------------------------------------------- #
+#                             STABILITY                                       #
+# --------------------------------------------------------------------------- #
+class Performance(LearningRateSchedule):
+    """Decays the learning rate if performance plateaus.
+
+    Parameters
+    ----------
+    decay_factor : float (default - 0.3)
+        The factor by which the learning rate is reduced. 
+        math:: \alpha_{new} = \alpha_ * \text{decay_factor}
+
+    metric : str, optional (default='val_score')
+        Specifies which statistic to metric for evaluation purposes.
+
+        'train_cost': Training set costs
+        'train_score': Training set scores based upon the model's metric parameter
+        'val_cost': Validation set costs
+        'val_score': Validation set scores based upon the model's metric parameter
+        'theta': The parameters of the model
+        'gradient': The gradient of the objective function w.r.t. theta
+
+    scorer : Scorer object
+        Computes training and validation scores.
+
+    min_lr : float (default=0)
+        The learning rate floor to which I will not be reduced.
+
+    epsilon : float, optional (default=0.001)
+        The factor by which performance is considered to have improved. For 
+        instance, a value of 0.01 means that performance must have improved
+        by a factor of 1% to be considered an improvement.
+
+    patience : int, optional (default=5)
+        The number of consecutive epochs of non-improvement that would 
+        stop training.    
+
+    freq : str
+        The unit of time associated with one iteration. This will be
+        'epoch' or 'batch'.
+
+    """
+
+    def __init__(self, decay_factor=0.5, metric='val_cost', scorer=MSE(), min_lr=0,
+                 epsilon=1e-3, patience=5, freq='epoch'):
+        super(Performance, self).__init__()
+        self.name = "Performance Learning Rate Schedule"
+        self.decay_factor = decay_factor
+        self.metric = metric
+        self.scorer = scorer
+        self.epsilon = epsilon
+        self.patience = patience
+        self.freq = freq       
+
+    def _validate(self):
+        if self.metric not in ['train_cost', 'train_score', 'val_cost', 'val_score',
+                               'theta', 'gradient']:
+            msg = "{m} is an invalid metric. The valid metrics include : {v}".\
+                format(m=self.metric,
+                       v=str(['train_cost', 'train_score', 'val_cost', 'val_score', 'theta', 'gradient']))
+            raise ValueError(msg)
+        validate_zero_to_one(p = self.epsilon)       
+
+    def on_train_begin(self, logs=None):        
+        """Sets key variables at beginning of training.
+        
+        Parameters
+        ----------
+        log : dict
+            Contains no information
+        """
+        super(Performance, self).on_train_begin(logs)
+        self._validate()        
+        self._observer = Performance(metric=self.metric, scorer=self.model.scorer, \
+            epsilon=self.epsilon, patience=self.patience)    
+        self._observer.initialize()        
+
+    def _adjust_learning_rate(self, iteration, logs):
+        self.model.eta = self.mode.eta * self.decay_factor
+
+    def on_epoch_end(self, epoch, logs=None):
+        """Determines whether convergence has been achieved.
+
+        Parameters
+        ----------
+        epoch : int
+            The current epoch number
+
+        logs : dict
+            Dictionary containing training cost, (and if metric=score, 
+            validation cost)  
+
+        Returns
+        -------
+        Bool if True convergence has been achieved. 
+
+        """
+        super(Performance, self).on_epoch_end(epoch, logs)        
+        logs = logs or {}        
+        
+        if self._observer.evaluate(epoch, logs):            
+            if self.mode.eta * self.decay_factor > self.min_lr:
+                self._adjust_learning_rate(logs)

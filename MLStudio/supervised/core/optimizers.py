@@ -300,14 +300,15 @@ class AdamW(Optimizer):
 
 # --------------------------------------------------------------------------  #
 class QHAdam(Optimizer):
-    """AdamW optimizer."""
+    """Quasi-Hyperbolic Adam Optimizer"""
 
     def __init__(self, beta_one=0.9, beta_two=0.999, decay_rate=1e-4, epsilon=10e-8,
                  v1=1, v2=1):
         self.name = "Quasi-Hyperbolic Adam Optimizer"
+        self.v1 = v1
+        self.v2 = v2
         self.beta_one = beta_one        
         self.beta_two = beta_two
-        self.decay_rate = decay_rate
         self.epsilon = epsilon
         self.t = 0
         self.m = 0
@@ -320,34 +321,58 @@ class QHAdam(Optimizer):
         self.m = self.beta_one * self.m + (1 - self.beta_one) * grad
         self.v = self.beta_two * self.v + (1 - self.beta_two) * np.square(grad)
         self.v_hat = np.maximum(self.v_hat, self.v)
-        theta = theta - learning_rate (((1-v1)*grad + v1 * self.m) \
-            / (np.sqrt(1-v2)*np.square(grad)+v2*self.v+self.epsilon))
+        theta = theta - learning_rate * (((1-self.v1)*grad + self.v1 * self.m) /\
+            (np.sqrt(1-self.v2)*np.square(grad)+self.v2*self.v+self.epsilon))
         
         return theta, grad                  
 
 # --------------------------------------------------------------------------  #
-class QHAdam(Optimizer):
-    """AdamW optimizer."""
+class AggMo(Optimizer):
+    """Aggregated Momentum Optimizer."""
 
-    def __init__(self, beta_one=0.9, beta_two=0.999, decay_rate=1e-4, epsilon=10e-8,
-                 v1=1, v2=1):
-        self.name = "Quasi-Hyperbolic Adam Optimizer"
-        self.beta_one = beta_one        
-        self.beta_two = beta_two
-        self.decay_rate = decay_rate
-        self.epsilon = epsilon
+    def __init__(self, k=3, betas=[0, 0.9, 0.999], decay_factor=0, epsilon=10e-8):
+        self.name = "Aggregated Momentum Optimizer."
+        self.k = k
+        self.betas = betas
         self.t = 0
-        self.m = 0
         self.v = 0
-        self.v_hat = 0
+        
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
-        grad = gradient(theta)        
-        self.m = self.beta_one * self.m + (1 - self.beta_one) * grad
-        self.v = self.beta_two * self.v + (1 - self.beta_two) * np.square(grad)
-        self.v_hat = np.maximum(self.v_hat, self.v)
-        theta = theta - learning_rate (((1-v1)*grad + v1 * self.m) \
-            / (np.sqrt(1-v2)*np.square(grad)+v2*self.v+self.epsilon))
+        grad = gradient(theta)       
+        if self.v == 0:
+            self.v = {}            
+            for beta in self.betas:
+                self.v[beta] = np.zeros_like(theta)
+        buf = np.zeros_like(theta)
+        for beta in self.betas:
+            self.v[beta] = beta * self.v[beta] - grad
+            buf = buf + self.v[beta]
+        buf = buf / self.k
+
+        theta = theta - learning_rate * buf 
         
-        return theta, grad                
+        return theta, grad        
+
+# --------------------------------------------------------------------------  #
+class QuasiHyperbolicMomentum(Optimizer):
+    """Quasi-Hyperbolic Momentum Optimizer"""
+
+    def __init__(self, v=0.7, beta=0.999, epsilon=10e-8):
+        self.name = "Quasi-Hyperbolic Momentum Optimizer."       
+        self.v = v 
+        self.beta = beta
+        self.t = 0
+        self.m = 0
+        
+    
+    def __call__(self, gradient, learning_rate, theta, **kwargs):    
+        self.t += 1
+        grad = gradient(theta)
+        self.m = self.beta * self.m + (1 - self.beta) * grad
+        theta = theta - learning_rate * ((1-self.v) * grad + self.v * self.m)
+        
+        return theta, grad                 
+
+         

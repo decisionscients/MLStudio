@@ -44,6 +44,8 @@ from mlstudio.supervised.core.objectives import Rosenbrock, StyblinskiTank
 from mlstudio.supervised.core.optimizers import Momentum, Nesterov, Adagrad
 from mlstudio.supervised.core.optimizers import Adadelta, RMSprop, Adam
 from mlstudio.supervised.core.optimizers import AdaMax, Nadam, AMSGrad
+from mlstudio.supervised.core.optimizers import AdamW, QHAdam, QuasiHyperbolicMomentum
+from mlstudio.supervised.core.optimizers import AggMo
 from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 from mlstudio.utils.data_analyzer import cosine
 
@@ -53,15 +55,15 @@ from mlstudio.utils.data_analyzer import cosine
 scenarios = [
     GradientDescent(objective=Adjiman(),  optimizer=Momentum(), epochs=5000, theta_init=Adjiman().start),
     GradientDescent(objective=BartelsConn(),  optimizer=Nesterov(), epochs=5000, theta_init=BartelsConn().start),
-    GradientDescent(objective=SumSquares(),  optimizer=Adagrad(), epochs=1000, theta_init=SumSquares().start),
+    GradientDescent(objective=SumSquares(),  optimizer=Adagrad(), epochs=5000, theta_init=SumSquares().start),
     GradientDescent(objective=ThreeHumpCamel(),  optimizer=Adadelta(), epochs=5000, theta_init=ThreeHumpCamel().start),
     GradientDescent(objective=Himmelblau(),  optimizer=RMSprop(), epochs=5000, theta_init=Himmelblau().start),
     GradientDescent(objective=Leon(), optimizer=Adam(), learning_rate=0.001, epochs=5000, theta_init=Leon().start),
     GradientDescent(objective=Rosenbrock(),  optimizer=AdaMax(), epochs=5000, theta_init=Rosenbrock().start),
     GradientDescent(objective=StyblinskiTank(),  optimizer=Nadam(), epochs=5000, theta_init=StyblinskiTank().start),
     GradientDescent(objective=Adjiman(),  optimizer=QHAdam(), epochs=5000, theta_init=Adjiman().start),
-
-
+    GradientDescent(objective=BartelsConn(),  optimizer=AggMo(), epochs=5000, theta_init=BartelsConn().start),
+    GradientDescent(objective=SumSquares(),  optimizer=QuasiHyperbolicMomentum(), epochs=5000, theta_init=SumSquares().start),
     GradientDescent(objective=ThreeHumpCamel(),  optimizer=AMSGrad(), epochs=5000, theta_init=ThreeHumpCamel().start),
     GradientDescent(objective=Himmelblau(),  optimizer=AdamW(), epochs=5000, theta_init=Himmelblau().start),
     

@@ -36,7 +36,7 @@ from mlstudio.supervised.callbacks.early_stop import Stability
 from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, PowerSchedule
-from mlstudio.supervised.callbacks.learning_rate import BottouSchedule
+from mlstudio.supervised.callbacks.learning_rate import BottouSchedule, Performance
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.supervised.core.objectives import MSE
@@ -199,7 +199,8 @@ scenarios = [
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(), schedule=PolynomialDecay(), epochs=3000),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), schedule=ExponentialSchedule(), epochs=3000),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), schedule=PowerSchedule(), epochs=3000),    
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), schedule=BottouSchedule(), epochs=3000)
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), schedule=BottouSchedule(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), schedule=Performance(), epochs=3000)
 ]        
 @mark.regression
 @mark.regression_learning_rates
