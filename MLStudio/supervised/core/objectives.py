@@ -459,7 +459,7 @@ class GoldsteinPrice(Benchmark):
             6 * np.multiply(theta[0], theta[1]) + 3 * theta[1]**2)
         c = (2 * theta[0] - 3 * theta[1])**2
         d = (18 - 32 * theta[0] + 12 * theta[0]**2 + 48 * theta[1] -\
-            36 * np.multiply(theta0, theta1) + 27 * theta[1]**2)
+            36 * np.multiply(theta[0], theta[1]) + 27 * theta[1]**2)
         return (1 + (a * b)) * (30 + (c * d))
 
     def gradient(self, theta):
@@ -473,7 +473,7 @@ class GoldsteinPrice(Benchmark):
         fx = 3*theta[0]**2+6*theta[0]*theta[1]-14*theta[0]+\
             3*theta[1]**2-14*theta[1]+19
         gx = 1
-        hx = 9*((2,3)*theta[0]-theta[1])**2
+        hx = 9*((2/3)*theta[0]-theta[1])**2
         ix = 12*theta[0]**2-36*theta[0]*theta[1]-\
             32*theta[0]+27*theta[1]**2+48*theta[1]+18
         jx = 30
@@ -566,7 +566,7 @@ class Leon(Benchmark):
     def gradient(self, theta):
         """Computes the gradient of the objective function."""
         dfdx = 600*theta[0]**2*(theta[0]**3-theta[1])+2*theta[0]-2
-        dfdy = -200*theta[1]**3 + 200 * theta[1]
+        dfdy = -200*theta[0]**3 + 200 * theta[1]
         return np.array([dfdx, dfdy])             
 
    
@@ -599,9 +599,10 @@ class Rosenbrock(Benchmark):
         """Computes the objective function value"""
         a = 1
         b = 100
+        return b*(theta[1]-theta[0]**2)**2+(a-theta[0])**2
         n = 2
         score = 0
-        for i in range(n):
+        for i in range(n-1):
             score += (b*(theta[i+1]-theta[i]**2)+(a-theta[i])**2)
         return score
 
@@ -678,3 +679,35 @@ class SumSquares(Benchmark):
         dfdy = 2 * theta[1]
         return np.array([dfdx, dfdy])        
 
+# --------------------------------------------------------------------------  #
+class ThreeHumpCamel(Benchmark):
+    """Three hump camel objective functions."""    
+
+    @property
+    def name(self):
+        return "Three Hump Camel Objective Function"    
+
+    @property
+    def start(self):
+        return np.array([2,2])
+        
+    @property
+    def minimum(self):
+        return np.array([0,0])           
+    
+    @property
+    def _range(self):
+        """Returns the x and y ranges for plotting."""
+        x = {'min': -2, 'max': 2}
+        y = {'min': -2, 'max': 2}
+        return x, y
+    
+    def __call__(self, theta):
+        """Computes the objective function value"""        
+        return 2*theta[0]**2 - 1.05*theta[0]**4 + ((theta[0]**6)/6)+theta[0]*theta[1]+theta[1]**2
+
+    def gradient(self, theta):
+        """Computes the gradient of the objective function."""
+        dfdx = theta[0]**5-((21*theta[0]**3)/5)+4*theta[0]+theta[1]
+        dfdy = theta[0]+2*theta[1]
+        return np.array([dfdx, dfdy]) 
