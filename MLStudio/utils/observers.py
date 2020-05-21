@@ -27,7 +27,9 @@ import numpy as np
 import types
 
 from sklearn.base import BaseEstimator
+from tabulate import tabulate
 
+from mlstudio.supervised.core.scorers import MSE
 from mlstudio.utils.print import Printer
 from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
@@ -112,7 +114,7 @@ class Performance(Observer):
         """        
         # Attributes
         self.best_performance_ = None
-        self.stalled = False
+        self.improved = False
         self.best_weights_ = None        
         # Instance variables
         self._iter_no_improvement = 0
@@ -136,7 +138,7 @@ class Performance(Observer):
                 c=str(current),
                 r=str(relative_change)))            
 
-    def _has_improved(self, current):
+    def _has_stalled(self, current):
         """Returns true if the magnitude of the improvement is greater than epsilon."""
         relative_change = abs(current-self.best_performance_) / abs(self.best_performance_)
         return relative_change > self.epsilon
@@ -146,7 +148,7 @@ class Performance(Observer):
         self._iter_no_improvement = 0
         self.best_performance_ = current
         self.best_weights_ = logs.get('theta')
-        self._stalled=False        
+        self._stalled = False        
 
     def _process_no_improvement(self):
         """Sets values of parameters and attributes if no improved."""        
@@ -195,7 +197,7 @@ class Performance(Observer):
             # Evaluate if there has been an improvement
             if self._better(current, self.best_performance_):
                 # Check if improvement is significant
-                if self._has_improved(current):
+                if self._has_stalled(current):
                     self._process_improvement(current, logs)
                 else:
                     self._process_no_improvement()                        
@@ -203,7 +205,7 @@ class Performance(Observer):
                 self._process_no_improvement()                       
         return self._stalled       
 
-    def report(estimator, features=None):
+    def report(self, estimator, features=None):
         """Summarizes statistics for model.
 
         Parameters
@@ -239,6 +241,11 @@ class Performance(Observer):
 
         printer.print_dictionary(performance_summary, "Performance Summary")
         
+        if estimator.critical_points_:
+            print("\n")
+            printer.print_title("Critical Points")
+            print(tabulate(estimator.critical_points_, headers="keys"))
+            print("\n")
         # --------------------------------------------------------------------------- #
         if features is None:
             features = []

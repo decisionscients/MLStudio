@@ -27,9 +27,13 @@ import pandas as pd
 import pytest
 from pytest import mark
 
+from sklearn.utils.estimator_checks import parametrize_with_checks
+from sklearn.utils.estimator_checks import check_estimator
+from tabulate import tabulate
+
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.callbacks.early_stop import Stability
-from mlstudio.supervised.callbacks.learning_rate import Constant, TimeDecay, SqrtTimeDecay
+from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, PowerSchedule
 from mlstudio.supervised.callbacks.learning_rate import BottouSchedule
@@ -47,15 +51,19 @@ from mlstudio.utils.data_analyzer import cosine
 #                       OPTIMIZATION ALGORITHMS W/ BGD                        #
 # --------------------------------------------------------------------------  #
 scenarios = [
-    GradientDescent(objective=Adjiman(), learning_rate=ExponentialDecay(eta0=0.0001), optimizer=Momentum()),
-    GradientDescent(objective=BartelsConn(), learning_rate=ExponentialDecay(eta0=0.0001),optimizer=Nesterov()),
-    GradientDescent(objective=SumSquares(), learning_rate=ExponentialDecay(eta0=0.0001), optimizer=Adagrad()),
-    GradientDescent(objective=ThreeHumpCamel(), learning_rate=ExponentialDecay(eta0=0.0001), optimizer=Adadelta()),
-    GradientDescent(objective=Himmelblau(), learning_rate=ExponentialDecay(eta0=0.0001), optimizer=RMSprop()),
-    GradientDescent(objective=Leon(),learning_rate=ExponentialDecay(eta0=0.0001), optimizer=Adam()),
-    GradientDescent(objective=Rosenbrock(), learning_rate=ExponentialDecay(eta0=0.0001), optimizer=AdaMax()),
-    GradientDescent(objective=StyblinskiTank(), learning_rate=ExponentialDecay(eta0=0.0001), optimizer=Nadam()),
-    GradientDescent(objective=ThreeHumpCamel(), learning_rate=ExponentialDecay(eta0=0.0001), optimizer=AMSGrad())
+    GradientDescent(objective=Adjiman(),  optimizer=Momentum(), epochs=5000, theta_init=Adjiman().start),
+    GradientDescent(objective=BartelsConn(),  optimizer=Nesterov(), epochs=5000, theta_init=BartelsConn().start),
+    GradientDescent(objective=SumSquares(),  optimizer=Adagrad(), epochs=1000, theta_init=SumSquares().start),
+    GradientDescent(objective=ThreeHumpCamel(),  optimizer=Adadelta(), epochs=5000, theta_init=ThreeHumpCamel().start),
+    GradientDescent(objective=Himmelblau(),  optimizer=RMSprop(), epochs=5000, theta_init=Himmelblau().start),
+    GradientDescent(objective=Leon(), optimizer=Adam(), learning_rate=0.001, epochs=5000, theta_init=Leon().start),
+    GradientDescent(objective=Rosenbrock(),  optimizer=AdaMax(), epochs=5000, theta_init=Rosenbrock().start),
+    GradientDescent(objective=StyblinskiTank(),  optimizer=Nadam(), epochs=5000, theta_init=StyblinskiTank().start),
+    GradientDescent(objective=Adjiman(),  optimizer=QHAdam(), epochs=5000, theta_init=Adjiman().start),
+
+
+    GradientDescent(objective=ThreeHumpCamel(),  optimizer=AMSGrad(), epochs=5000, theta_init=ThreeHumpCamel().start),
+    GradientDescent(objective=Himmelblau(),  optimizer=AdamW(), epochs=5000, theta_init=Himmelblau().start),
     
 ]
 
@@ -66,20 +74,19 @@ def test_benchmark_gradients():
     results = []
     for est in scenarios:
         est.fit()
-        sim=cosine(est.theta_, est.objective.minimum)        
+        diff = round(np.linalg.norm(np.subtract(est.theta_, est.objective.minimum),3))     
         row = [est.optimizer.name, est.objective.name, est.objective.minimum,\
-               est.theta_, sim]            
+               est.theta_, diff]            
         results.append(row)
-        msg = est.optimizer.name + ' optimizing ' + est.objective.name + \
-            ": True minimum: {t}.   Empirical minimum: {e}.   Cosine Sim: {c}".\
-            format(t=str(est.objective.minimum), e=str(est.theta_), \
-                c=str(sim))
-        print(msg) 
+        print("\n{o} optimizing {f}:".format(o=est.optimizer.name, f=est.objective.name))
+        print("         True minimum: {t}".format(t=str(est.objective.minimum)))
+        print("               Result: {r}".format(r=str(est.theta_)))
+        print("           Difference: {d}".format(d=str(diff)))
 
-    print(tabulate(results, headers=["Optimizer", "Objective", "True Min.", "Min Hat", "Similarity"]))
+    print(tabulate(results, headers=["Optimizer", "Objective", "True Min.", "Min Hat", "Difference"]))
 
-@mark.optimization
-@parametrize_with_checks(scenarios)
-def test_regression_qnd(estimator, check):
-    check(estimator)    
+# @mark.optimization
+# @parametrize_with_checks(scenarios)
+# def test_regression_qnd(estimator, check):
+#     check(estimator)    
         

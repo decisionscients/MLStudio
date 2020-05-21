@@ -80,11 +80,11 @@ class LearningRateSchedule(Callback):
 
     def on_epoch_begin(self, epoch, logs=None):
         if self.freq == 'epoch':
-            self._adjust_learning_rate(iteration=epoch, logs)
+            self._adjust_learning_rate(iteration=epoch, logs=logs)
     
     def on_batch_begin(self, batch, logs=None):
         if self.freq != 'epoch':
-            self._adjust_learning_rate(iteration=batch, logs)
+            self._adjust_learning_rate(iteration=batch, logs=logs)
         
 
 # --------------------------------------------------------------------------  #
@@ -107,7 +107,7 @@ class StepDecay(LearningRateSchedule):
 
     """
 
-    def __init__(self, decay_factor=1, decay_steps, freq='epoch'):        
+    def __init__(self, decay_factor=1, decay_steps=1, freq='epoch'):        
         super(StepDecay, self).__init__(
             decay_factor=decay_factor,
             freq=freq)              
@@ -261,7 +261,7 @@ class ExponentialSchedule(LearningRateSchedule):
     """
 
     def __init__(self, decay_factor=1.0, decay_steps=1, freq='epoch'):   
-        super(ExponentialLearningRate, self).__init__(
+        super(ExponentialSchedule, self).__init__(
             decay_factor=decay_factor,
             freq=freq
         )    
@@ -310,9 +310,9 @@ class BottouSchedule(LearningRateSchedule):
 
     """
 
-    def __init__(self, decay_rate=0.01, freq="epoch"):
+    def __init__(self, decay_factor=0.01, freq="epoch"):
         super(BottouSchedule, self).__init__(
-            decay_factor==decay_factor,
+            decay_factor=decay_factor,
             freq=freq
         )
 

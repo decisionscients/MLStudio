@@ -516,8 +516,7 @@ class Himmelblau(Benchmark):
 
     @property
     def minimum(self):
-        return np.array([3,2], [-2.805118, 3.131312], \
-                        [-3.779310,-3.283186], [3.584428,-1.848126])           
+        return np.array([3,2])           
 
     @property
     def _range(self):
@@ -561,12 +560,12 @@ class Leon(Benchmark):
 
     def __call__(self, theta):
         """Computes the objective function value"""
-        return 100 * (theta[1] - theta[0]**3)**2 + (1 - theta[0])**2
+        return 100 * (theta[1] - theta[0]**2)**2 + (1 - theta[0])**2
 
     def gradient(self, theta):
         """Computes the gradient of the objective function."""
-        dfdx = 600*theta[0]**2*(theta[0]**3-theta[1])+2*theta[0]-2
-        dfdy = -200*theta[0]**3 + 200 * theta[1]
+        dfdx = -400*(-theta[0]**2+theta[1]) + 2*theta[0] - 2
+        dfdy = -200*theta[0]**2 + 200 * theta[1]
         return np.array([dfdx, dfdy])             
 
    

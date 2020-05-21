@@ -74,7 +74,7 @@ class Printer(ABC):
         return anchor    
 
 
-    def _print_title(self, title):
+    def print_title(self, title):
         """Prints title and title separator"""
         if not isinstance(self._line_length, (int, float)):
             raise TypeError("Invalid line length. Must be an integer or float.")
@@ -94,7 +94,7 @@ class Printer(ABC):
         """Pretty prints a title and dictionary."""
         anchor = self._set_anchor(content) 
         if title:
-            self._print_title(title)
+            self.print_title(title)
         for k, v in content.items():
             self._print_line(anchor, k,v)
 
@@ -112,7 +112,7 @@ class Printer(ABC):
             Dictionary in which the values are iterables.
         """
         if title:
-            self._print_title(title)
+            self.print_title(title)
         print(content.to_string())
 
         

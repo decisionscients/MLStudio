@@ -25,6 +25,7 @@ import copy
 import numpy as np
 
 from mlstudio.supervised.callbacks.base import Callback
+from mlstudio.supervised.core.scorers import MSE
 from mlstudio.utils.observers import Performance
 from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
@@ -80,15 +81,20 @@ class Stability(EarlyStop):
     patience : int, optional (default=5)
         The number of consecutive epochs of non-improvement that would 
         stop training.    
+
+    mode : str (default="active")
+        Indicates whether to stop training when performance stops improving
+        or to just indicate that training has stalled.
     """
 
-    def __init__(self, metric='val_cost', val_size=0.3, epsilon=0.01, patience=5):
+    def __init__(self, metric='val_cost', val_size=0.3, epsilon=1e-1, patience=100, mode="active"):
         super(Stability, self).__init__()
         self.name = "Stability"
         self.metric = metric
         self.val_size = val_size
         self.epsilon = epsilon
         self.patience = patience
+        self.mode = mode
        
 
     def _validate(self):
@@ -110,51 +116,9 @@ class Stability(EarlyStop):
         """
         super(Stability, self).on_train_begin(logs)
         self._validate()        
-        self._observer = Performance(metric=self.metric, scorer=self.model.scorer)
-        # Attributes
-        self.best_performance_ = None
-        self.converged_ = False
-        self.best_weights_ = None        
-        # Instance variables
-        self._iter_no_improvement = 0
-        self._better = None            
-        
-        logs = logs or {}
-        self._validate()
-        # Obtain the 'better' function from the scorer.
-        # This is either np.less or np.greater        
-        if 'score' in self.metric:
-            scorer = copy.copy(self.model.scorer)
-            self._better = scorer.better
-        else:
-            self._better = np.less
-
-    def _print_results(self, current):
-        """Prints current, best and relative change."""
-        relative_change = abs(current-self.best_performance_) / abs(self.best_performance_)
-        print("Iteration #: {i}  Best : {b}     Current : {c}   Relative change : {r}".format(\
-                i=str(self._iter_no_improvement),
-                b=str(self.best_performance_), 
-                c=str(current),
-                r=str(relative_change)))            
-
-    def _check_improvement(self, current):
-        """Returns true if the magnitude of the improvement is greater than epsilon."""
-        relative_change = abs(current-self.best_performance_) / abs(self.best_performance_)
-        return relative_change > self.epsilon
-
-    def _process_improvement(self, current, logs):
-        """Sets values of parameters and attributes if improved."""
-        self._iter_no_improvement = 0
-        self.best_performance_ = current
-        self.best_weights_ = logs.get('theta')
-        self.converged_=False        
-
-    def _process_no_improvement(self):
-        """Sets values of parameters and attributes if no improved."""        
-        self._iter_no_improvement += 1  
-        if self._iter_no_improvement == self.patience:
-            self.converged_ = True           
+        self._observer = Performance(metric=self.metric, scorer=self.model.scorer, \
+            epsilon=self.epsilon, patience=self.patience)    
+        self._observer.initialize()        
 
     def on_epoch_end(self, epoch, logs=None):
         """Determines whether convergence has been achieved.
@@ -174,37 +138,15 @@ class Stability(EarlyStop):
 
         """
         super(Stability, self).on_epoch_end(epoch, logs)        
-        logs = logs or {}
-        # Obtain current cost or score if possible.
-        try:
-            current = logs.get(self.metric)
-        except:
-            raise ValueError("{m} is not a valid metric for this optimization."\
-                .format(m=self.metric))        
-
-        # If the metric is 'gradient' or 'theta', get the magnitude 
-        if self.metric in ['gradient', 'theta']:
-            current = np.linalg.norm(current)        
-
-        # Handle first iteration
-        if self.best_performance_ is None:
-            self._process_improvement(current, logs)
-
-        # Otherwise, if metric is negative i.e. R2, continue as if improved
-        elif current < 0:
-            self._process_improvement(current, logs)
-        # Otherwise...
-        else:                
-            # Evaluate if there has been an improvement
-            if self._better(current, self.best_performance_):
-                # Check if improvement is significant
-                if self._check_improvement(current):
-                    self._process_improvement(current, logs)
-                else:
-                    self._process_no_improvement()                        
-            else:
-                self._process_no_improvement()                       
-        self.model.converged = self.converged_       
+        logs = logs or {}        
+        
+        if self._observer.evaluate(epoch, logs):
+            self.model.stalled = True
+            if self.mode == "active":
+                self.converged = True
+        else:
+            self.model.stalled = False
+            self.converged = False
 
 # --------------------------------------------------------------------------- #
 class BCN1(EarlyStop):

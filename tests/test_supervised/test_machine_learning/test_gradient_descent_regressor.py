@@ -33,7 +33,7 @@ from mlstudio.supervised.core.tasks import LinearRegression
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.callbacks.debugging import GradientCheck
 from mlstudio.supervised.callbacks.early_stop import Stability
-from mlstudio.supervised.callbacks.learning_rate import Constant, TimeDecay, SqrtTimeDecay
+from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, PowerSchedule
 from mlstudio.supervised.callbacks.learning_rate import BottouSchedule
@@ -55,7 +55,7 @@ scenarios = [
                              objective=MSE(regularizer=L1_L2())),
     GradientDescentRegressor(task=LinearRegression(),gradient_check=GradientCheck()),
     GradientDescentRegressor(task=LinearRegression(), early_stop=Stability()),                                           
-    GradientDescentRegressor(task=LinearRegression(), learning_rate=BottouSchedule()),                                           
+    GradientDescentRegressor(task=LinearRegression(), schedule=BottouSchedule()),                                           
 
 ]
 
@@ -159,10 +159,10 @@ scenarios_early_stop = [
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), early_stop=Stability(metric='val_cost')),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2(alpha=0.0001)), early_stop=Stability(metric='train_score')),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), early_stop=Stability(metric='train_cost')),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(), early_stop=Stability(metric='gradient')),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), early_stop=Stability(metric='theta')),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), early_stop=Stability(metric='gradient')),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), early_stop=Stability(metric='theta'))
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(), early_stop=Stability(metric='gradient', mode='passive')),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), early_stop=Stability(metric='theta', mode='passive')),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), early_stop=Stability(metric='gradient', mode='active')),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), early_stop=Stability(metric='theta', mode='passive'))
 ]   
 
 
@@ -192,14 +192,14 @@ def test_regression_early_stop(get_regression_data_split, get_regression_data_fe
 #                              TEST LEARNING RATES                            #
 # --------------------------------------------------------------------------  #
 scenarios = [
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(), learning_rate=Constant(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), learning_rate=TimeDecay(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), learning_rate=SqrtTimeDecay(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), learning_rate=ExponentialDecay(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(), learning_rate=PolynomialDecay(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), learning_rate=ExponentialSchedule(), epochs=3000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), learning_rate=PowerSchedule(), epochs=3000),    
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), learning_rate=BottouSchedule(), epochs=3000)
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), schedule=TimeDecay(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), schedule=SqrtTimeDecay(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), schedule=ExponentialDecay(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(), schedule=PolynomialDecay(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), schedule=ExponentialSchedule(), epochs=3000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), schedule=PowerSchedule(), epochs=3000),    
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), schedule=BottouSchedule(), epochs=3000)
 ]        
 @mark.regression
 @mark.regression_learning_rates
@@ -215,7 +215,7 @@ def test_regression_learning_rates_II(get_regression_data_split, get_regression_
         est.fit(X_train, y_train)            
         score = est.score(X_test, y_test)
         learning_rate = est.learning_rate.__class__.__name__
-        if learning_rate != 'Constant':
+        if est.schedule:
             msg = "Learning rate decay didn't work for " + learning_rate
             l0 = est.blackbox_.epoch_log.get('learning_rate')[0]
             l9 = est.blackbox_.epoch_log.get('learning_rate')[-1]
@@ -231,7 +231,7 @@ scenarios_sgd = [
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), early_stop=Stability(metric='val_score'), batch_size=1),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), early_stop=Stability(metric='train_score'), batch_size=1),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), early_stop=Stability(metric='gradient'), batch_size=1),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), learning_rate=BottouSchedule(), batch_size=1)    
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), schedule=BottouSchedule(), batch_size=1)    
 ]   
 
 
@@ -254,8 +254,8 @@ scenarios_MBGD = [
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(),early_stop=Stability(epsilon=0.0001, patience=100), batch_size=64, epochs=2000),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1()), early_stop=Stability(metric='val_score'), batch_size=64),
     GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), early_stop=Stability(metric='train_score'), batch_size=64),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), learning_rate=BottouSchedule(), early_stop=Stability(metric='val_cost'), batch_size=64, epochs=2000),
-    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), learning_rate=BottouSchedule(), batch_size=64)    
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L1_L2()), schedule=BottouSchedule(), early_stop=Stability(metric='val_cost'), batch_size=64, epochs=2000),
+    GradientDescentRegressor(task=LinearRegression(),objective=MSE(regularizer=L2()), schedule=BottouSchedule(), batch_size=64)    
 ]   
 
 

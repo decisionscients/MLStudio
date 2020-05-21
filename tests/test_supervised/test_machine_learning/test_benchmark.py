@@ -30,7 +30,7 @@ from pytest import mark
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.callbacks.debugging import GradientCheck
 from mlstudio.supervised.callbacks.early_stop import Stability
-from mlstudio.supervised.callbacks.learning_rate import Constant, TimeDecay, SqrtTimeDecay
+from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, PowerSchedule
 from mlstudio.supervised.callbacks.learning_rate import BottouSchedule
@@ -44,14 +44,14 @@ from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 #                             GRADIENT CHECK                                  #
 # --------------------------------------------------------------------------  #
 scenarios = [
-    GradientDescent(objective=Adjiman(), learning_rate=ExponentialDecay(eta0=0.0001), gradient_check=GradientCheck()),
-    GradientDescent(objective=BartelsConn(), learning_rate=ExponentialDecay(eta0=0.0001),gradient_check=GradientCheck()),
-    GradientDescent(objective=SumSquares(), learning_rate=ExponentialDecay(eta0=0.0001), gradient_check=GradientCheck()),
-    GradientDescent(objective=ThreeHumpCamel(), learning_rate=ExponentialDecay(eta0=0.0001), gradient_check=GradientCheck()),
-    GradientDescent(objective=Himmelblau(), learning_rate=ExponentialDecay(eta0=0.0001), gradient_check=GradientCheck()),
-    GradientDescent(objective=Leon(),learning_rate=ExponentialDecay(eta0=0.0001), gradient_check=GradientCheck()),
-    GradientDescent(objective=Rosenbrock(), learning_rate=ExponentialDecay(eta0=0.0001), gradient_check=GradientCheck()),
-    GradientDescent(objective=StyblinskiTank(), learning_rate=ExponentialDecay(eta0=0.0001), gradient_check=GradientCheck())
+    GradientDescent(objective=Adjiman(), learning_rate=ExponentialDecay(), gradient_check=GradientCheck()),
+    GradientDescent(objective=BartelsConn(), learning_rate=ExponentialDecay(),gradient_check=GradientCheck()),
+    GradientDescent(objective=SumSquares(), learning_rate=ExponentialDecay(), gradient_check=GradientCheck()),
+    GradientDescent(objective=ThreeHumpCamel(), learning_rate=ExponentialDecay(), gradient_check=GradientCheck()),
+    GradientDescent(objective=Himmelblau(), learning_rate=ExponentialDecay(), gradient_check=GradientCheck()),
+    GradientDescent(objective=Leon(),learning_rate=ExponentialDecay(), gradient_check=GradientCheck()),
+    GradientDescent(objective=Rosenbrock(), learning_rate=ExponentialDecay(), gradient_check=GradientCheck()),
+    GradientDescent(objective=StyblinskiTank(), learning_rate=ExponentialDecay(), gradient_check=GradientCheck())
     
 ]
 
@@ -61,8 +61,7 @@ def test_benchmark_gradients():
     print("\n")
     for est in scenarios:
         est.fit()    
-        msg = "Fit of {o} complete.".format(o=est.objective.name)        
+        msg = est.optimizer.name + ' on the ' +  est.objective.name + ' function converged to ' + str(est.theta_) +\
+            '.    True minimum: ' + str(est.objective.minimum)
         print(msg)
-        # msg = est.objective.name + ' failed convergence. True minimum: {t}.   Empirical minimum: {e}.'.\
-        #     format(t=str(est.objective.minimum), e=str(est.theta_)) 
-        # assert np.allclose(est.objective.minimum, est.theta_, rtol=1e-3, atol=1e-5), msg
+        
