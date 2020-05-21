@@ -267,7 +267,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         optimizer_title = ""
 
         if regularizer != "Nill":
-            regularizer_title = " (" + optimizer_title + " Regularization) "
+            regularizer_title = " (" + regularizer + " Regularization) "
 
         if optimizer != "Standard":
             optimizer_title = " (" + optimizer_title + " Optimization) "
