@@ -24,8 +24,6 @@ import math
 import numpy as np
 from sklearn.base import BaseEstimator
 
-from mlstudio.utils.data_manager import decode
-
 class Scorer(ABC, BaseEstimator):
     """Abstract base class for all metrics."""
 
@@ -322,9 +320,4 @@ class Accuracy(ClassificationScorer):
     def __call__(self, y, y_pred):
         """Computes accuracy as correct over total."""
         # If scoring multinomial logistical regression with one-hot vectors,
-        # convert them back to 1d integers.
-        if len(y.shape) > 1:
-            y = decode(y)
-        if len(y_pred.shape) > 1:
-            y_pred = decode(y_pred)
         return np.sum(np.equal(y,y_pred)) / y.shape[0]

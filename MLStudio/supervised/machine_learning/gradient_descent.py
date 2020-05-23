@@ -29,9 +29,6 @@ import pandas as pd
 from scipy import sparse
 from sklearn.base import BaseEstimator
 from sklearn.base import RegressorMixin, ClassifierMixin
-from sklearn.utils.validation import check_array, check_X_y, check_is_fitted
-from sklearn.utils.testing import ignore_warnings
-from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 
 from mlstudio.supervised.core.tasks import LinearRegression, LogisticRegression
 from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
@@ -47,6 +44,9 @@ from mlstudio.supervised.callbacks.early_stop import Stability
 from mlstudio.supervised.callbacks.monitor import BlackBox, Progress
 from mlstudio.supervised.callbacks.learning_rate import LearningRateSchedule
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
+from mlstudio.utils.data_manager import add_bias_term, encode_labels, one_hot_encode
+from mlstudio.utils.data_manager import RegressionDataProcessor, ClassificationDataProcessor
+from mlstudio.utils.validation import check_X, check_X_y, check_is_fitted
 from mlstudio.utils.observers import Performance
 
 # =========================================================================== #
@@ -54,16 +54,16 @@ from mlstudio.utils.observers import Performance
 # =========================================================================== #        
 class GradientDescent(BaseEstimator):
     """Performs pure optimization of a 2d objective function."""
-    def __init__(self, optimizer=Classic(), objective=Adjiman(),
-                 learning_rate=0.01, theta_init=None,  epochs=1000, 
-                 schedule=None, early_stop=None, verbose=False, checkpoint=100,  
+    def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
+                 optimizer=Classic(), objective=MSE(), schedule=None, 
+                 early_stop=None, verbose=False, checkpoint=100, 
                  random_state=None, gradient_check=None):
 
+        self.learning_rate = learning_rate
+        self.epochs = epochs
+        self.theta_init = theta_init
         self.optimizer = optimizer
         self.objective  = objective
-        self.learning_rate = learning_rate
-        self.theta_init = theta_init
-        self.epochs = epochs
         self.schedule = schedule
         self.early_stop = early_stop
         self.verbose = verbose
@@ -136,10 +136,8 @@ class GradientDescent(BaseEstimator):
             self.gradient_check else self.gradient_check
         self._schedule = copy.deepcopy(self.schedule) if \
             self.schedule else self.schedule            
-        # Parameters that will be updated during training
-        self._eta = copy.copy(self.learning_rate)
-
-    def _compile(self):
+        
+    def _compile(self, log=None):
         """Initializes all callbacks."""
         # Copy mutable classes and parameters that will be modified during
         # training. 
@@ -188,12 +186,12 @@ class GradientDescent(BaseEstimator):
         """Performs initializations required at the beginning of training."""
         self._epoch = 0
         self._batch = 0        
+        self._eta = copy.copy(self.learning_rate)
         self._last_state = False
         self._converged = False
         self._stalled = False
-        self.is_fitted_ = False          
         self.critical_points_ = []
-        self._compile()              
+        self._compile(log)              
         self._init_weights()            
         self._cbks.on_train_begin(log) 
 
@@ -203,7 +201,6 @@ class GradientDescent(BaseEstimator):
         self.intercept_ = self.theta_[0]
         self.coef_ = self.theta_[1:]
         self.n_iter_ = self._epoch
-        self.is_fitted_ = True          
 
     def _begin_epoch(self, log=None):
         """Runs 'begin_epoch' methods on all callbacks."""
@@ -258,18 +255,18 @@ class GradientDescent(BaseEstimator):
 class GradientDescentEstimator(ABC, GradientDescent):
     """Base class gradient descent estimator."""
 
-    def __init__(self, task=LinearRegression(), optimizer=Classic(), 
-                 objective=MSE(), learning_rate=0.01, batch_size=None, 
-                 theta_init=None,  epochs=1000, schedule=None,
-                 scorer=R2(), early_stop=None, verbose=False, 
-                 checkpoint=100, random_state=None, gradient_check=None):
+    def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
+                 optimizer=Classic(), objective=MSE(), batch_size=None, 
+                 val_size=0.3, schedule=None, scorer=R2(), early_stop=None, 
+                 verbose=False, checkpoint=100, random_state=None, 
+                 gradient_check=None):
                  
         super(GradientDescentEstimator, self).__init__(
-            optimizer = optimizer,
-            objective = objective,
-            learning_rate = learning_rate,
-            theta_init = theta_init,
+            learning_rate = learning_rate,      
             epochs = epochs,
+            theta_init = theta_init,
+            optimizer = optimizer,
+            objective = objective,                                          
             schedule=schedule,
             early_stop = early_stop,
             verbose = verbose,
@@ -277,8 +274,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
             random_state = random_state,
             gradient_check = gradient_check
         )
-
-        self.task = task
+        self.val_size = val_size        
         self.batch_size = batch_size
         self.scorer = scorer
 # --------------------------------------------------------------------------- #
@@ -293,6 +289,10 @@ class GradientDescentEstimator(ABC, GradientDescent):
         else:
             variant = 'Minibatch Gradient Descent'
         return variant
+
+    @property
+    def task(self):
+        return self._task
 
     @property
     def description(self):
@@ -317,7 +317,6 @@ class GradientDescentEstimator(ABC, GradientDescent):
     def _copy_mutable_parameters(self):
         """Copies mutable parameters for sklearn compliance."""
         super(GradientDescentEstimator, self)._copy_mutable_parameters()
-        self._task = copy.deepcopy(self.task)
         self._scorer = copy.deepcopy(self.scorer)
 # --------------------------------------------------------------------------- #
 #                            INITIALIZATION                                   #
@@ -329,69 +328,10 @@ class GradientDescentEstimator(ABC, GradientDescent):
 # --------------------------------------------------------------------------- #
 #                             DATA PREPARATION                                #
 # --------------------------------------------------------------------------- #
-    def _handle_no_validation_data(self):
-        """Issues warning if validation set could not be created due to training set size."""        
-        if self.X_val_ is None:            
-            if 'val' in self._early_stop.metric:
-                self._early_stop.metric = "train_cost"         
-                warnings.warn("Validation set could not be created. Training set \
-                    only has {s} observations. Changing cross-validation metric \
-                        to 'train_cost'.\
-                        ".format(s=str(self.X_train_.shape[0])), UserWarning)        
-            else:
-                warnings.warn("Validation set could not be created. Training set \
-                    only has {s} observations.".format(s=str(self.X_train_.shape[0])), UserWarning)     
-
-
+    @abstractmethod
     def _prepare_training_data(self, X, y):
         """Prepares X and y data for training."""
-        self.X_train_ = self.X_val_ = self.y_train_ = self.y_val_ = None
-        # Validate inputs
-        self.X_train_, self.y_train_ = check_X_y(X, y, accept_sparse=['csr'], 
-                                                 accept_large_sparse=True,
-                                                 estimator=self)
-        # Add a column of ones to create the X design matrix                                         
-        if sparse.issparse(self.X_train_):         
-            # If COO matrix, convert to CSR
-            if sparse.isspmatrix_coo(self.X_train_):
-                self.X_train_ = self.X_train_.tocsr()                        
-            ones = np.ones((self.X_train_.shape[0],1))
-            bias_term = sparse.csr_matrix(ones, dtype=float)
-            self.X_train_ = sparse.hstack((bias_term, self.X_train_))
-        else:
-            self.X_train_ = np.insert(self.X_train_, 0, 1.0, axis=1)
-
-        # If y is COO convert to CSR
-        if sparse.isspmatrix_coo(self.y_train_):
-            self.y_train_ = self.y_train_.tocsr()
-
-        self.n_training_observations_ = self.X_train_.shape[0]      
-        self.n_features_ = self.X_train_.shape[1]      
-
-    def _prepare_test_data(self, X, y=None):
-        """Prepares test data for prediction and scoring."""
-        X = check_array(X, accept_sparse=['csr'], 
-                           accept_large_sparse=True,
-                           estimator=self)
-        # Add a column of ones to create the X design matrix
-        if sparse.issparse(X):         
-        # If COO matrix, convert to CSR
-            if sparse.isspmatrix_coo(X):
-                X = X.tocsr()            
-            # Add bias term 
-            ones = np.ones((X.shape[0],1))
-            bias_term = sparse.csr_matrix(ones, dtype=float)
-            X = sparse.hstack((bias_term, X))
-        else:
-            # Add bias term
-            X = np.insert(X, 0, 1.0, axis=1)      
-
-        # If y is COO convert to CSR
-        if y is not None: 
-            if sparse.isspmatrix_coo(y):
-                y = y.tocsr()                
-        
-        return X, y 
+        pass
 
 
 # --------------------------------------------------------------------------- #
@@ -405,10 +345,10 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self._last_state = False
         self._converged = False
         self._stalled = False
-        self.is_fitted_ = False           
+        self._eta = copy.copy(self.learning_rate)
         self.critical_points_ = []                     
-        self._compile()      
-        self._prepare_training_data(log.get("X"),log.get("y"))
+        self._compile(log)              
+        self._prepare_training_data(log.get("X"),log.get("y"))        
         self._init_weights()            
         self._cbks.on_train_begin(log)        
 
@@ -449,9 +389,10 @@ class GradientDescentEstimator(ABC, GradientDescent):
         y_pred = self._task.predict(self.theta_, self.X_train_)
         log['train_score'] = self._scorer(self.y_train_orig_, y_pred)
 
-        # If early stop object is provided, get validation cost and score
-        if self._early_stop:
-            if self._early_stop.val_size and self.X_val_.shape[0] > 0:
+        # Compute validation error and score if a validation set has been 
+        # designated.
+        if hasattr(self, 'X_val_'):
+            if self.X_val_.shape[0] > 0:
                 y_out_val = self._task.compute_output(self.theta_, self.X_val_)
                 log['val_cost'] = self._objective(self.theta_, self.y_val_, y_out_val)        
                 y_pred_val = self._task.predict(self.theta_, self.X_val_)
@@ -529,13 +470,14 @@ class GradientDescentEstimator(ABC, GradientDescent):
         y_pred : prediction
         """
         check_is_fitted(self)
-        X, _ = self._prepare_test_data(X)
+        X = check_X(X)
+        X = add_bias_term(X)
         return self._task.predict(self.theta_, X)
     
     def _score(self, X, y):
-        """Calculates score in training and testing."""
-
-        y_pred = self.predict(X)
+        """Calculates scores during training."""
+        # Called during training. Assumes data has valid format. 
+        y_pred = self._task.predict(self.theta_, X)
         return self._scorer(y, y_pred)
     
     def score(self, X, y):
@@ -546,7 +488,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         X : array-like of shape (n_samples, n_features)
             The input data
 
-        y : array_like of shape (n_samples,) or (n_samples, n_classes)
+        y : array_like of shape (n_samples,) 
             The target variable.
 
         Returns
@@ -554,7 +496,8 @@ class GradientDescentEstimator(ABC, GradientDescent):
         score based upon the scorer object.
         
         """        
-        return self._score(X, y)
+        y_pred = self.predict(X)        
+        return self._scorer(y, y_pred)
 
     def summary(self, features=None):
         observer = Performance()
@@ -566,22 +509,21 @@ class GradientDescentEstimator(ABC, GradientDescent):
 class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
     """Gradient descent estimator for regression."""
 
-    def __init__(self, task=LinearRegression(), optimizer=Classic(), 
-                 objective=MSE(),learning_rate=0.01, 
-                 batch_size=None, theta_init=None,  epochs=1000, 
-                 schedule=None, scorer=R2(), early_stop=None, 
+    def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
+                 optimizer=Classic(), objective=MSE(), batch_size=None, 
+                 val_size=0.3, schedule=None, scorer=R2(), early_stop=None, 
                  verbose=False, checkpoint=100, random_state=None, 
                  gradient_check=None):
         
         super(GradientDescentRegressor, self).__init__(\
-            task=task,
-            optimizer = optimizer,
-            objective = objective,
-            learning_rate = learning_rate,        
-            batch_size = batch_size,
-            theta_init = theta_init,
-            schedule=schedule,
+            learning_rate = learning_rate,
             epochs = epochs,        
+            theta_init = theta_init,
+            optimizer = optimizer,
+            objective = objective,        
+            batch_size = batch_size,
+            val_size = val_size,
+            schedule=schedule,
             scorer = scorer,
             early_stop = early_stop,
             verbose = verbose,
@@ -590,21 +532,19 @@ class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
             gradient_check = gradient_check   
         )
 
+    def _compile(self, log=None):
+        """Compiles required objects."""
+        super(GradientDescentRegressor, self)._compile(log)        
+        self._task = LinearRegression()        
+
     def _prepare_training_data(self, X, y):
         """Creates the X design matrix and saves data as attributes."""
-        super(GradientDescentRegressor, self)._prepare_training_data(X,y)
-        # If early stopping, set aside a proportion of the data for the validation set    
-        if self._early_stop:            
-            if self._early_stop.val_size:                
-                self.X_train_, self.X_val_, self.y_train_, self.y_val_ = \
-                    data_split(self.X_train_, self.y_train_, stratify=False,
-                        test_size=self._early_stop.val_size, 
-                        random_state=self.random_state)                   
-                if self.X_val_ is None:
-                    self._handle_no_validation_data()                                    
-        
-        self.y_train_orig_ = self.y_train_
-        self.y_val_orig_ = self.y_val_        
+        processor = RegressionDataProcessor(val_size=self.val_size, 
+                                            random_state=self.random_state)
+        data = processor.fit_transform(X, y)
+        # Set attributes from data.
+        for k, v in data.items():
+            setattr(self, k, v)
 
     def _init_weights(self):
         """Initializes parameters."""
@@ -622,21 +562,20 @@ class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
 class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
     """Gradient descent estimator for classification."""
 
-    def __init__(self, task=LogisticRegression(), optimizer=Classic(), 
-                 objective=CrossEntropy(), learning_rate=0.01, 
-                 batch_size=None, theta_init=None,  epochs=1000, 
-                 schedule=None, scorer=Accuracy(), early_stop=None, 
-                 verbose=False, checkpoint=100,  random_state=None, 
+    def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
+                 optimizer=Classic(), objective=CrossEntropy(), batch_size=None, 
+                 val_size=0.3, schedule=None, scorer=Accuracy(), early_stop=None, 
+                 verbose=False, checkpoint=100, random_state=None, 
                  gradient_check=None):
         
-        super(GradientDescentClassifier, self).__init__(
-            task=task,
-            optimizer = optimizer,
-            objective = objective,
-            learning_rate = learning_rate,        
-            batch_size = batch_size,
-            theta_init = theta_init,
+        super(GradientDescentClassifier, self).__init__(\
+            learning_rate = learning_rate,
             epochs = epochs,        
+            theta_init = theta_init,
+            optimizer = optimizer,
+            objective = objective,        
+            batch_size = batch_size,
+            val_size = val_size,
             schedule=schedule,
             scorer = scorer,
             early_stop = early_stop,
@@ -646,50 +585,24 @@ class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
             gradient_check = gradient_check   
         )
 
-    def _prepare_training_data(self, X, y):
-        """Prepares data for binary or multiclass classification."""
-        super(GradientDescentClassifier, self)._prepare_training_data(X,y)            
-        self.classes_ = np.unique(self.y_train_)
-        self.n_classes_ = len(self.classes_)
 
-        self._binarizer = LabelBinarizer()
-        self._encoder = LabelEncoder()
-    
-        if self._early_stop:            
-            if self._early_stop.val_size:                
-                self.X_train_, self.X_val_, self.y_train_, self.y_val_ = \
-                    data_split(X, y, stratify=True,
-                    test_size=self._early_stop.val_size, random_state=self.random_state)
-
-                if self.X_val_ is None:
-                    self._handle_no_validation_data()
-                    self.y_train_ = self._encoder.fit_transform(self.y_train_)                    
-                    self.y_train_orig_ = self.y_train_
-                    if self.n_classes_ > 2:
-                        self.y_train_ = self._binarizer.fit_transform(self.y_train_)
-
-                else:
-                    self.y_train_ = self._encoder.fit_transform(self.y_train_)                    
-                    self.y_val_ = self._encoder.transform(self.y_val_)
-                    self.y_train_orig_ = self.y_train_
-                    self.y_val_orig_ = self.y_val_
-                    if self.n_classes_ > 2:
-                        self.y_train_ = self._binarizer.fit_transform(self.y_train_)
-                        self.y_val_ = self._binarizer.transform(self.y_val_)                    
+    def _compile(self, log=None):
+        """Compiles required objects."""
+        super(GradientDescentClassifier, self)._compile(log)        
+        y = log.get('y')
+        if np.ndim(y) == 2 or len(np.unique(y)==2):
+            self._task = LogisticRegression()
         else:
-            self.y_train_ = self._encoder.fit_transform(self.y_train_)
-            self.y_train_orig_ = self.y_train_            
-            if self.n_classes_ > 2:
-                self.y_train_ = self._binarizer.fit_transform(self.y_train_)    
+            self._task = MultinomialLogisticRegression()
 
-    def _prepare_test_data(self, X, y=None):
-        """Prepares test data for prediction and scoring."""
-        X, y = super(GradientDescentClassifier, self)._prepare_test_data(X, y)
-        y = self._encoder.transform(y)
-        if self.n_classes_ > 2:
-            y = self._binarizer.transform(y)
-        return X, y
-                
+    def _prepare_training_data(self, X, y):
+        """Creates the X design matrix and saves data as attributes."""
+        processor = ClassificationDataProcessor(val_size=self.val_size, 
+                                            random_state=self.random_state)
+        data = processor.fit_transform(X, y)
+        # Set attributes from data.
+        for k, v in data.items():
+            setattr(self, k, v)                
         
     def _init_weights_binary_classification(self):
         """Initializes weights for binary classification."""

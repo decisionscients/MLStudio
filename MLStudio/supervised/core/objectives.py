@@ -227,7 +227,7 @@ class CrossEntropy(Cost):
         """
         n_samples = X.shape[0]
         dZ = y_out-y
-        dW = float(1./n_samples) * X.dot(dZ)
+        dW = float(1./n_samples) * (dZ).dot(X)
         dW += self.regularizer.gradient(theta) / n_samples        
         # Check scale of gradient if requested
         if self.gradient_scaler:

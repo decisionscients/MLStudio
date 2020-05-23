@@ -63,6 +63,9 @@ class LinearRegression(Task):
 class LogisticRegression(Task):
     """Defines the logistic regression task."""
 
+    def __init__(self):
+        self.sigmoid = Sigmoid()
+
     @property
     def name(self):
         return "Logistic Regression"    
@@ -70,7 +73,7 @@ class LogisticRegression(Task):
     def compute_output(self, theta, X):
         """Computes logistic regression output."""        
         z = X.dot(theta)
-        return self._sigmoid(z)
+        return self.sigmoid(z)
 
     def predict(self, theta, X):
         o = self.compute_output(theta, X)        
@@ -81,6 +84,9 @@ class LogisticRegression(Task):
 class MultinomialLogisticRegression(Task):
     """Defines the multinomial logistic regression task."""
 
+    def __init__(self):
+        self.softmax = Softmax()
+
     @property
     def name(self):
         return "Multinomial Logistic Regression"    
@@ -88,7 +94,7 @@ class MultinomialLogisticRegression(Task):
     def compute_output(self, theta, X):
         """Computes multinomial logistic regression output."""        
         z = X.dot(theta)
-        return self._softmax(z)        
+        return self.softmax(z)        
 
     def predict(self, theta, X):
         o = self.compute_output(theta, X)        

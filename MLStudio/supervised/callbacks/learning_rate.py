@@ -134,7 +134,7 @@ class TimeDecay(LearningRateSchedule):
 
     """
 
-    def __init__(self, decay_factor=1, freq='epoch'):        
+    def __init__(self, decay_factor=.005, freq='epoch'):        
         super(TimeDecay, self).__init__(
             decay_factor=decay_factor,
             freq=freq)              
@@ -158,7 +158,7 @@ class SqrtTimeDecay(LearningRateSchedule):
         The unit of time associated with a single iteration. 
 
     """
-    def __init__(self, decay_factor=1, freq='epoch'):        
+    def __init__(self, decay_factor=.0005, freq='epoch'):        
         super(SqrtTimeDecay, self).__init__(
             decay_factor=decay_factor,
             freq=freq)              
@@ -183,7 +183,7 @@ class ExponentialDecay(LearningRateSchedule):
         The unit of time associated with a single iteration. 
 
     """
-    def __init__(self, decay_factor=1, freq='epoch'):        
+    def __init__(self, decay_factor=.002, freq='epoch'):        
         super(ExponentialDecay, self).__init__(
             decay_factor=decay_factor,
             freq=freq)   
@@ -236,7 +236,7 @@ class ExponentialLearningRate(LearningRateSchedule):
 
     """
 
-    def __init__(self, decay_factor=1.0, freq='epoch'):   
+    def __init__(self, decay_factor=.005, freq='epoch'):   
         super(ExponentialLearningRate, self).__init__(
             decay_factor=decay_factor,
             freq=freq
@@ -261,7 +261,7 @@ class ExponentialSchedule(LearningRateSchedule):
 
     """
 
-    def __init__(self, decay_factor=1.0, decay_steps=1, freq='epoch'):   
+    def __init__(self, decay_factor=0.0005, decay_steps=100, freq='epoch'):   
         super(ExponentialSchedule, self).__init__(
             decay_factor=decay_factor,
             freq=freq

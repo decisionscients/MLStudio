@@ -70,9 +70,6 @@ class Stability(EarlyStop):
         'theta': The parameters of the model
         'gradient': The gradient of the objective function w.r.t. theta
 
-    val_size : float
-        The proportion of the dataset to allocate to validation set.        
-
     epsilon : float, optional (default=0.001)
         The factor by which performance is considered to have improved. For 
         instance, a value of 0.01 means that performance must have improved
@@ -87,11 +84,10 @@ class Stability(EarlyStop):
         or to just indicate that training has stalled.
     """
 
-    def __init__(self, metric='val_cost', val_size=0.3, epsilon=1e-1, patience=100, mode="active"):
+    def __init__(self, metric='val_cost', epsilon=1e-1, patience=100, mode="active"):
         super(Stability, self).__init__()
         self.name = "Stability"
         self.metric = metric
-        self.val_size = val_size
         self.epsilon = epsilon
         self.patience = patience
         self.mode = mode
@@ -148,48 +144,3 @@ class Stability(EarlyStop):
             self.model.stalled = False
             self.converged = False
 
-# --------------------------------------------------------------------------- #
-class BCN1(EarlyStop):
-    """Stopping Criteria #1: Based upon Bottou-Curtis-Nocedal Functions.
-
-    Let :math:'\epsilon' > 0. Let :math: '{T_j}' be a sequence of positive-
-    valued, strictly increasing, finite stopping times with respect to
-    :math: '{F_k}'. Then, the SGD iterates are stopped at iterate 
-    :math: 'T_j' where:
-
-        :math: 'J = \text{min}\bigg\{j \ge 1: \lVert F(\Beta T_j)\rVert_2\le\epsilon\bigg}.'
-
-    Parameters
-    ----------
-    val_size : float (default=0.3)
-        The proportion of training set to allocate to the validation set.
-
-    epsilon : float Default 0.0001
-        The lower bound allowed for the percent change in the gradient norm.
-
-    Reference: https://arxiv.org/abs/2004.00475
-
-    """
-
-    def __init__(self, n_size = 100, val_size = 0.3, epsilon=0.01):        
-        super(BCN1, self).__init__()
-        self.name = "BCN1"                 
-        self.val_size = val_size
-        self.epsilon = epsilon     
-
-    def on_train_begin(self, logs=None):
-        super(BCN1, self).on_train_begin(logs)
-        j 
-
-    def on_epoch_end(self, epoch, logs=None):        
-        """Stops the epoch the L2 norm of the gradient drops below epsilon"""
-        super(BCN1, self).on_epoch_end(epoch, logs)
-        batch = logs.get('batch')
-        norm_g = np.linalg.norm(logs.get('gradient')) 
-        if norm_g <= self.epsilon and batch >= 1:
-            J = np.min(batch, norm_g)
-            if J == batch:
-                self.model.converged = True
-   
-
-                self.model.converged = True

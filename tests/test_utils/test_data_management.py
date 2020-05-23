@@ -27,6 +27,57 @@ import scipy.sparse as sp
 
 from mlstudio.datasets import load_urls
 from mlstudio.utils.data_manager import MinMaxScaler, data_split, VectorScaler
+from mlstudio.utils.data_manager import encode_labels, add_bias_term
+from mlstudio.utils.validation import check_X_y, check_X, check_is_fitted, is_multilabel
+from mlstudio.utils.validation import is_multilabel
+
+# --------------------------------------------------------------------------  #
+#                       TEST DATA CHECKS AND PREP                             #
+# --------------------------------------------------------------------------  #
+@mark.utils
+@mark.data_manager
+@mark.data_checks
+@mark.encode_labels
+def test_encode_labels(get_data_management_data):
+    d = get_data_management_data
+    for k, y in d.items():
+        classes = np.unique(y)
+        n_classes = len(classes)
+        encoded_classes = np.arange(n_classes)
+        y_new = encode_labels(y)
+        y_new_classes = np.sort(np.unique(y_new))
+        msg = "Encoding of " + k + " didn't work."
+        assert np.array_equal(encoded_classes, y_new_classes), msg
+  
+# --------------------------------------------------------------------------  #
+@mark.utils
+@mark.data_manager
+@mark.data_checks
+@mark.is_one_hot
+def test_is_one_hot(get_data_management_data):
+    d = get_data_management_data
+    for k, y in d.items():        
+        msg = "Is one-hot of " + k + " didn't work."
+        if k == 'one_hot':
+            assert is_one_hot(y), msg
+        else:
+            assert not is_one_hot(y), msg
+
+# --------------------------------------------------------------------------  #
+@mark.utils
+@mark.data_manager
+@mark.data_checks
+@mark.is_multilabel
+def test_is_multilabel(get_data_management_data):
+    d = get_data_management_data
+    for k, y in d.items():        
+        msg = "Is multilabel of " + k + " didn't work."
+        if 'multilabel' in k:
+            assert is_multilabel(y), msg
+        else:
+            assert not is_multilabel(y), msg
+
+
 # --------------------------------------------------------------------------  #
 #                        TEST VECTOR SCALER                                   #
 # --------------------------------------------------------------------------  #  
@@ -56,9 +107,6 @@ def test_vector_scaler_clip():
         assert len(X_new[X_new < s[1]])==0, "Clipping didn't work"
         assert len(X_new[X_new > s[2]])==0, "Clipping didn't work"
 
-
-
-    
 
 # --------------------------------------------------------------------------  #
 #                       TEST MINMAX SCALER                                    #

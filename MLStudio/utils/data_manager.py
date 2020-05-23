@@ -20,23 +20,169 @@
 # ============================================================================ #
 #%%
 """Data manipulation functions."""
-
+from abc import ABC, abstractmethod
 from itertools import combinations_with_replacement
 from math import ceil, floor
+
 import numpy as np
 from numpy.random import RandomState
-from scipy.sparse import isspmatrix_coo
+from scipy.sparse import isspmatrix_coo, issparse, csr_matrix, hstack
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils import shuffle
-from sklearn.utils.validation import check_is_fitted
+from sklearn.preprocessing import LabelBinarizer, LabelEncoder
+
+from mlstudio.utils.validation import check_X, check_X_y
 
 import pandas as pd
+# --------------------------------------------------------------------------- #
+#                           DATA PREPARATION                                  #
+# --------------------------------------------------------------------------- #
+
+def one_hot_encode(y):
+    """One hot encodes a multiclass target variable of shape (n_samples,)"""
+    encoder = LabelBinarizer()
+    return encoder.fit_transform(y)
+
+def encode_labels(y):
+    """Encodes labels to have values from 0 to n_classes - 1
+    
+    Parameters
+    ----------
+    y : array shape (n_samples,)
+        Labels to encode
+
+    Returns
+    -------
+    y : Encoded labels with values from 0 to n_classes - 1
+    """
+    y = check_y_dim(y)
+    classes = np.sort(np.unique(y))
+    n_classes = len(classes)
+    binary_classes = np.arange(n_classes)
+    if np.array_equal(classes, binary_classes):
+        return y
+    else:
+        encoder = LabelEncoder()
+        return encoder.fit_transform(y)
+
+def add_bias_term(X):
+    """Adds a bias vector of ones to X."""
+    if issparse(X):
+        # If COO matrix, convert to CSR
+        if isspmatrix_coo(X):
+            X = x.tocsr()
+        ones = np.ones((X.shape[0],1))
+        bias_term = csr_matrix(ones, dtype=float)
+        X = hstack((bias_term, X))
+    else:
+        X = np.insert(X, 0, 1.0, axis=1)
+    return X
+
 
 # --------------------------------------------------------------------------- #
 #                               TRANSFORMERS                                  #
 # --------------------------------------------------------------------------- #
-class Normalize(TransformerMixin, BaseEstimator):
-    """Normalizes a vector to unit length.  
+class DataProcessor(ABC, BaseEstimator):
+    """Prepares data for training.
+    
+    Parameters
+    ----------
+    val_size : float (default = 0.3)
+        The proportion of data to be allocated to a validation set.
+
+    random_state : int or None (default = None)
+        The seed for pseudo randomization.
+    
+    """
+    def __init__(self, val_size=0.3, random_state=None):        
+        self.val_size = val_size
+        self.random_state = random_state
+
+    def fit(self, X, y=None):
+        """Returns self."""
+        return self
+
+    @abstractmethod
+    def transform(self, X, y=None):
+        """Processes data and returns a dictionary to the calling object.
+        
+        Parameters
+        ----------
+        X : array_like of shape (n_samples,n_features)
+            The matrix of inputs 
+
+        y : array_like of shape(n_samples,)
+            An array of target values.
+
+        Returns
+        -------
+        dict : Dictionary containing transformed data.           
+
+        """
+        pass
+
+    def fit_transform(self, X, y=None):
+        """Calls fit and transform."""
+        return self.fit(X, y).transform(X, y)        
+
+# --------------------------------------------------------------------------- #
+class RegressionDataProcessor(DataProcessor):
+    """Prepares data for regression."""
+
+    def transform(self, X, y):
+        """Prepares data for regression."""
+
+        X_train, y_train = check_X_y(X, y)
+        X_train = add_bias_term(X_train)
+        
+        d = {}
+        d['n_features_'] = X_train.shape[1]
+        d['X_train_'] = X_train
+        d['y_train_orig_'] = y_train
+        d['y_train_'] = y_train
+        if self.val_size:
+            X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
+                        stratify=False, test_size=self.val_size, 
+                        random_state=self.random_state)
+            d['X_train_'] = X_train
+            d['y_train_orig_'] = y_train
+            d['y_train_'] = y_train
+            d['X_val_'] = X_val
+            d['y_val_orig_'] = y_val
+            d['y_val_'] = y_val
+        return d
+
+# --------------------------------------------------------------------------- #
+class ClassificationDataProcessor(DataProcessor):
+    """Prepares data for classification."""
+
+    def transform(self, X, y):
+        """Prepares data for classification."""
+
+        X_train, y_train = check_X_y(X, y)
+        X_train = add_bias_term(X_train)
+        y_train = encode_labels(y_train)
+        d = {}
+        d['n_features_'] = X_train.shape[1]
+        d['n_classes_'] = len(np.unique(y_train))
+        d['X_train_'] = X_train
+        d['y_train_orig_'] = y_train
+        d['y_train_'] = one_hot_encode(y_train) if n_classes > 2 else y_train
+        if self.val_size:
+            X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
+                        stratify=True, test_size=self.val_size, 
+                        random_state=self.random_state)
+            d['X_train_'] = X_train
+            d['y_train_orig_'] = y_train
+            d['y_train_'] = one_hot_encode(y_train) if n_classes > 2 else y_train
+            d['X_val_'] = X_val
+            d['y_val_orig_'] = y_val
+            d['y_val_'] = one_hot_encode(y_val) if n_classes > 2 else y_val
+        return d                               
+
+# --------------------------------------------------------------------------- #
+class NormScaler(TransformerMixin, BaseEstimator):
+    """Scalers a vector to unit length.  
 
     Scaling a sample 'x' to 0-1 is calculated as:
 
@@ -332,7 +478,7 @@ class VectorScaler(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         """Fits the transformer to the data. """
         if self.method == "n":
-            self.normalizer_ = Normalize(clip_norm=self.clip_norm)        
+            self.normalizer_ = NormScaler(clip_norm=self.clip_norm)        
 
     def transform(self, X):
         """Transforms the data."""
@@ -589,10 +735,6 @@ def one_hot(x, n_classes=None, dtype='float32'):
     one_hot = np.zeros((x.shape[0], n_classes))
     one_hot[np.arange(x.shape[0]), x] = 1
     return one_hot
-
-def decode(x, axis=1):
-    """Convert probability distributions to integers."""     
-    return np.argmax(x, axis=axis)
 
 def todf(x, stub):
     """Converts nested array to dataframe."""

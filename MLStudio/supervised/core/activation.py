@@ -42,7 +42,7 @@ class Sigmoid(Activation):
     """Sigmoid activation function."""
 
     def __call__(self, x):
-        if x >= 0:            
+        if np.all(x >= 0):            
             return 1 / (1 + np.exp(-x))
         else:
             return np.exp(x) / (1 + np.exp(x))    

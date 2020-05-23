@@ -20,15 +20,38 @@
 # =========================================================================== #
 """Functions used to validate the state, parameters or data of an estimator."""
 import numpy as np
-
+import sklearn.utils.validation as skl
 # --------------------------------------------------------------------------  #
-def check_y(y):
-    """Returns the number of outputs."""
-    y = np.array(y) 
-    if y.ndim == 1:
-        return 1
-    else:
-        return y.shape[1]
+def check_X(X):
+    """Wraps sklearn's check array function."""
+    return skl.check_array(array=X, accept_sparse=['csr'], 
+                           accept_large_sparse=True)
+
+def check_X_y(X, y):
+    return skl.check_X_y(X, y, accept_sparse=['csr'],  
+                        accept_large_sparse=True)    
+
+def check_is_fitted(estimator):
+    skl.check_is_fitted(estimator)
+
+def is_one_hot(x):
+    """Returns true if a 2 dimensional matrix is in one-hot encoded format."""
+    if np.ndim(x) == 1:
+        return False
+    try:
+        return np.sum(x) / x.shape[0]  == 1
+    except:
+        return False
+
+def is_multilabel(y):
+    """Returns true if y is multilabel"""
+    y = np.asarray(y)
+    if np.ndim(y) == 1:
+        return False
+    if is_one_hot(y):
+        return False
+    if y.shape[1] > 1:
+        return True
 # --------------------------------------------------------------------------  #
 def validate_zero_to_one(p, left='open', right='open'):
     """Validates a parameter whose values should be [0,1]."""

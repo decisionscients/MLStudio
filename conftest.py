@@ -43,6 +43,69 @@ collect_ignore_glob = ["/test_visual/test_model*.py"]
 #                                  DATA                                        #
 # ============================================================================ #  
 @fixture(scope="session")
+def get_target_2d_vector():
+    y = np.array([0,1,1,0,1,0,1,0,0,0,1,0,1,1,0,1,0,1,0,0], ndmin=2).reshape(-1,1)
+    return y
+
+@fixture(scope="session")
+def get_binary_target_numeric():
+    y = np.array([0,1,1,0,1,0,1,0,0,0,1,0,1,1,0,1,0,1,0,0])
+    return y
+
+@fixture(scope="session")
+def get_binary_target_char():
+    y = np.array(["blue","green","green","blue","green","blue","green","blue","blue","blue","green","blue","green","green","blue","green","blue","green","blue","blue"])
+    return y
+
+@fixture(scope="session")
+def get_multiclass_target_num():
+    y = np.array([0,1,1,0,1,0,1,2,0,0,1,0,9,1,17,1,0,1,0,0])
+    return y    
+
+@fixture(scope="session")
+def get_multiclass_target_char():
+    y = np.array(["blue", "red", "green","green","blue","green","blue","green","blue","blue","blue","green","blue","green","green","blue","green","blue","green","blue","blue","blue","green"])
+    return y    
+
+@fixture(scope="session")
+def get_one_hot():
+    y = np.array([[0,0,0,1],
+             [0,0,1,0],
+             [0,1,0,0],
+             [1,0,0,0]])
+    return y
+
+@fixture(scope="session")
+def get_multilabel_numeric():
+    y = np.arange(0,100)
+    y = y.reshape(20,-1)
+    return y
+
+@fixture(scope="session")
+def get_multilabel_char():
+    labels = np.array(["red", "green", "blue", "orange"])
+    y = np.random.choice(a=labels, size=(20,5))
+    return y
+
+@fixture(scope="session")
+def get_data_management_data(get_target_2d_vector,
+                             get_binary_target_numeric,
+                             get_binary_target_char,
+                             get_multiclass_target_num,
+                             get_multiclass_target_char,
+                             get_one_hot,
+                             get_multilabel_numeric,
+                             get_multilabel_char):
+    d = {}
+    d['target_2d_vector'] = get_target_2d_vector
+    d['binary_target_numeric'] = get_binary_target_numeric
+    d['binary_target_char'] = get_binary_target_char
+    d['multiclass_target_num'] = get_multiclass_target_num
+    d['multiclass_target_char'] = get_multiclass_target_char
+    d['one_hot'] = get_one_hot
+    return d
+
+@fixture(scope="session")
 def get_regression_data():
     X, y = datasets.load_boston(return_X_y=True)
     scaler = StandardScaler()    
