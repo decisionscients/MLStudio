@@ -120,10 +120,10 @@ class SurfaceLine:
         # Subplots 1, Traces 1, 2 & 3: Gradient Descent Trajectories
         for name, model in models.items():
             fig.add_trace(
-                go.Scatter3d(x=model['theta_0'][:2], y=model['theta_1'][:2], z=model['cost'][:2],
+                go.Scatter3d(x=model['theta_0'][:1], y=model['theta_1'][:1], z=model['cost'][:1],
                             name=name, 
                             showlegend=False, 
-                            mode='lines', line=dict(color=model['color'], width=10)),
+                            mode='lines', line=dict(color=model['color'], width=5)),
                             row=1, col=1)            
 
         # ------------------------------------------------------------------  #
@@ -162,27 +162,27 @@ class SurfaceLine:
             dict(
                 name = f'{k+1}',
                 data = [                    
-                    go.Scatter3d(x=models[names[0]]['theta_0'][:k+2], 
-                                 y=models[names[0]]['theta_1'][:k+2], 
-                                 z=models[names[0]]['cost'][:k+2]),
-                    go.Scatter3d(x=models[names[1]]['theta_0'][:k+2], 
-                                 y=models[names[1]]['theta_1'][:k+2], 
-                                 z=models[names[1]]['cost'][:k+2]),                                 
-                    go.Scatter3d(x=models[names[2]]['theta_0'][:k+2], 
-                                 y=models[names[2]]['theta_1'][:k+2], 
-                                 z=models[names[2]]['cost'][:k+2]),                                                                  
+                    go.Scatter3d(x=models[names[0]]['theta_0'][:k+1], 
+                                 y=models[names[0]]['theta_1'][:k+1], 
+                                 z=models[names[0]]['cost'][:k+1]),
+                    go.Scatter3d(x=models[names[1]]['theta_0'][:k+1], 
+                                 y=models[names[1]]['theta_1'][:k+1], 
+                                 z=models[names[1]]['cost'][:k+1]),                                 
+                    go.Scatter3d(x=models[names[2]]['theta_0'][:k+1], 
+                                 y=models[names[2]]['theta_1'][:k+1], 
+                                 z=models[names[2]]['cost'][:k+1]),                                                                  
                     go.Scatter(x=xx, y=models[names[0]]['yy'][k]),
                     go.Scatter(x=xx, y=models[names[1]]['yy'][k]),
                     go.Scatter(x=xx, y=models[names[2]]['yy'][k])
                 ],
                 traces=[1,2,3,5,6,7])
-            ) for k in range(n_frames-2)]
+            ) for k in range(n_frames-1)]
 
         # Update the menus
         updatemenus = [dict(type='buttons',
                             buttons=[dict(label="Play",
                                           method="animate",
-                                          args=[[f'{k+1}' for k in range(n_frames-2)],
+                                          args=[[f'{k+1}' for k in range(n_frames-1)],
                                             dict(frame=dict(duration=1, redraw=True),
                                                  transition=dict(duration=1),
                                                  easing="linear",
@@ -200,7 +200,7 @@ class SurfaceLine:
                    'len': 0.9, 'x': 0.1, 'y': 0, 
                    'steps': [{'args': [[f'{k+1}'], {'frame': {'duration': 1, 'easing': 'linear', 'redraw': False},
                                       'transition': {'duration': 1, 'easing': 'linear'}}], 
-                       'label': k, 'method': 'animate'} for k in range(n_frames-2)       
+                       'label': k, 'method': 'animate'} for k in range(n_frames-1)       
                     ]}]
 
         fig.update(frames=frames)
