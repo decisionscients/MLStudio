@@ -31,6 +31,7 @@ from tabulate import tabulate
 
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.utils.print import Printer
+from mlstudio.utils.validation import validate_metric, validate_scorer
 from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
 #                          OBSERVER BASE CLASS                                #
@@ -48,10 +49,6 @@ class Observer(ABC, BaseEstimator):
 
     @abstractmethod
     def evaluate(self, logs=None):
-        pass
-
-    @abstractmethod
-    def report(self, estimator, features=None):
         pass
 
 # --------------------------------------------------------------------------- #
@@ -88,21 +85,17 @@ class Performance(Observer):
         stop training.    
     """
 
-    def __init__(self, metric='val_score', scorer=MSE(), epsilon=0.01, patience=5):        
+    def __init__(self, metric='cost', scorer=MSE(), epsilon=0.01, patience=5):        
         self.name = "Performance Observer"
         self.metric = metric        
         self.scorer = scorer
         self.epsilon = epsilon
         self.patience = patience
        
-    def _validate(self):
-        if self.metric not in ['train_cost', 'train_score', 'val_cost', 'val_score',
-                               'theta', 'gradient']:
-            msg = "{m} is an invalid metric. The valid metrics include : {v}".\
-                format(m=self.metric,
-                       v=str(['train_cost', 'train_score', 'val_cost', 'val_score', 'theta', 'gradient']))
-            raise ValueError(msg)
-        validate_zero_to_one(p = self.epsilon)       
+    def _validate(self):        
+        validate_metric(self.metric)
+        validate_scorer(self.scorer)
+        validate_zero_to_one(param=self.epsilon, param_name='epsilon')       
 
     def initialize(self, logs=None):        
         """Sets key variables at beginning of training.
@@ -118,12 +111,22 @@ class Performance(Observer):
         self.best_weights_ = None        
         # Instance variables
         self._iter_no_improvement = 0
-        self._better = None            
+        self._better = None   
+        self._stabilized = False   
+        # For 'score' and 'cost' metrics, we measure improvement by changes 
+        # in a specific direction. For 'gradient' and 'theta', we don't 
+        # care about the direction of the change in so much as we care about
+        # the magnitude of the change.
+        self._directional_metric = self.metric in ['score', 'cost']    
+        # Take a copy of the metric because we may change it by prepend it with
+        # 'train_' or 'val_'   
+        self._metric = copy.copy(self.metric) 
         
         logs = logs or {}
         self._validate()
-        # Obtain the 'better' function from the scorer.
-        # This is either np.less or np.greater        
+        # If 'score' is the metric, obtain the 'better' function from the scorer.
+        # Otherwise, the better function is np.less since we improve be reducing
+        # cost or the magnitudes of the parameters        
         if 'score' in self.metric:            
             self._better = self.scorer.better
         else:
@@ -138,26 +141,59 @@ class Performance(Observer):
                 c=str(current),
                 r=str(relative_change)))            
 
-    def _has_stalled(self, current):
+    def _evaluate_non_directional_change(self, current):
         """Returns true if the magnitude of the improvement is greater than epsilon."""
         relative_change = abs(current-self.best_performance_) / abs(self.best_performance_)
         return relative_change > self.epsilon
+
+    def _evaluate_directional_change(self, current):
+        """Returns true if the direction and magnitude of change indicates improvement"""
+        # Determine if change is in the right direction.
+        if self._better(current, self.best_performance_):
+            return self._evaluate_non_directional_change(current)
+        else:
+            return False
 
     def _process_improvement(self, current, logs):
         """Sets values of parameters and attributes if improved."""
         self._iter_no_improvement = 0
         self.best_performance_ = current
         self.best_weights_ = logs.get('theta')
-        self._stalled = False        
+        self._stabilized = False        
 
     def _process_no_improvement(self):
         """Sets values of parameters and attributes if no improved."""        
         self._iter_no_improvement += 1  
         if self._iter_no_improvement == self.patience:
-            self._stalled = True           
+            self._stabilized = True       
+
+    def _get_current_value(self, logs):
+        """Obtain the designated metric from the logs."""
+        try:
+            current = logs.get(self._metric)
+        except:
+            raise ValueError("{m} is not a valid metric for this optimization."\
+                .format(m=self._metric))      
+        if self._metric in ['gradient', 'theta']:
+            current = np.linalg.norm(current)  
+        return current
+
+    def _resolve_metric(self, logs):
+        """Prepends the metric to match the log if necessary."""
+        if self._metric in ['cost', 'score']:
+            if 'val' in logs.keys():  
+                self._metric = 'val_' + self._metric 
+            else:
+                self._metric = 'train_' + self._metric
+
+    def _handle_first_iteration(self, current, logs):
+        """First iteration processing."""
+        self._resolve_metric(logs)        
+        self._process_improvement(current, logs)
+
 
     def evaluate(self, epoch, logs=None):
-        """Determines whether performance is improving.
+        """Determines whether performance is improving or stabilized.
 
         Parameters
         ----------
@@ -174,99 +210,26 @@ class Performance(Observer):
 
         """        
         logs = logs or {}
-        # Obtain current cost or score if possible.
-        try:
-            current = logs.get(self.metric)
-        except:
-            raise ValueError("{m} is not a valid metric for this optimization."\
-                .format(m=self.metric))        
-
-        # If the metric is 'gradient' or 'theta', get the magnitude of the vector
-        if self.metric in ['gradient', 'theta']:
-            current = np.linalg.norm(current)        
-
+        # Obtain current performance
+        current = self._get_current_value(logs)
         # Handle first iteration
         if self.best_performance_ is None:
-            self._process_improvement(current, logs)
+            self._handle_first_iteration(current, logs)        
 
-        # Otherwise, if metric is negative i.e. R2, continue as if improved
-        elif current < 0:
-            self._process_improvement(current, logs)
-        # Otherwise...
-        else:                
-            # Evaluate if there has been an improvement
-            if self._better(current, self.best_performance_):
-                # Check if improvement is significant
-                if self._has_stalled(current):
+        # Otherwise, evaluate directional or non-directional performance
+        else:
+            if self._directional_metric:
+                if self._evaluate_directional_change(current):
                     self._process_improvement(current, logs)
                 else:
-                    self._process_no_improvement()                        
+                    self._process_no_improvement()
             else:
-                self._process_no_improvement()                       
-        return self._stalled       
-
-    def report(self, estimator, features=None):
-        """Summarizes statistics for model.
-
-        Parameters
-        ----------
-        estimator : an estimator object
-            An fitted estimator object.
-        """
-        history = estimator.blackbox_
-        # ----------------------------------------------------------------------- #
-        printer = Printer()
-        optimization_summary = {'Name': history.model.description,
-                                'Start': str(history.start),
-                                'End': str(history.end),
-                                'Duration': str(history.duration) + " seconds.",
-                                'Epochs': str(history.total_epochs),
-                                'Batches': str(history.total_batches)}
-        printer.print_dictionary(optimization_summary, "Optimization Summary")
-
-        # ----------------------------------------------------------------------- #
-        if history.model.early_stop:    
-            performance_summary = \
-                {'Final Training Loss': str(np.round(history.epoch_log.get('train_cost')[-1],4)),
-                'Final Training Score' : str(np.round(history.epoch_log.get('train_score')[-1],4))
-                    + " " + history.model.scorer.name,
-                'Final Validation Loss': str(np.round(history.epoch_log.get('val_cost')[-1],4)),
-                'Final Validation Score': str(np.round(history.epoch_log.get('val_score')[-1],4))
-                        + " " + history.model.scorer.name}
-        else:
-            performance_summary = \
-                {'Final Training Loss': str(np.round(history.epoch_log.get('train_cost')[-1],4)),
-                'Final Training Score' : str(np.round(history.epoch_log.get('train_score')[-1],4))
-                    + " " + history.model.scorer.name}
-
-        printer.print_dictionary(performance_summary, "Performance Summary")
-        
-        if estimator.critical_points_:
-            print("\n")
-            printer.print_title("Critical Points")
-            print(tabulate(estimator.critical_points_, headers="keys"))
-            print("\n")
-        # --------------------------------------------------------------------------- #
-        if features is None:
-            features = []
-            for i in np.arange(len(history.model.coef_)):
-                features.append("Feature_" + str(i))
-
-        theta = OrderedDict()
-        theta['Intercept'] = str(np.round(history.model.intercept_, 4))
-        for k, v in zip(features, history.model.coef_):
-            theta[k]=str(np.round(v,4))
-        printer.print_dictionary(theta, "Model Parameters")
-        # --------------------------------------------------------------------------- #
-        hyperparameters = OrderedDict()
-        def get_params(o):
-            params = o.get_params()
-            for k, v in params.items():
-                if isinstance(v, (str, bool, int, float)) or v is None:
-                    k = o.__class__.__name__ + '__' + k
-                    hyperparameters[k] = str(v)
+                if self._evaluate_non_directional_change(current):
+                    self._process_improvement(current, logs)
                 else:
-                    get_params(v)
-        get_params(history.model)
-        printer.print_dictionary(hyperparameters, "Model HyperParameters")
+                    self._process_no_improvement()                    
+
+        return self._stabilized       
+
+
 

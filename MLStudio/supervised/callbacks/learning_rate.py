@@ -25,6 +25,12 @@ import numpy as np
 
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.core.scorers import MSE
+from mlstudio.utils.validation import validate_bool, validate_early_stop
+from mlstudio.utils.validation import validate_gradient_check, validate_int
+from mlstudio.utils.validation import validate_learning_rate_schedule
+from mlstudio.utils.validation import validate_objective, validate_optimizer
+from mlstudio.utils.validation import validate_scorer, validate_string
+from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------  #
 class LearningRateSchedule(Callback):
     """Base class for learning rate schedules. 
@@ -42,8 +48,9 @@ class LearningRateSchedule(Callback):
 
     @abstractmethod
     def __init__(self, decay_factor=1, freq='epoch'):    
+        super(LearningRateSchedule, self).__init__()
         self.decay_factor = decay_factor
-        self.freq = freq            
+        self.freq = freq                    
 
     def _default_decay_factor(self):
         """Computes a default decay factor.
@@ -53,6 +60,12 @@ class LearningRateSchedule(Callback):
         
         """
         return self.model.eta / self.model.epochs
+
+    def _validate(self):
+        """Performs validation of hyperparameters."""
+        validate_zero_to_one(self.decay_factor, 'decay_factor')
+        validate_string(param=self.freq, param_name='freq', 
+                        valid_values=['epoch', 'batch'])
 
     @abstractmethod
     def _adjust_learning_rate(self, iteration, logs):
@@ -113,6 +126,12 @@ class StepDecay(LearningRateSchedule):
             decay_factor=decay_factor,
             freq=freq)              
         self.decay_steps = decay_steps
+
+    def _validate(self):
+        """Performs hyperparameter """
+        super(StepDecay, self)._validate(decay_factor=self.decay_factor, 
+                                         freq=self.freq)
+        validate_int(param=self.decay_steps, param_name='decay_steps', minimum=1)
 
     def _adjust_learning_rate(self, iteration, logs):
         self.model.eta = self._eta0 * np.power(self.decay_factor, math.floor((1+iteration)/self.decay_steps))
@@ -213,6 +232,12 @@ class PolynomialDecay(LearningRateSchedule):
         )
         self.power = power
 
+    def _validate(self):
+        """Performs hyperparameter """
+        validate_zero_to_one(self.power)        
+        validate_string(param=self.freq, param_name='freq', 
+                        valid_values=['epoch', 'batch'])     
+
     def _adjust_learning_rate(self, iteration, logs):
         decay = (1 - (iteration / float(self.model.epochs))) ** self.power                
         self.model.eta = self._eta0 * decay
@@ -268,6 +293,12 @@ class ExponentialSchedule(LearningRateSchedule):
         )    
         self.decay_steps = decay_steps
 
+    def _validate(self):
+        """Performs hyperparameter """
+        super(ExponentialSchedule, self)._validate(decay_factor=self.decay_factor,
+                                                   freq=self.freq)
+        validate_int(param=decay_steps, param_name='decay_steps')
+
     def _adjust_learning_rate(self, iteration, logs):
         self.model.eta = self._eta0 * np.power(self.decay_factor, \
             (iteration / self.decay_steps))
@@ -295,6 +326,13 @@ class PowerSchedule(LearningRateSchedule):
         self.power = power
         self.decay_steps = decay_steps
 
+    def _validate(self):
+        """Performs hyperparameter """
+        validate_zero_to_one(self.power)        
+        validate_int(param=decay_steps, param_name='decay_steps')
+        validate_string(param=self.freq, param_name='freq', 
+                        valid_values=['epoch', 'batch'])             
+
     def _adjust_learning_rate(self, iteration, logs):
         self.model.eta = self._eta0 / (1 + iteration/self.decay_steps)**self.power
 
@@ -306,7 +344,7 @@ class BottouSchedule(LearningRateSchedule):
 
     Parameters
     ----------
-    alpha : float (default=1)
+    alpha : float (default=0.01)
         The factor by which the learning rate is decayed
 
     """
@@ -364,25 +402,25 @@ class Performance(LearningRateSchedule):
 
     """
 
-    def __init__(self, decay_factor=0.5, metric='val_cost', scorer=MSE(), min_lr=0,
+    def __init__(self, decay_factor=0.5, metric='cost', min_lr=0,
                  epsilon=1e-3, patience=5, freq='epoch'):
         super(Performance, self).__init__()
         self.name = "Performance Learning Rate Schedule"
         self.decay_factor = decay_factor
-        self.metric = metric
-        self.scorer = scorer
+        self.metric = metric        
         self.epsilon = epsilon
         self.patience = patience
         self.freq = freq       
 
     def _validate(self):
-        if self.metric not in ['train_cost', 'train_score', 'val_cost', 'val_score',
-                               'theta', 'gradient']:
-            msg = "{m} is an invalid metric. The valid metrics include : {v}".\
-                format(m=self.metric,
-                       v=str(['train_cost', 'train_score', 'val_cost', 'val_score', 'theta', 'gradient']))
-            raise ValueError(msg)
-        validate_zero_to_one(p = self.epsilon)       
+        super(Performance, self)._validate(decay_factor=self.decay_factor,
+                                           freq=self.freq)
+        validate_zero_to_one(param=self.decay_factor, param_name='decay_factor')       
+        validate_metric(self.metric)
+        validate_zero_to_one(param=min_lr, param_name='min_lr',
+                             left='open')
+        validate_zero_to_one(param=self.epsilon, param_name='epsilon') 
+        validate_int(param=patience, param_name='patience')      
 
     def on_train_begin(self, logs=None):        
         """Sets key variables at beginning of training.
@@ -401,7 +439,7 @@ class Performance(LearningRateSchedule):
     def _adjust_learning_rate(self, iteration, logs):
         self.model.eta = self.mode.eta * self.decay_factor
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch, logs=None):
         """Determines whether convergence has been achieved.
 
         Parameters
@@ -418,9 +456,9 @@ class Performance(LearningRateSchedule):
         Bool if True convergence has been achieved. 
 
         """
-        super(Performance, self).on_epoch_end(epoch, logs)        
+        super(Performance, self).on_epoch_begin(epoch, logs)        
         logs = logs or {}        
         
         if self._observer.evaluate(epoch, logs):            
-            if self.mode.eta * self.decay_factor > self.min_lr:
+            if self.model.eta * self.decay_factor > self.min_lr:
                 self._adjust_learning_rate(logs)

@@ -58,6 +58,8 @@ class BlackBox(Callback):
         """
         self.end = datetime.datetime.now()
         self.duration = (self.end-self.start).total_seconds() 
+        if self.model.verbose:
+            self.report()
 
     def on_batch_end(self, batch, logs=None):
         """Updates data and statistics relevant to the training batch.
@@ -75,7 +77,7 @@ class BlackBox(Callback):
         for k,v in logs.items():
             self.batch_log.setdefault(k,[]).append(v)        
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch, logs=None):
         """Updates data and statistics relevant to the training epoch.
 
         Parameters
@@ -93,13 +95,97 @@ class BlackBox(Callback):
         for k,v in logs.items():
             self.epoch_log.setdefault(k,[]).append(v)
 
+    def _report_hyperparameters(self):
+        hyperparameters = OrderedDict()
+        def get_params(o):
+            params = o.get_params()
+            for k, v in params.items():
+                if isinstance(v, (str, bool, int, float)) or v is None:
+                    k = o.__class__.__name__ + '__' + k
+                    hyperparameters[k] = str(v)
+                else:
+                    get_params(v)
+        get_params(self.model)
+
+        self._printer.print_dictionary(hyperparameters, "Model HyperParameters")        
+
+
+    def _report_features(self):
+        theta = OrderedDict()
+        theta['Intercept'] = str(np.round(self.model.intercept_, 4))        
+        if self.model.feature_names:
+            features = self.model.feature_names
+        else:
+            features = []
+            for i in np.arange(len(self.model.coef_)):
+                features.append("Feature_" + str(i))
+
+        for k, v in zip(features, self.model.coef_):
+            theta[k]=str(np.round(v,4))  
+        self._printer.print_dictionary(theta, "Model Parameters")        
+
+    def _report_critical_points(self):
+        if self.model.critical_points:
+            print("\n")
+            self._printer.print_title("Critical Points")
+            print(tabulate(self.model.critical_points, headers="keys"))
+            print("\n")        
+
+
+    def _report_performance_with_validation(self):
+        performance_summary = \
+            {'Final Training Loss': str(np.round(self.epoch_log.get('train_cost')[-1],4)),
+            'Final Training Score' : str(np.round(self.epoch_log.get('train_score')[-1],4))
+                + " " + self.model.scorer.name,
+            'Final Validation Loss': str(np.round(self.epoch_log.get('val_cost')[-1],4)),
+            'Final Validation Score': str(np.round(self.epoch_log.get('val_score')[-1],4))
+                    + " " + self.model.scorer.name}
+
+        self._printer.print_dictionary(performance_summary, "Performance Summary")                    
+
+    def _report_performance_wo_validation(self):
+        performance_summary = \
+            {'Final Training Loss': str(np.round(self.epoch_log.get('train_cost')[-1],4)),
+             'Final Training Score' : str(np.round(self.epoch_log.get('train_score')[-1],4))
+             + " " + self.model.scorer.name}
+
+        self._printer.print_dictionary(performance_summary, "Performance Summary")        
+
+    def _report_performance(self):
+        if self.model.X_val_ is not None:    
+            if self.model.X_val_.shape[0] > 0:
+                self._report_performance_with_validation()
+            else:
+                self._report_performance_wo_validation()
+        else:
+            self._report_performance_wo_validation()        
+
+    def _report_summary(self):
+        """Reports summary information for the optimization."""        
+        optimization_summary = {'Name': self.model.description,
+                                'Start': str(self.start),
+                                'End': str(self.end),
+                                'Duration': str(self.duration) + " seconds.",
+                                'Epochs': str(self.total_epochs),
+                                'Batches': str(self.total_batches)}
+        self._printer.print_dictionary(optimization_summary, "Optimization Summary")        
+
+    def report(self):
+        """Summarizes performance statistics and parameters for model."""
+        self._report_summary()        
+        self._report_performance()        
+        self._report_critical_points()
+        self._report_features()
+        self._report_hyperparameters()        
+          
+
 # --------------------------------------------------------------------------- #
 #                            PROGRESS CLASS                                   #
 # --------------------------------------------------------------------------- #              
 class Progress(Callback):
     """Class that reports progress at designated points during training."""
     
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch, logs=None):
         """Reports progress at the end of each epoch.
 
         Parameters
@@ -116,69 +202,4 @@ class Progress(Callback):
             progress = "".join(str(key) + ': ' + str(np.round(value,4)) + ' ' \
                 for key, value in logs.items())
             print(progress)
-
-# --------------------------------------------------------------------------- #
-#                                SUMMARY                                      #
-# --------------------------------------------------------------------------- #
-
-def summary(history, features=None):
-    """Summarizes statistics for model.
-
-    Parameters
-    ----------
-    history : history object
-        history object containing data and statistics from training.
-    """
-    # ----------------------------------------------------------------------- #
-    printer = Printer()
-    optimization_summary = {'Name': history.model.description,
-                            'Start': str(history.start),
-                            'End': str(history.end),
-                            'Duration': str(history.duration) + " seconds.",
-                            'Epochs': str(history.total_epochs),
-                            'Batches': str(history.total_batches)}
-    printer.print_dictionary(optimization_summary, "Optimization Summary")
-
-    # ----------------------------------------------------------------------- #
-    if history.model.early_stop:    
-        performance_summary = \
-            {'Final Training Loss': str(np.round(history.epoch_log.get('train_cost')[-1],4)),
-            'Final Training Score' : str(np.round(history.epoch_log.get('train_score')[-1],4))
-                + " " + history.model.scorer.name,
-            'Final Validation Loss': str(np.round(history.epoch_log.get('val_cost')[-1],4)),
-            'Final Validation Score': str(np.round(history.epoch_log.get('val_score')[-1],4))
-                    + " " + history.model.scorer.name}
-    else:
-        performance_summary = \
-            {'Final Training Loss': str(np.round(history.epoch_log.get('train_cost')[-1],4)),
-            'Final Training Score' : str(np.round(history.epoch_log.get('train_score')[-1],4))
-                + " " + history.model.scorer.name}
-
-    printer.print_dictionary(performance_summary, "Performance Summary")
-    
-    # --------------------------------------------------------------------------- #
-    if features is None:
-        features = []
-        for i in np.arange(len(history.model.coef_)):
-            features.append("Feature_" + str(i))
-
-    theta = OrderedDict()
-    theta['Intercept'] = str(np.round(history.model.intercept_, 4))
-    for k, v in zip(features, history.model.coef_):
-        theta[k]=str(np.round(v,4))
-    printer.print_dictionary(theta, "Model Parameters")
-    # --------------------------------------------------------------------------- #
-    hyperparameters = OrderedDict()
-    def get_params(o):
-        params = o.get_params()
-        for k, v in params.items():
-            if isinstance(v, (str, bool, int, float)) or v is None:
-                k = o.__class__.__name__ + '__' + k
-                hyperparameters[k] = str(v)
-            else:
-                get_params(v)
-    get_params(history.model)
-    printer.print_dictionary(hyperparameters, "Model HyperParameters")
-
-    #printer.print_dictionary(hyperparameters, "Model HyperParameters")
         

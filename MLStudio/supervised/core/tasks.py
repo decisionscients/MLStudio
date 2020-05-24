@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.base import BaseEstimator
 
-from mlstudio.supervised.core.activation import Sigmoid, Softmax
+from mlstudio.supervised.core.activations import Sigmoid, Softmax
 from mlstudio.supervised.core.objectives import MSE, CrossEntropy, CategoricalCrossEntropy 
 # --------------------------------------------------------------------------  #
 class Task(ABC, BaseEstimator):

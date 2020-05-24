@@ -56,11 +56,11 @@ mbgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, batch_si
 bgd.fit(X,y)
 sgd.fit(X,y)
 mbgd.fit(X,y)
-models = [bgd, sgd, mbgd]
-# models = {'Batch Gradient Descent': bgd, 'Stochastic Gradient Descent': sgd,
-#           'Minibatch Gradient Descent': mbgd}
+#models = [bgd, sgd, mbgd]
+estimators = {'Batch Gradient Descent': bgd, 'Stochastic Gradient Descent': sgd,
+           'Minibatch Gradient Descent': mbgd}
 
 # --------------------------------------------------------------------------  #
 v = SurfaceLine()
-v.animate(models=models, directory=demodir)
+v.animate(estimators=estimators, directory=figures, filename="Gradient Descent w Regression Lines1.html")
 

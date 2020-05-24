@@ -25,7 +25,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 
 from mlstudio.supervised.core.regularizers import Nill
-from mlstudio.utils.data_manager import VectorScaler
+
 # --------------------------------------------------------------------------  #
 #                        OBJECTIVE BASE CLASS                                 #
 # --------------------------------------------------------------------------  #
@@ -47,6 +47,10 @@ class Objective(ABC, BaseEstimator):
         if not regularizer:
             self.regularizer = Nill()       
         
+    def _validation(self):
+        from mlstudio.utils.validation import validate_regularizer                
+        validate_regularizer(self.regularizer)
+        validate_gradient_scaler(self.gradient_scaler)
 
     @abstractmethod
     def name(self):

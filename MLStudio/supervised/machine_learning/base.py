@@ -36,8 +36,8 @@ class BaseRegressor(ABC, BaseEstimator):
         
     def _validate_hyperparam(self, p):
         """Validates a parameter. Used for validating regularization parameters."""
-        assert isinstance(p, (int,float)), "Regularization hyperparameter must be numeric."
-        assert p >= 0 and p <= 1, "Regularization parameter must be between zero and 1."
+        assert isinstance(p, (int,float)), "Regularizer hyperparameter must be numeric."
+        assert p >= 0 and p <= 1, "Regularizer parameter must be between zero and 1."
 
     def predict(self, X, theta):
         """Computes the prediction as linear combination of inputs and parameters.        

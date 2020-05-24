@@ -27,7 +27,7 @@ import numpy as np
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.utils.observers import Performance
-from mlstudio.utils.validation import validate_zero_to_one
+from mlstudio.utils.validation import validate_metric, validate_zero_to_one
 # --------------------------------------------------------------------------- #
 #                          EARLY STOP BASE CLASS                              #
 # --------------------------------------------------------------------------- #
@@ -43,7 +43,7 @@ class EarlyStop(Callback, ABC):
         pass
 
     @abstractmethod
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch, logs=None):
         pass
 
 # --------------------------------------------------------------------------- #
@@ -52,16 +52,24 @@ class EarlyStop(Callback, ABC):
 class Stability(EarlyStop):
     """Stops training if performance hasn't improved.
     
-    Stops training if performance hasn't improved. Improvement is measured 
-    with a 'tolerance', so that performance must improve by a factor greater
-    than the tolerance, to be considered improved. A 'patience' parameter
-    indicates how long non-performance has to occur, in epochs, to stop
-    training.
+    Observes performance and signals if performance has not improved. 
+    Improvement is measured  with a tolerance parameter 'epsilon', so that 
+    performance must improve by a relative factor greater than the 'epsilon', 
+    to be considered significant enough. 'patience' parameter indicates how long 
+    the optimizer has to show improvement before the algorithm signals that 
+    performance has stabilized.  The object has two modes: 'active' and 
+    'passive'. If 'active', then the algorithm stops when performance hasn't
+    improved. If 'passive', just messages the estimator signalling that performance
+    has stabilized.
 
     Parameters
     ----------
-    metric : str, optional (default='val_score')
-        Specifies which statistic to metric for evaluation purposes.
+    metric : str, optional (default='cost')
+        Valid values include 'cost', 'score', 'theta', and 'gradient'. If 
+        'cost' or 'score is selected, this metric will be evaluated on the
+        validation set if designated; otherwise, it will be assessed on the 
+        training set.  If 'theta' or 'gradient' is specified, we measure the
+        change in the magnitude of the vector. The full list of metrics include:
 
         'train_cost': Training set costs
         'train_score': Training set scores based upon the model's metric parameter
@@ -79,12 +87,12 @@ class Stability(EarlyStop):
         The number of consecutive epochs of non-improvement that would 
         stop training.    
 
-    mode : str (default="active")
+    mode : str (default="passive")
         Indicates whether to stop training when performance stops improving
-        or to just indicate that training has stalled.
+        or to just indicate that training has stabilized.
     """
 
-    def __init__(self, metric='val_cost', epsilon=1e-1, patience=100, mode="active"):
+    def __init__(self, metric='cost', epsilon=1e-2, patience=50, mode='passive'):
         super(Stability, self).__init__()
         self.name = "Stability"
         self.metric = metric
@@ -93,14 +101,9 @@ class Stability(EarlyStop):
         self.mode = mode
        
 
-    def _validate(self):
-        if self.metric not in ['train_cost', 'train_score', 'val_cost', 'val_score',
-                               'theta', 'gradient']:
-            msg = "{m} is an invalid metric. The valid metrics include : {v}".\
-                format(m=self.metric,
-                       v=str(['train_cost', 'train_score', 'val_cost', 'val_score', 'theta', 'gradient']))
-            raise ValueError(msg)
-        validate_zero_to_one(p = self.epsilon)       
+    def _validate(self):        
+        validate_metric(self.metric)
+        validate_zero_to_one(param=self.epsilon, param_name='epsilon')       
 
     def on_train_begin(self, logs=None):        
         """Sets key variables at beginning of training.
@@ -116,7 +119,7 @@ class Stability(EarlyStop):
             epsilon=self.epsilon, patience=self.patience)    
         self._observer.initialize()        
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch, logs=None):
         """Determines whether convergence has been achieved.
 
         Parameters
@@ -133,14 +136,14 @@ class Stability(EarlyStop):
         Bool if True convergence has been achieved. 
 
         """
-        super(Stability, self).on_epoch_end(epoch, logs)        
+        super(Stability, self).on_epoch_begin(epoch, logs)        
         logs = logs or {}        
         
         if self._observer.evaluate(epoch, logs):
-            self.model.stalled = True
+            self.model.stabilized = True
             if self.mode == "active":
-                self.converged = True
+                self.model.converged = True
         else:
-            self.model.stalled = False
-            self.converged = False
+            self.model.stabilized = False
+            self.model.converged = False
 

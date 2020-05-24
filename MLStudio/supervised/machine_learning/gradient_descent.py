@@ -47,15 +47,20 @@ from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
 from mlstudio.utils.data_manager import add_bias_term, encode_labels, one_hot_encode
 from mlstudio.utils.data_manager import RegressionDataProcessor, ClassificationDataProcessor
 from mlstudio.utils.validation import check_X, check_X_y, check_is_fitted
-from mlstudio.utils.observers import Performance
-
+from mlstudio.utils.validation import validate_zero_to_one, validate_metric
+from mlstudio.utils.validation import validate_objective, validate_optimizer
+from mlstudio.utils.validation import validate_scorer, validate_early_stop
+from mlstudio.utils.validation import validate_learning_rate_schedule
+from mlstudio.utils.validation import validate_int, validate_string
+from mlstudio.utils.validation import validate_early_stop, validate_metric
+from mlstudio.utils.validation import validate_scorer
 # =========================================================================== #
 #                          GRADIENT DESCENT                                   #
 # =========================================================================== #        
 class GradientDescent(BaseEstimator):
     """Performs pure optimization of a 2d objective function."""
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
-                 optimizer=Classic(), objective=MSE(), schedule=None, 
+                 optimizer=Classic(), objective=MSE(), schedule=None,                  
                  early_stop=None, verbose=False, checkpoint=100, 
                  random_state=None, gradient_check=None):
 
@@ -97,18 +102,51 @@ class GradientDescent(BaseEstimator):
         self._converged = x       
 
     @property
-    def stalled(self):
-        return self._stalled
+    def stabilized(self):
+        return self._stabilized
 
-    @stalled.setter
-    def stalled(self, x):
-        self._stalled = x 
+    @stabilized.setter
+    def stabilized(self, x):
+        self._stabilized = x 
+
+    @property
+    def critical_points(self):
+        return self._critical_points   
+
+    @property
+    def feature_names(self):
+        return self._feature_names
+
+    @feature_names.setter
+    def feature_names(self, x):
+        self._feature_names = x     
+
+# --------------------------------------------------------------------------- #
+#                                 VALIDATION                                  #
+# --------------------------------------------------------------------------- #   
+    def _validate_params(self):
+        """Performs validation on the hyperparameters."""
+        validate_zero_to_one(param=self.learning_rate, param_name="learning_rate", 
+                            left="open", right="closed")
+        validate_int(param=self.epochs, param_name='epochs')
+        validate_optimizer(self.optimizer)
+        validate_objective(self.objective)
+        if self.schedule:
+            validate_learning_rate_schedule(self.schedule)
+        if self.early_stop:
+            validate_early_stop(self.early_stop)
+        validate_bool(param=self.verbose, param_name='verbose')
+        validate_int(param=self.checkpoint, param_name='checkpoint')
+        if self.random_state:
+            validate_int(param=self.random_state, param_name='random_state')
+        if self.gradient_check:
+            validate_gradient_check(self.gradient_check)
 
 
 # --------------------------------------------------------------------------- #
-#                               STATE                                         #
+#                                 CHECK STATE                                 #
 # --------------------------------------------------------------------------- #   
-    def _state(self, log):
+    def _check_state(self, log):
         d = {}
         d['Epoch'] = log.get('epoch')
         d['Learning Rate'] = log.get('learning_rate')
@@ -116,10 +154,10 @@ class GradientDescent(BaseEstimator):
         d['Gradient'] = np.linalg.norm(log.get('gradient'))
         kv = d.items()
         sp = {str(key): str(value) for key, value in kv}
-        if self._stalled != self._last_state:
-            self._last_state = self._stalled     
-            if self._stalled:       
-                self.critical_points_.append(sp)  
+        if self._stabilized != self._last_state:
+            self._last_state = self._stabilized     
+            if self._stabilized:       
+                self._critical_points.append(sp)  
 
 
 # --------------------------------------------------------------------------- #
@@ -157,7 +195,7 @@ class GradientDescent(BaseEstimator):
         if isinstance(self._gradient_check, GradientCheck):
             self._cbks.append(self._gradient_check)        
         if isinstance(self._schedule, LearningRateSchedule):
-            self._cbks.append(self._schedule)        
+            self._cbks.append(self._schedule)                
 
         # Initialize all callbacks.
         self._cbks.set_params(self.get_params())
@@ -184,19 +222,27 @@ class GradientDescent(BaseEstimator):
 
     def _begin_training(self, log=None):
         """Performs initializations required at the beginning of training."""
+        log = log or {}   
+        self._validate_params(self) 
+        # Private variables
         self._epoch = 0
         self._batch = 0        
-        self._eta = copy.copy(self.learning_rate)
         self._last_state = False
         self._converged = False
-        self._stalled = False
-        self.critical_points_ = []
+        self._stabilized = False
+        self._eta = copy.copy(self.learning_rate)
+        # Attributes
+        self._critical_points = []   
+        self.theta_ = 0
+        self.gradient_ = 0
+        # Dependencies, data, and weights.
         self._compile(log)              
         self._init_weights()            
         self._cbks.on_train_begin(log) 
 
     def _end_training(self, log=None):
         """Closes history callout and assign final and best weights."""
+        log = log or {}    
         self._cbks.on_train_end()
         self.intercept_ = self.theta_[0]
         self.coef_ = self.theta_[1:]
@@ -204,15 +250,17 @@ class GradientDescent(BaseEstimator):
 
     def _begin_epoch(self, log=None):
         """Runs 'begin_epoch' methods on all callbacks."""
+        log = log or {}    
         self._epoch += 1        
         self._cbks.on_epoch_begin(self._epoch, log) 
+        self._check_state(log)     
 
     def _end_epoch(self, log=None):        
         """Performs end-of-epoch evaluation and scoring."""
         log = log or {}
         # Call 'on_epoch_end' methods on callbacks.
         self._cbks.on_epoch_end(self._epoch, log)     
-        self._state(log)     
+        
 
 # --------------------------------------------------------------------------- #
 #                                 FIT                                         #
@@ -234,16 +282,16 @@ class GradientDescent(BaseEstimator):
 
         while (self._epoch < self.epochs and not self._converged):
 
-            self._begin_epoch()
+            epoch_log = {'epoch': self._epoch, 'learning_rate': self._eta, 'train_cost': cost,
+                         'theta': self.theta_, 'gradient': self.gradient_}
+
+            self._begin_epoch(copy.deepcopy(epoch_log))
 
             cost = self._objective(self.theta_)
-            self.theta_, gradient = self._optimizer(gradient=self._objective.gradient, \
+            self.theta_, self.gradient_ = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.deepcopy(self.theta_))
 
-            epoch_log = {'epoch': self._epoch, 'learning_rate': self._eta, 'train_cost': cost,
-                   'theta': self.theta_, 'gradient': gradient}
-
-            self._end_epoch(copy.deepcopy(epoch_log))
+            self._end_epoch()
 
         self._end_training()
         return self         
@@ -278,6 +326,17 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self.batch_size = batch_size
         self.scorer = scorer
 # --------------------------------------------------------------------------- #
+#                                 VALIDATION                                  #
+# --------------------------------------------------------------------------- #   
+    def _validate_params(self):        
+        super(GradientDescentEstimator, self)._validate_params()
+        if self.val_size:
+            validate_zero_to_one(param=self.val_size, param_name='val_size')
+        if self.batch_size:
+            validate_int(param=self.batch_size, param_name='batch_size')
+        if self.scorer:
+            validate_scorer(self.scorer)
+# --------------------------------------------------------------------------- #
 #                               PROPERTIES                                    #
 # --------------------------------------------------------------------------- #    
     @property
@@ -304,7 +363,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         optimizer_title = ""
 
         if regularizer != "Nill":
-            regularizer_title = " (" + regularizer + " Regularization) "
+            regularizer_title = " (" + regularizer + " Regularizer) "
 
         if optimizer != "Classic":
             optimizer_title = " (" + optimizer_title + " Optimization) "
@@ -340,41 +399,53 @@ class GradientDescentEstimator(ABC, GradientDescent):
 
     def _begin_training(self, log=None):
         """Performs initializations required at the beginning of training."""
+        log = log or {}    
+        # Private variables
         self._epoch = 0
         self._batch = 0        
         self._last_state = False
         self._converged = False
-        self._stalled = False
+        self._stabilized = False
         self._eta = copy.copy(self.learning_rate)
-        self.critical_points_ = []                     
+        # Attributes
+        self._critical_points = []   
+        self.theta_ = 0
+        self.gradient_ = 0
+        # Dependencies, data, and weights.
         self._compile(log)              
         self._prepare_training_data(log.get("X"),log.get("y"))        
         self._init_weights()            
         self._cbks.on_train_begin(log)        
 
     def _begin_epoch(self, log=None):
-        """Increment the epoch count and shuffle the data."""
-        super(GradientDescentEstimator, self)._begin_epoch(log)        
+        """Increment the epoch, evaluate using current parameters and shuffle the data."""
+        log = log or {}    
+        # Compute performance statistics for epoch and post to history
+        log = self._evaluate_epoch(log)                
+        # Shuffle data      
         rs = None
         if self.random_state:
             rs = self.random_state + self._epoch
         self.X_train_, self.y_train_ = shuffle_data(self.X_train_, self.y_train_, random_state=rs) 
-        
+        # Call 'on_epoch_begin' methods on callbacks.
+        self._cbks.on_epoch_begin(self._epoch, log)               
+        # Once the performance callback has executed, check whether the optimization has stabilized.
+        self._check_state(log) 
+        self._epoch += 1         
 
     def _end_epoch(self, log=None):        
         """Performs end-of-epoch evaluation and scoring."""
         log = log or {}    
-        # Compute performance statistics for epoch and post to history
-        log = self._evaluate_epoch(log)
         # Call 'on_epoch_end' methods on callbacks.
-        self._cbks.on_epoch_end(self._epoch, log)
-        self._state(log)
+        self._cbks.on_epoch_end(self._epoch, log)        
 
     def _begin_batch(self, log=None):
-        self._batch += 1
+        log = log or {}            
         self._cbks.on_batch_begin(self._batch, log)
+        self._batch += 1
 
     def _end_batch(self, log=None):
+        log = log or {}    
         self._cbks.on_batch_end(self._batch, log)
 
 # --------------------------------------------------------------------------- #
@@ -382,7 +453,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
 # --------------------------------------------------------------------------- #
     def _evaluate_epoch(self, log=None):
         """Computes training costs, and optionally scores, for each epoch."""
-        log = log or {}
+        log = log or {}        
         # Compute training costs and scores
         y_out = self._task.compute_output(self.theta_, self.X_train_)
         log['train_cost'] = self._objective(self.theta_, self.y_train_, y_out)
@@ -420,11 +491,14 @@ class GradientDescentEstimator(ABC, GradientDescent):
         """
         X, y = check_X_y(X, y)
         train_log = {'X': X, 'y': y}
-        self._begin_training(train_log)
+        self._begin_training(train_log)        
 
         while (self._epoch < self.epochs and not self._converged):
 
-            self._begin_epoch()
+            epoch_log = {'epoch': self._epoch, 'learning_rate': self._eta, 'theta': self.theta_,
+                         'gradient': self.gradient_}            
+
+            self._begin_epoch(copy.deepcopy(epoch_log))
 
             for X_batch, y_batch in batch_iterator(self.X_train_, self.y_train_, batch_size=self.batch_size):
 
@@ -441,18 +515,15 @@ class GradientDescentEstimator(ABC, GradientDescent):
                              'theta': self.theta_, 'train_cost': J}
                 
                 # Compute the parameter updates.
-                self.theta_, gradient = self._optimizer(gradient=self._objective.gradient, \
+                self.theta_, self.gradient_ = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.deepcopy(self.theta_),  X=X_batch, y=y_batch,\
                         y_out=y_out)
 
                 # Update batch log
                 self._end_batch(copy.deepcopy(batch_log))
 
-            epoch_log = {'epoch': self._epoch, 'learning_rate': self._eta, 'theta': self.theta_,
-                         'gradient': gradient}
-
             # Wrap up epoch
-            self._end_epoch(copy.deepcopy(epoch_log))
+            self._end_epoch()
 
         self._end_training()
         return self     

@@ -31,7 +31,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils import shuffle
 from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 
-from mlstudio.utils.validation import check_X, check_X_y
+from mlstudio.utils.validation import check_X_y
 
 import pandas as pd
 # --------------------------------------------------------------------------- #
@@ -55,7 +55,6 @@ def encode_labels(y):
     -------
     y : Encoded labels with values from 0 to n_classes - 1
     """
-    y = check_y_dim(y)
     classes = np.sort(np.unique(y))
     n_classes = len(classes)
     binary_classes = np.arange(n_classes)

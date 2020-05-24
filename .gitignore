@@ -29,6 +29,8 @@ wheels/
 mlstudio/data/
 tests/test_data/
 tests/test_visual/figures/
+mlstudio/demo/data/
+mlstudio/demo/figures/
 *.html
 *.gif
 *.png
