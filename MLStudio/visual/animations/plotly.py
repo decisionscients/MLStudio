@@ -35,7 +35,7 @@ from plotly.subplots import make_subplots
 from mlstudio.utils.data_manager import todf
 from mlstudio.utils.file_manager import check_directory
 # --------------------------------------------------------------------------  #
-class SurfaceLine1:
+class SurfaceLine:
     """Animates gradient descent with a surface and line plot."""
     def __init__(self):
         pass
@@ -85,6 +85,12 @@ class SurfaceLine1:
         xm = np.min(x)
         xM = np.max(x)
         xx = np.linspace(xm, xM)
+
+        # Designate dimensions
+        cm, cM = min(cost), max(cost)
+        jm, jM = Js.min(), Js.max()
+        zm, zM = min([cm, jm]), max([cM, jM])
+
         
         lines = {}
         est = ['BGD', 'SGD', 'MBGD'] 
@@ -97,56 +103,81 @@ class SurfaceLine1:
             lines[est[i]] = yy
     
         fig = make_subplots(rows=1, cols=2, subplot_titles=("Gradient Descent", "Linear Regression"),
-                            specs=[[{'type': "surface"}, {"type": "scatter"}]])      
+                            specs=[[{'type': "surface"}, {"type": "xy"}]])      
+
+        
+        # Subplot 1, Trace 0: Surface plot
+        fig.add_trace(
+            go.Surface(x=theta0, y=theta1, z=Js, colorscale="YlGnBu", 
+                       showscale=False, showlegend=False), row=1, col=1)
+
 
         # Subplot 1, Trace 1: Gradient descent path
         fig.add_trace(
-            go.Scatter3d(x=[theta0[:1]], y=[theta1[:1]], z=[cost[:1]],
+            go.Scatter3d(x=[theta0[:2]], y=[theta1[:2]], z=[cost[:2]],
                          name="Batch Gradient Descent", 
                          showlegend=False, 
                          mode='lines', line=dict(color="red")),
                          row=1, col=1)            
 
-        # Subplot 2, Trace 2: BGD Line
+        # Subplot 2, Trace 2 Ames Data
+        fig.add_trace(
+            go.Scatter(x=X_train_[:,1], y=y_train_,
+                       name="Ames Data",
+                       mode="markers",
+                       showlegend=True,
+                       marker=dict(color="#1560bd")), row=1, col=2)                    
+
+
+        # Subplot 2, Trace 3: BGD Line
         fig.add_trace(
             go.Scatter(x=xx, y=lines['BGD'][0], 
                        name="Batch Gradient Descent",
                        mode="lines", marker=dict(color="red", size=0.5)),
                        row=1, col=2)
 
-         # Subplot 2, Trace 3: SGD Line
+         # Subplot 2, Trace 4: SGD Line
         fig.add_trace(
             go.Scatter(x=xx, y=lines['SGD'][0], 
                        name="Stochastic Gradient Descent",
                        mode="lines", marker=dict(color="green", size=0.5)),
                        row=1, col=2)                        
         
-        # Subplot 2, Trace 4: MBGD Line
+        # Subplot 2, Trace 5: MBGD Line
         fig.add_trace(
             go.Scatter(x=xx, y=lines['MBGD'][0], 
                        name="Minibatch Gradient Descent",
                        mode="lines", marker=dict(color="orange", size=0.5)),
                        row=1, col=2)
 
+        fig.update_layout(
+            scene_xaxis=dict(range=[theta0_min, theta0_max], autorange=False),
+            scene_yaxis=dict(range=[theta1_min, theta1_max], autorange=False),            
+            scene_zaxis=dict(range=[zm, zM], autorange=False),
+            title=dict(xanchor='center', yanchor='top', x=0.5, y=0.9),        
+            font=dict(family="Open Sans"),                
+            showlegend=True,            
+            template='plotly_white');                       
+
         # Create frames definition                       
         frames = [go.Frame(
             dict(
-                name = k,
+                name = f'{k+1}',
                 data = [                    
-                    go.Scatter3d(x=[theta0[:k+2]], y=[theta1[:k+2]], z=[cost[:k+2]], mode='lines', marker=dict(size=10, color="red")),
-                    go.Scatter(x=xx, y=lines['BGD'][k], mode="lines", marker=dict(color="red")),
-                    go.Scatter(x=xx, y=lines['SGD'][k], mode="lines", marker=dict(color="green")),
-                    go.Scatter(x=xx, y=lines['MBGD'][k], mode="lines", marker=dict(color="orange")),
+                    go.Scatter3d(x=theta0[:k+2], y=theta1[:k+2], z=cost[:k+2]),
+                    go.Scatter(x=xx, y=lines['BGD'][k]),
+                    go.Scatter(x=xx, y=lines['SGD'][k]),
+                    go.Scatter(x=xx, y=lines['MBGD'][k]),
                 ],
-                traces=[1, 2, 3, 4])
-            ) for k in range(n_frames)]
+                traces=[1, 3, 4, 5])
+            ) for k in range(n_frames-2)]
 
         # Update the menus
         updatemenus = [dict(type='buttons',
                             buttons=[dict(label="Play",
                                           method="animate",
-                                          args=[[f'{k}' for k in range(n_frames)],
-                                            dict(frame=dict(duration=100, redraw=False),
+                                          args=[[f'{k+1}' for k in range(n_frames-2)],
+                                            dict(frame=dict(duration=10, redraw=True),
                                                  transition=dict(duration=0),
                                                  easing="linear",
                                                  fromcurrent=True,
@@ -158,50 +189,21 @@ class SurfaceLine1:
         sliders = [{"yanchor": "top",
                    "xanchor": "left",
                    "currentvalue": {"font": {"size": 16}, "prefix": "Iteration: ", "visible":True, "xanchor": "right"},
-                   'transition': {'duration': 100.0, 'easing': 'linear'},
+                   'transition': {'duration': 0, 'easing': 'linear'},
                    'pad': {'b': 10, 't': 50}, 
                    'len': 0.9, 'x': 0.1, 'y': 0, 
-                   'steps': [{'args': [[k], {'frame': {'duration': 100.0, 'easing': 'linear', 'redraw': False},
+                   'steps': [{'args': [[f'{k+1}'], {'frame': {'duration': 10, 'easing': 'linear', 'redraw': False},
                                       'transition': {'duration': 0, 'easing': 'linear'}}], 
-                       'label': k, 'method': 'animate'} for k in range(n_frames)       
+                       'label': k, 'method': 'animate'} for k in range(n_frames-2)       
                     ]}]
 
         fig.update(frames=frames)
+
         fig.update_layout(
-            xaxis=dict(range=[theta0_min, theta0_max], autorange=False, zeroline=False),
-            yaxis=dict(range=[theta1_min, theta1_max], autorange=False, zeroline=False),            
-            title=dict(xanchor='center', yanchor='top', x=0.5, y=0.9),        
-            font=dict(family="Open Sans"),    
-            updatemenus=updatemenus, 
-            showlegend=True,
-            sliders=sliders, 
-            template='plotly_white')
+            updatemenus=updatemenus,
+            sliders=sliders
+        )
 
-        # Surface plot. Had to add twice; otherwise, the trace disappears after play.
-        fig.add_trace(
-            go.Surface(x=theta0, y=theta1, z=Js, colorscale="YlGnBu", 
-                       showscale=False, showlegend=False),
-                       row=1, col=1)                    
-
-        fig.add_trace(
-            go.Surface(x=theta0, y=theta1, z=Js, colorscale="YlGnBu", 
-                       showscale=False, showlegend=False),
-                       row=1, col=1)            
-
-        # Scatterplot. Had to add twice; otherwise, the trace disappears after play.
-        fig.add_trace(
-            go.Scatter(x=X_train_[:,1], y=y_train_,
-                       name="Ames Data",
-                       mode="markers",
-                       showlegend=True,
-                       marker=dict(color="#1560bd")), row=1, col=2)                    
-         
-        fig.add_trace(
-            go.Scatter(x=X_train_[:,1], y=y_train_,
-                       name="Ames Data",
-                       mode="markers",
-                       showlegend=False,
-                       marker=dict(color="#1560bd")), row=1, col=2)
 
         # Save plotting data.        
         filepath = os.path.join(directory, "data/gradient_descent_demo.npz")

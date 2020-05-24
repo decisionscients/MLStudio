@@ -31,8 +31,8 @@ sys.path.append(homedir)
 
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.utils.data_manager import StandardScaler
-from mlstudio.visual.animations.surface_line1 import SurfaceLine1
-from mlstudio.visual.animations.gradient import MultiModelSearch3D
+from mlstudio.visual.animations.plotly import SurfaceLine
+
 
 # --------------------------------------------------------------------------  #
 # Designate file locations
@@ -61,7 +61,6 @@ models = [bgd, sgd, mbgd]
 #           'Minibatch Gradient Descent': mbgd}
 
 # --------------------------------------------------------------------------  #
-v = SurfaceLine1()
+v = SurfaceLine()
 v.animate(models=models, directory=demodir)
-# v = MultiModelSearch3D()
-# ani = v.search(models, frames=None, directory=figures)
+
