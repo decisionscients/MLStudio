@@ -125,7 +125,10 @@ class StepDecay(LearningRateSchedule):
         super(StepDecay, self).__init__(
             decay_factor=decay_factor,
             freq=freq)              
+        self.name = "Step Decay Learning Rate Schedule"
         self.decay_steps = decay_steps
+
+     
 
     def _validate(self):
         """Performs hyperparameter """
@@ -156,7 +159,8 @@ class TimeDecay(LearningRateSchedule):
     def __init__(self, decay_factor=.005, freq='epoch'):        
         super(TimeDecay, self).__init__(
             decay_factor=decay_factor,
-            freq=freq)              
+            freq=freq)
+        self.name = "Time Decay Learning Rate Schedule"              
 
     def _adjust_learning_rate(self, iteration, logs):
         self.model.eta = self._eta0 / (1 + self.decay_factor * iteration)
@@ -181,6 +185,7 @@ class SqrtTimeDecay(LearningRateSchedule):
         super(SqrtTimeDecay, self).__init__(
             decay_factor=decay_factor,
             freq=freq)              
+        self.name = "Sqrt Time Decay Learning Rate Schedule"
 
     def _adjust_learning_rate(self, iteration, logs):
         self.model.eta = self._eta0 / (1 + self.decay_factor * \
@@ -206,6 +211,7 @@ class ExponentialDecay(LearningRateSchedule):
         super(ExponentialDecay, self).__init__(
             decay_factor=decay_factor,
             freq=freq)   
+        self.name = "Exponential Decay Learning Rate Schedule"
 
     def _adjust_learning_rate(self, iteration, logs):
         self.model.eta = self._eta0 * np.exp(-self.decay_factor * iteration)
@@ -230,6 +236,7 @@ class PolynomialDecay(LearningRateSchedule):
         super(PolynomialDecay, self).__init__(
             freq=freq
         )
+        self.name = "Polynomial Decay Learning Rate Schedule"
         self.power = power
 
     def _validate(self):
@@ -266,6 +273,7 @@ class ExponentialLearningRate(LearningRateSchedule):
             decay_factor=decay_factor,
             freq=freq
         )
+        self.name = "Exponential Learning Rate Schedule"
 
     def _adjust_learning_rate(self, iteration, logs):
         self.model.eta = np.power((1- self.decay_factor*self._eta0), \
@@ -291,6 +299,7 @@ class ExponentialSchedule(LearningRateSchedule):
             decay_factor=decay_factor,
             freq=freq
         )    
+        self.name = "Exponential Schedule Learning Rate Schedule"
         self.decay_steps = decay_steps
 
     def _validate(self):
@@ -322,7 +331,8 @@ class PowerSchedule(LearningRateSchedule):
     def __init__(self, power=1, decay_steps=1, freq='epoch'):
         super(PowerSchedule, self).__init__(
             freq=freq
-        )              
+        )
+        self.name = "Power Schedule Learning Rate Schedule"              
         self.power = power
         self.decay_steps = decay_steps
 
@@ -354,6 +364,7 @@ class BottouSchedule(LearningRateSchedule):
             decay_factor=decay_factor,
             freq=freq
         )
+        self.name = "Bottou Schedule Learning Rate Schedule"
 
     def _adjust_learning_rate(self, iteration, logs):
         self.model.eta = self._eta0 * (1 + self._eta0 * \

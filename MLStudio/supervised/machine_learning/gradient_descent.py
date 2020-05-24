@@ -53,7 +53,7 @@ from mlstudio.utils.validation import validate_scorer, validate_early_stop
 from mlstudio.utils.validation import validate_learning_rate_schedule
 from mlstudio.utils.validation import validate_int, validate_string
 from mlstudio.utils.validation import validate_early_stop, validate_metric
-from mlstudio.utils.validation import validate_scorer
+from mlstudio.utils.validation import validate_scorer, validate_bool
 # =========================================================================== #
 #                          GRADIENT DESCENT                                   #
 # =========================================================================== #        
@@ -223,7 +223,7 @@ class GradientDescent(BaseEstimator):
     def _begin_training(self, log=None):
         """Performs initializations required at the beginning of training."""
         log = log or {}   
-        self._validate_params(self) 
+        self._validate_params() 
         # Private variables
         self._epoch = 0
         self._batch = 0        
@@ -231,6 +231,7 @@ class GradientDescent(BaseEstimator):
         self._converged = False
         self._stabilized = False
         self._eta = copy.copy(self.learning_rate)
+        self._feature_names = None
         # Attributes
         self._critical_points = []   
         self.theta_ = 0
@@ -242,11 +243,11 @@ class GradientDescent(BaseEstimator):
 
     def _end_training(self, log=None):
         """Closes history callout and assign final and best weights."""
-        log = log or {}    
-        self._cbks.on_train_end()
+        log = log or {}            
         self.intercept_ = self.theta_[0]
         self.coef_ = self.theta_[1:]
         self.n_iter_ = self._epoch
+        self._cbks.on_train_end()
 
     def _begin_epoch(self, log=None):
         """Runs 'begin_epoch' methods on all callbacks."""
@@ -282,12 +283,13 @@ class GradientDescent(BaseEstimator):
 
         while (self._epoch < self.epochs and not self._converged):
 
-            epoch_log = {'epoch': self._epoch, 'learning_rate': self._eta, 'train_cost': cost,
-                         'theta': self.theta_, 'gradient': self.gradient_}
-
-            self._begin_epoch(copy.deepcopy(epoch_log))
-
             cost = self._objective(self.theta_)
+
+            epoch_log = {'epoch': self._epoch, 'learning_rate': self._eta, 'train_cost': copy.deepcopy(cost),
+                         'theta': self.theta_, 'gradient': self.gradient_}            
+
+            self._begin_epoch(copy.copy(epoch_log))
+            
             self.theta_, self.gradient_ = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.deepcopy(self.theta_))
 
@@ -400,6 +402,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
     def _begin_training(self, log=None):
         """Performs initializations required at the beginning of training."""
         log = log or {}    
+        self._validate_params() 
         # Private variables
         self._epoch = 0
         self._batch = 0        
@@ -407,6 +410,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self._converged = False
         self._stabilized = False
         self._eta = copy.copy(self.learning_rate)
+        self._feature_names = None
         # Attributes
         self._critical_points = []   
         self.theta_ = 0

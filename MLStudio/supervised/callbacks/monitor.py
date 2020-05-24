@@ -46,7 +46,7 @@ class BlackBox(Callback):
         self.total_batches = 0
         self.start = datetime.datetime.now()
         self.epoch_log = {}
-        self.batch_log = {}        
+        self.batch_log = {}                
 
     def on_train_end(self, logs=None):        
         """Sets instance variables at end of training.
@@ -100,7 +100,7 @@ class BlackBox(Callback):
         def get_params(o):
             params = o.get_params()
             for k, v in params.items():
-                if isinstance(v, (str, bool, int, float)) or v is None:
+                if isinstance(v, (str, bool, int, float, np.ndarray, np.generic, list)) or v is None:
                     k = o.__class__.__name__ + '__' + k
                     hyperparameters[k] = str(v)
                 else:
@@ -112,7 +112,8 @@ class BlackBox(Callback):
 
     def _report_features(self):
         theta = OrderedDict()
-        theta['Intercept'] = str(np.round(self.model.intercept_, 4))        
+        theta['Intercept'] = str(np.round(self.model.intercept_, 4))      
+
         if self.model.feature_names:
             features = self.model.feature_names
         else:
@@ -130,6 +131,12 @@ class BlackBox(Callback):
             self._printer.print_title("Critical Points")
             print(tabulate(self.model.critical_points, headers="keys"))
             print("\n")        
+
+    def _report_performance_cost(self):
+        performance_summary = \
+            {'Final Training Loss': str(np.round(self.epoch_log.get('train_cost')[-1],4))}
+
+        self._printer.print_dictionary(performance_summary, "Performance Summary")                
 
 
     def _report_performance_with_validation(self):
@@ -152,13 +159,20 @@ class BlackBox(Callback):
         self._printer.print_dictionary(performance_summary, "Performance Summary")        
 
     def _report_performance(self):
-        if self.model.X_val_ is not None:    
-            if self.model.X_val_.shape[0] > 0:
-                self._report_performance_with_validation()
+        if hasattr(self.model, 'X_val_'):    
+            if self.model.X_val_ is not None:
+                if self.model.X_val_.shape[0] > 0:
+                    self._report_performance_with_validation()
+                else:
+                    self._report_performance_wo_validation()
+            elif hasattr(self.model, 'scorer'):
+                self._report_performance_wo_validation()        
             else:
-                self._report_performance_wo_validation()
-        else:
+                self._report_performance_cost()
+        elif hasattr(self.model, 'scorer'):
             self._report_performance_wo_validation()        
+        else:
+            self._report_performance_cost()
 
     def _report_summary(self):
         """Reports summary information for the optimization."""        
@@ -172,6 +186,7 @@ class BlackBox(Callback):
 
     def report(self):
         """Summarizes performance statistics and parameters for model."""
+        self._printer = Printer()
         self._report_summary()        
         self._report_performance()        
         self._report_critical_points()

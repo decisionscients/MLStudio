@@ -332,13 +332,13 @@ class Benchmark(Objective):
         pass    
 
     @property
-    def _range(self):
+    def range(self):
         """Returns x and y ranges for plotting."""
         pass
 
     def mesh(self):
         """Returns the mesh grid for the function."""       
-        x, y = self._range
+        x, y = self.range
         density_x = (x['max']-x['min']) * self.density
         density_y = (y['max']-y['min']) * self.density
         density = np.max(density_x, density_y)
@@ -377,7 +377,7 @@ class Adjiman(Benchmark):
         return np.array([0,0])
 
     @property
-    def _range(self):
+    def range(self):
         """Returns the x and y ranges for plotting."""
         x = {'min': -4, 'max': 4}
         y = {'min': -5, 'max': 5}
@@ -410,7 +410,7 @@ class BartelsConn(Benchmark):
         return np.array([0,0])        
 
     @property
-    def _range(self):
+    def range(self):
         """Returns the x and y ranges for plotting."""
         x = {'min': -500, 'max': 500}
         y = {'min': -500, 'max': 500}
@@ -434,79 +434,6 @@ class BartelsConn(Benchmark):
         return np.array([dfdx, dfdy])
 
 # --------------------------------------------------------------------------  #
-class GoldsteinPrice(Benchmark):
-    """Base class for objective functions."""    
-
-    @property
-    def name(self):
-        return "Goldstein-Price Function"    
-
-    @property
-    def start(self):
-        return np.array([2,-2])
-
-    @property
-    def minimum(self):
-        return np.array([0,-1])           
-
-    @property
-    def _range(self):
-        """Returns the x and y ranges for plotting."""
-        x = {'min': -2, 'max': 2}
-        y = {'min': -2, 'max': 2}
-        return x, y
-    
-    def __call__(self, theta):
-        """Computes the objective function value"""
-        a = (theta[0] + theta[1] + 1)**2
-        b = (19 - 14 * theta[0] + 3 * theta[0]**2 - 14 * theta[1] + \
-            6 * np.multiply(theta[0], theta[1]) + 3 * theta[1]**2)
-        c = (2 * theta[0] - 3 * theta[1])**2
-        d = (18 - 32 * theta[0] + 12 * theta[0]**2 + 48 * theta[1] -\
-            36 * np.multiply(theta[0], theta[1]) + 27 * theta[1]**2)
-        return (1 + (a * b)) * (30 + (c * d))
-
-    def gradient(self, theta):
-        """Computes the gradient of the objective function."""
-        ax = 9 * ((2/3)*theta[0]-theta[1])**2 
-        bx =24*theta[0]-36*theta[1]-32
-        cx = 8*theta[0]-12*theta[1]
-        dx = 12*theta[0]**2-36*theta[0]*theta[1]-32*theta[0]+\
-                27*theta[1]**2+48*theta[1]+18
-        ex = (theta[0]+theta[1]+1)**2
-        fx = 3*theta[0]**2+6*theta[0]*theta[1]-14*theta[0]+\
-            3*theta[1]**2-14*theta[1]+19
-        gx = 1
-        hx = 9*((2/3)*theta[0]-theta[1])**2
-        ix = 12*theta[0]**2-36*theta[0]*theta[1]-\
-            32*theta[0]+27*theta[1]**2+48*theta[1]+18
-        jx = 30
-        kx = (theta[0]+theta[1]+1)**2
-        lx = 6*theta[0]+6*theta[1]-14
-        mx = 2*theta[0]+2*theta[1]+2
-        nx = 3*theta[0]**2+6*theta[0]*theta[1]-14*theta[0]+3*theta[1]**2-14*theta[1]+19
-        dfdx = (ax*bx+cx*dx) * (ex*fx+gx) + (hx*ix+jx) * (kx*lx+mx*nx)
-
-        ay = -12*theta[0]+18*theta[1]
-        by = dx
-        cy = ax
-        dy = -36*theta[0]+54*theta[1]+48
-        ey = ex
-        fy = fx
-        gy = gx
-        hy = hx
-        iy = ix
-        jy = jx
-        ky = kx
-        ly = lx
-        my = mx
-        ny = nx
-        a = (theta[0] + 2 * theta[1]) * np.sign(theta[0]**2 + theta[0] * theta[1] + theta[1]**2)
-        b = np.sin(theta[1]) * np.sign(np.cos(theta[1]))
-        dfdy = (ay*by+cy*dy) * (ey*fy+gy) + (hy*iy+jy) * (ky*ly+my*ny)
-        return np.array([dfdx, dfdy])        
-
-# --------------------------------------------------------------------------  #
 class Himmelblau(Benchmark):
     """Base class for objective functions."""   
 
@@ -523,7 +450,7 @@ class Himmelblau(Benchmark):
         return np.array([3,2])           
 
     @property
-    def _range(self):
+    def range(self):
         """Returns the x and y ranges for plotting."""
         x = {'min': -6, 'max': 6}
         y = {'min': -6, 'max': 6}
@@ -556,7 +483,7 @@ class Leon(Benchmark):
         return np.array([1,1])  
 
     @property
-    def _range(self):
+    def range(self):
         """Returns the x and y ranges for plotting."""
         x = {'min': -6, 'max': 6}
         y = {'min': -6, 'max': 6}
@@ -591,7 +518,7 @@ class Rosenbrock(Benchmark):
         return np.array([1,1])  
 
     @property
-    def _range(self):
+    def range(self):
         """Returns the x and y ranges for plotting."""
         x = {'min': -10, 'max': 10}
         y = {'min': -10, 'max': 10}
@@ -604,10 +531,6 @@ class Rosenbrock(Benchmark):
         b = 100
         return b*(theta[1]-theta[0]**2)**2+(a-theta[0])**2
         n = 2
-        score = 0
-        for i in range(n-1):
-            score += (b*(theta[i+1]-theta[i]**2)+(a-theta[i])**2)
-        return score
 
     def gradient(self, theta):
         """Computes the gradient of the objective function."""
@@ -632,7 +555,7 @@ class StyblinskiTank(Benchmark):
         return np.array([-2.903534, -2.903534])  
 
     @property
-    def _range(self):
+    def range(self):
         """Returns the x and y ranges for plotting."""
         x = {'min': -5, 'max': 5}
         y = {'min': -5, 'max': 5}
@@ -666,7 +589,7 @@ class SumSquares(Benchmark):
         return np.array([0,0])           
     
     @property
-    def _range(self):
+    def range(self):
         """Returns the x and y ranges for plotting."""
         x = {'min': -10, 'max': 10}
         y = {'min': -10, 'max': 10}
@@ -692,14 +615,14 @@ class ThreeHumpCamel(Benchmark):
 
     @property
     def start(self):
-        return np.array([2,2])
+        return np.array([100,100])
         
     @property
     def minimum(self):
         return np.array([0,0])           
     
     @property
-    def _range(self):
+    def range(self):
         """Returns the x and y ranges for plotting."""
         x = {'min': -2, 'max': 2}
         y = {'min': -2, 'max': 2}
