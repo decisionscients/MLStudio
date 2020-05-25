@@ -71,6 +71,8 @@ class Benchmark:
 
         # ------------------------------------------------------------------  #
         # Create data for surface plot
+        xm, xM = min(xm, min(theta0)), max(xM, max(theta0))
+        ym, yM = min(ym, min(theta1)), max(yM, max(theta1))
         theta0_min, theta0_max = xm, xM
         theta1_min, theta1_max = ym, yM
         theta0_mesh = np.linspace(theta0_min, theta0_max, 50)
@@ -116,6 +118,7 @@ class Benchmark:
             #scene_xaxis=dict(range=[theta0_min, theta0_max], autorange=False),
             #scene_yaxis=dict(range=[theta1_min, theta1_max], autorange=False),            
             #scene_zaxis=dict(range=[zm, zM], autorange=False),
+            title=objective,
             title=dict(xanchor='center', yanchor='top', x=0.5, y=0.9),        
             font=dict(family="Open Sans"),                
             showlegend=True,            
@@ -162,13 +165,10 @@ class Benchmark:
                                  z=models[names[10]]['cost'][:k+1]),   
                     go.Scatter3d(x=models[names[11]]['theta_0'][:k+1], 
                                  y=models[names[11]]['theta_1'][:k+1], 
-                                 z=models[names[11]]['cost'][:k+1]),   
-                    go.Scatter3d(x=models[names[12]]['theta_0'][:k+1], 
-                                 y=models[names[12]]['theta_1'][:k+1], 
-                                 z=models[names[12]]['cost'][:k+1]),                                                                                                                                                                                                                                                                                                                                          
+                                 z=models[names[11]]['cost'][:k+1]),                                                                                                                                                                                                                                                                                                                                         
 
                 ],
-                traces=[1,2,3,4,5,6,7,8,9,10,11,12,13])
+                traces=[1,2,3,4,5,6,7,8,9,10,11,12])
             ) for k in range(n_frames-1)]
 
         # Update the menus

@@ -530,7 +530,6 @@ class Rosenbrock(Benchmark):
         a = 1
         b = 100
         return b*(theta[1]-theta[0]**2)**2+(a-theta[0])**2
-        n = 2
 
     def gradient(self, theta):
         """Computes the gradient of the objective function."""
@@ -563,8 +562,12 @@ class StyblinskiTank(Benchmark):
 
     
     def __call__(self, theta):
-        """Computes the objective function value"""        
-        return 1/2 * np.sum(theta**4 - (16 * theta**2) + (5 * theta))     
+        """Computes the objective function value"""   
+        a = 0
+        for i in range(len(theta)):
+            a += theta[i]**4 - 16 * theta[i]**2 + 5 * theta[i]
+
+        return 1/2 * a
 
     def gradient(self, theta):
         """Computes the gradient of the objective function."""

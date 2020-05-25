@@ -54,12 +54,9 @@ figures = os.path.join(demodir, "figures")
 objectives = [Adjiman(), BartelsConn(), Himmelblau(), Leon(), Rosenbrock(),
               StyblinskiTank(), SumSquares(), ThreeHumpCamel()]
 
-objectives = [Himmelblau()]
 optimizers = [Momentum(), Nesterov(), Adagrad(), Adadelta(), RMSprop(), Adam(),
-              AdaMax(), Nadam(), AMSGrad(), AdamW(), AggMo(), QHAdam(),
+              AdaMax(), Nadam(), AMSGrad(), AdamW(), QHAdam(),
               QuasiHyperbolicMomentum()]
-
-
 
 # --------------------------------------------------------------------------  #
 # Train models
@@ -92,19 +89,25 @@ for objective in objectives:
 
     packages[objective.name] = estimators   
     objectives_results[objective.name] = optimizers_results 
-df = pd.DataFrame(results)
+df1 = pd.DataFrame(results)
+df2 = df1.groupby('Optimizer')[['Size', 'Diff']].mean()
+
 t = datetime.now()
 formatted_time = t.strftime('%y-%m-%d %H%M')
 
-filename = "Benchmark Optimizations " + formatted_time + '.csv'
-filepath = os.path.join(figures, filename)
-df.to_csv(filepath)
-print(df)
+df1_filename = "Benchmark Optimizations " + formatted_time + '.csv'
+df2_filename = "Benchmark Optimization Summary" + formatted_time + '.csv'
+df1_filepath = os.path.join(figures, df1_filename)
+df2_filepath = os.path.join(figures, df2_filename)
+df1.to_csv(df1_filepath)
+df2.to_csv(df2_filepath)
+print(df2)
+
+# for optimizer in optimizers:
 
 # --------------------------------------------------------------------------  #
 # Render plots
-v = Benchmark()
 for title, package in packages.items():        
-        v.animate(estimators=package, directory=figures, filename=title + " Optimization.html")
-        break
+    v = Benchmark()
+    v.animate(estimators=package, directory=figures, filename=title + " Optimization.html")        
 
