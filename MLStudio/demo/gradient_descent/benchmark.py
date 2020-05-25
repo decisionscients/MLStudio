@@ -83,6 +83,10 @@ for objective in objectives:
         d['Final Learning Rate'] = estimators[optimizer.name].eta
         d['Schedule'] = estimators[optimizer.name].schedule.name
         d['Decay Factor'] = estimators[optimizer.name].schedule.decay_factor
+        d['gradient'] = np.linalg.norm(estimators[optimizer.name].gradient_)
+        d['gradient_min'] = np.min(estimators[optimizer.name].blackbox_.epoch_log.get('gradient_norm'))
+        d['gradient_max'] = np.max(estimators[optimizer.name].blackbox_.epoch_log.get('gradient_norm'))        
+        d['gradient_mean'] = np.mean(estimators[optimizer.name].blackbox_.epoch_log.get('gradient_norm'))        
         d['True'] = np.linalg.norm(objective.minimum)
         d['Size'] = np.linalg.norm(estimators[optimizer.name].theta_)
         d['Diff'] = d['Size'] - d['True']

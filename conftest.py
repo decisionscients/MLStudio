@@ -31,6 +31,10 @@ import warnings
 warnings.filterwarnings('ignore')
 warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
 
+from mlstudio.supervised.core.optimizers import Adagrad
+from mlstudio.supervised.core.objectives import StyblinskiTank
+from mlstudio.supervised.callbacks.learning_rate import TimeDecay
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescent
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentClassifier
 
@@ -189,3 +193,15 @@ def get_softmax_regression_prediction(get_softmax_regression_data):
     gd.fit(X,y)
     y_pred = gd.predict(X)    
     return y, y_pred       
+
+@fixture(scope="session")
+def get_estimator():
+    objective = StyblinskiTank()
+    optimizer = Adagrad()
+    est = GradientDescent(learning_rate=0.1,
+                          theta_init=objective.start, 
+                          epochs=500, objective=objective,
+                          schedule=TimeDecay(decay_factor=0.9),
+                          optimizer=optimizer)
+    est.fit()    
+    return est
