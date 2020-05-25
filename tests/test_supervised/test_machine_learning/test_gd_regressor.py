@@ -41,7 +41,7 @@ from mlstudio.supervised.machine_learning.gradient_descent import GradientDescen
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.supervised.core.objectives import MSE
 from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
-from mlstudio.utils.data_manager import VectorScaler
+from mlstudio.utils.data_manager import GradientScaler
 
 
 # --------------------------------------------------------------------------  #
@@ -50,7 +50,7 @@ from mlstudio.utils.data_manager import VectorScaler
 scenarios = [
     GradientDescentRegressor( objective=MSE()),
     GradientDescentRegressor( 
-                             objective=MSE(gradient_scaler=VectorScaler())),
+                             objective=MSE(gradient_scaler=GradientScaler())),
     GradientDescentRegressor( 
                              objective=MSE(regularizer=L1_L2())),
     GradientDescentRegressor(gradient_check=GradientCheck()),
@@ -95,21 +95,21 @@ def test_regression_regularizer_II(get_regression_data_split, get_regression_dat
 # --------------------------------------------------------------------------  #
 scenarios = [
     GradientDescentRegressor( 
-                             objective=MSE(gradient_scaler=VectorScaler(method='c'))),
+                             objective=MSE(gradient_scaler=GradientScaler(method='c'))),
     GradientDescentRegressor(
-                             objective=MSE(regularizer=L1(),gradient_scaler=VectorScaler(method='c'))),
+                             objective=MSE(regularizer=L1(),gradient_scaler=GradientScaler(method='c'))),
     GradientDescentRegressor(
-                             objective=MSE(regularizer=L2(),gradient_scaler=VectorScaler(method='c'))),                             
+                             objective=MSE(regularizer=L2(),gradient_scaler=GradientScaler(method='c'))),                             
     GradientDescentRegressor(
-                             objective=MSE(regularizer=L1_L2(),gradient_scaler=VectorScaler(method='c'))),
+                             objective=MSE(regularizer=L1_L2(),gradient_scaler=GradientScaler(method='c'))),
     GradientDescentRegressor( 
-                             objective=MSE(gradient_scaler=VectorScaler(method='n'))),
+                             objective=MSE(gradient_scaler=GradientScaler(method='n'))),
     GradientDescentRegressor(
-                             objective=MSE(regularizer=L1(),gradient_scaler=VectorScaler(method='n'))),
+                             objective=MSE(regularizer=L1(),gradient_scaler=GradientScaler(method='n'))),
     GradientDescentRegressor(
-                             objective=MSE(regularizer=L2(),gradient_scaler=VectorScaler(method='n'))),                             
+                             objective=MSE(regularizer=L2(),gradient_scaler=GradientScaler(method='n'))),                             
     GradientDescentRegressor(
-                             objective=MSE(regularizer=L1_L2(),gradient_scaler=VectorScaler(method='n')))                             
+                             objective=MSE(regularizer=L1_L2(),gradient_scaler=GradientScaler(method='n')))                             
 ]
 
 @mark.regression

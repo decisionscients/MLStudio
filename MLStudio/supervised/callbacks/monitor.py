@@ -77,7 +77,7 @@ class BlackBox(Callback):
         for k,v in logs.items():
             self.batch_log.setdefault(k,[]).append(v)        
 
-    def on_epoch_begin(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):
         """Updates data and statistics relevant to the training epoch.
 
         Parameters
@@ -200,7 +200,7 @@ class BlackBox(Callback):
 class Progress(Callback):
     """Class that reports progress at designated points during training."""
     
-    def on_epoch_begin(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):
         """Reports progress at the end of each epoch.
 
         Parameters

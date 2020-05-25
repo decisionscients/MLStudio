@@ -26,7 +26,7 @@ from pytest import mark
 import scipy.sparse as sp
 
 from mlstudio.datasets import load_urls
-from mlstudio.utils.data_manager import MinMaxScaler, data_split, VectorScaler
+from mlstudio.utils.data_manager import MinMaxScaler, data_split, GradientScaler
 from mlstudio.utils.data_manager import encode_labels, add_bias_term
 from mlstudio.utils.validation import check_X_y, check_X, check_is_fitted, is_multilabel
 from mlstudio.utils.validation import is_multilabel
@@ -90,7 +90,7 @@ high = [1e-15, 1e16, 1e-15]
 def test_vector_scaler_normalize():            
     for s in zip(clip_norm, low, high):
         X = np.random.default_rng().uniform(low=s[1], high=s[2], size=20)
-        scaler = VectorScaler(method="n", clip_lower=s[1], clip_upper=s[2], clip_norm=s[0])
+        scaler = GradientScaler(method="n", lower_threshold=s[1], upper_threshold=s[2], clip_norm=s[0])
         X_new = scaler.fit_transform(X)
         assert np.isclose(np.linalg.norm(X_new),s[0]), "Normalization didn't work"
         X_old = scaler.inverse_transform(X_new)
@@ -102,7 +102,7 @@ def test_vector_scaler_normalize():
 def test_vector_scaler_clip():      
     for s in zip(clip_norm, low, high):
         X = np.random.default_rng().uniform(low=s[1], high=s[2], size=20)
-        scaler = VectorScaler(method="c", clip_lower=s[1], clip_upper=s[2], clip_norm=s[0])
+        scaler = GradientScaler(method="c", lower_threshold=s[1], upper_threshold=s[2], clip_norm=s[0])
         X_new = scaler.fit_transform(X)
         assert len(X_new[X_new < s[1]])==0, "Clipping didn't work"
         assert len(X_new[X_new > s[2]])==0, "Clipping didn't work"

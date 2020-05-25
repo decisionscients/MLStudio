@@ -77,7 +77,7 @@ class Momentum(Optimizer):
     """Standard gradient descent optimizer."""
 
     def __init__(self, gamma=0.9):
-        self.name = "Momentum Optimizer"
+        self.name = "Momentum"
         self.gamma = gamma
         self._velocity = 0
     
@@ -92,7 +92,7 @@ class Nesterov(Optimizer):
     """Nesterov accelerated gradient optimizer."""
 
     def __init__(self, gamma=0.9):
-        self.name = "Nesterov Accelerated Gradient Optimizer"
+        self.name = "Nesterov"
         self.gamma = gamma
         self._velocity = 0
     
@@ -108,7 +108,7 @@ class Adagrad(Optimizer):
     """Adagrad optimizer."""
 
     def __init__(self, epsilon=1e-8):
-        self.name = "Adagrad Optimizer"
+        self.name = "Adagrad"
         self.epsilon = epsilon
         self.gradients = 0
     
@@ -127,7 +127,7 @@ class Adadelta(Optimizer):
     """Adadelta optimizer."""
 
     def __init__(self, gamma=0.9, epsilon=1e-8):
-        self.name = "Adadelta Optimizer"
+        self.name = "Adadelta"
         self.gamma = gamma
         self.epsilon = epsilon
         self.avg_sqr_gradient = 0
@@ -156,7 +156,7 @@ class RMSprop(Optimizer):
     """RMSprop optimizer."""
 
     def __init__(self, gamma=0.9, epsilon=1e-8):     
-        self.name = "RMSprop Optimizer"   
+        self.name = "RMSprop"   
         self.gamma = gamma
         self.epsilon = epsilon
         self.avg_sqr_gradient = 0
@@ -176,7 +176,7 @@ class Adam(Optimizer):
     """Adam optimizer."""
 
     def __init__(self, beta_one=0.9, beta_two=0.999, epsilon=10e-8):
-        self.name = "Adaptive Moment (Adam) Estimation Optimizer"
+        self.name = "Adam"
         self.beta_one = beta_one
         self.beta_two = beta_two        
         self.epsilon = epsilon
@@ -203,7 +203,7 @@ class AdaMax(Optimizer):
     """AdaMax optimizer."""
 
     def __init__(self, beta_one=0.9, beta_two=0.999):    
-        self.name = "AdaMax Optimizer"   
+        self.name = "AdaMax"   
         self.beta_one = beta_one
         self.beta_two = beta_two        
         self.t = 0
@@ -225,7 +225,7 @@ class Nadam(Optimizer):
     """Nadam optimizer."""
 
     def __init__(self, beta_one=0.9, beta_two=0.999, epsilon=10e-8):
-        self.name = "Nesterov-accelerated Adaptive Moment (Nadam) Estimation Optimizer"
+        self.name = "Nadam"
         self.beta_one = beta_one        
         self.beta_two = beta_two        
         self.epsilon = epsilon
@@ -253,7 +253,7 @@ class AMSGrad(Optimizer):
     """AMSGrad optimizer."""
 
     def __init__(self, beta_one=0.9, beta_two=0.999, epsilon=10e-8):
-        self.name = "AMSGrad Optimizer"
+        self.name = "AMSGrad"
         self.beta_one = beta_one        
         self.beta_two = beta_two
         self.epsilon = epsilon
@@ -277,7 +277,7 @@ class AdamW(Optimizer):
     """AdamW optimizer."""
 
     def __init__(self, beta_one=0.9, beta_two=0.999, decay_rate=1e-4, epsilon=10e-8):
-        self.name = "AdamW Optimizer"
+        self.name = "AdamW"
         self.beta_one = beta_one        
         self.beta_two = beta_two
         self.decay_rate = decay_rate
@@ -300,11 +300,11 @@ class AdamW(Optimizer):
 
 # --------------------------------------------------------------------------  #
 class QHAdam(Optimizer):
-    """Quasi-Hyperbolic Adam Optimizer"""
+    """Quasi-Hyperbolic Adam"""
 
     def __init__(self, beta_one=0.9, beta_two=0.999, decay_rate=1e-4, epsilon=10e-8,
                  v1=1, v2=1):
-        self.name = "Quasi-Hyperbolic Adam Optimizer"
+        self.name = "QH-Adam"
         self.v1 = v1
         self.v2 = v2
         self.beta_one = beta_one        
@@ -328,10 +328,10 @@ class QHAdam(Optimizer):
 
 # --------------------------------------------------------------------------  #
 class AggMo(Optimizer):
-    """Aggregated Momentum Optimizer."""
+    """Aggregated Momentum."""
 
     def __init__(self, k=3, betas=[0, 0.9, 0.999], decay_factor=0, epsilon=10e-8):
-        self.name = "Aggregated Momentum Optimizer."
+        self.name = "AggMo"
         self.k = k
         self.betas = betas
         self.t = 0
@@ -357,10 +357,10 @@ class AggMo(Optimizer):
 
 # --------------------------------------------------------------------------  #
 class QuasiHyperbolicMomentum(Optimizer):
-    """Quasi-Hyperbolic Momentum Optimizer"""
+    """Quasi-Hyperbolic Momentum"""
 
     def __init__(self, v=0.7, beta=0.999, epsilon=10e-8):
-        self.name = "Quasi-Hyperbolic Momentum Optimizer."       
+        self.name = "QH-Momentum"       
         self.v = v 
         self.beta = beta
         self.t = 0

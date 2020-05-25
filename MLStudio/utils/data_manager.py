@@ -442,12 +442,10 @@ class StandardScaler(TransformerMixin, BaseEstimator):
         return self.transform(X)
 
 # --------------------------------------------------------------------------  #
-#                           VECTOR SCALING                                    #        
+#                           GRADIENT SCALING                                  #        
 # --------------------------------------------------------------------------  #        
-class VectorScaler(BaseEstimator, TransformerMixin):
-    """Scales vector by normalizing or clipping.
-
-    This class is primarily used to avoid vanishing or exploding gradients. 
+class GradientScaler(BaseEstimator, TransformerMixin):
+    """Scales and/or normalizes exploding and vanishing gradients. 
     
     Parameters
     ----------
@@ -455,22 +453,22 @@ class VectorScaler(BaseEstimator, TransformerMixin):
         The method used to scale the vector. Choices are 'n' for normalize and
         'c' for clipping.
 
-    clip_lower : float (default=1e-15)
+    lower_threshold : float (default=1e-15)
         The lower threshold for the magnitude of the vector.
 
-    clip_upper : float (default=1e15)
+    upper_threshold : float (default=1e15)
         The upper threshold for the magnitude of the vector.   
 
     clip_norm : float (default=1)
-        If method is 'n' for normalize, vectors with magnitudes below clip_lower
-        or above clip_upper will be normalized to have magnitudes of this value.  
+        If method is 'n' for normalize, vectors with magnitudes below lower_threshold
+        or above upper_threshold will be normalized to have magnitudes of this value.  
 
     """
 
-    def __init__(self, method='c', clip_lower=1e-15, clip_upper=1e15, clip_norm=1): 
+    def __init__(self, method='c', lower_threshold=1e-15, upper_threshold=1e15, clip_norm=1): 
         self.method = method
-        self.clip_lower  = clip_lower
-        self.clip_upper = clip_upper
+        self.lower_threshold  = lower_threshold
+        self.upper_threshold = upper_threshold
         self.clip_norm = clip_norm
         self.normalizer_ = None
 
@@ -482,11 +480,11 @@ class VectorScaler(BaseEstimator, TransformerMixin):
     def transform(self, X):
         """Transforms the data."""
         r_x = np.linalg.norm(X) 
-        if r_x < self.clip_lower or r_x > self.clip_upper:
+        if r_x < self.lower_threshold or r_x > self.upper_threshold:
             if self.method == 'n':
                 X = self.normalizer_.fit_transform(X)                  
             else:
-                X = np.clip(X, self.clip_lower, self.clip_upper)   
+                X = np.clip(X, self.lower_threshold, self.upper_threshold)   
         return X
 
     def fit_transform(self, X):

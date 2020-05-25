@@ -92,11 +92,11 @@ class LearningRateSchedule(Callback):
         if self.decay_factor is 'optimal':
             self.decay_factor = self._default_decay_factor()
 
-    def on_epoch_begin(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):
         if self.freq == 'epoch':
             self._adjust_learning_rate(iteration=epoch, logs=logs)
     
-    def on_batch_begin(self, batch, logs=None):
+    def on_batch_end(self, batch, logs=None):
         if self.freq != 'epoch':
             self._adjust_learning_rate(iteration=batch, logs=logs)
         

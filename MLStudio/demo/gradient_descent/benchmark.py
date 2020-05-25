@@ -32,8 +32,8 @@ demodir = str(Path(__file__).parents[1])
 sys.path.append(homedir)
 
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescent
-from mlstudio.utils.data_manager import StandardScaler
-from mlstudio.visual.animations.benchmark import Benchmark
+from mlstudio.visual.animations.surface import Surface
+from mlstudio.visual.animations.surface_contour import SurfaceContour
 from mlstudio.supervised.core.objectives import Adjiman, BartelsConn, Himmelblau
 from mlstudio.supervised.core.objectives import Leon, Rosenbrock, StyblinskiTank
 from mlstudio.supervised.core.objectives import SumSquares, ThreeHumpCamel
@@ -44,7 +44,7 @@ from mlstudio.supervised.core.optimizers import Nadam, AMSGrad, QHAdam
 from mlstudio.supervised.core.optimizers import QuasiHyperbolicMomentum
 from mlstudio.supervised.core.optimizers import AggMo
 from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, TimeDecay
-
+from mlstudio.utils.file_manager import save_df
 
 # --------------------------------------------------------------------------  #
 # Designate file locations
@@ -70,16 +70,19 @@ for objective in objectives:
     for optimizer in optimizers:
         estimators[optimizer.name] = GradientDescent(learning_rate=0.1,
                                         theta_init=objective.start, 
-                                        epochs=5000, objective=objective,
+                                        epochs=500, objective=objective,
                                         schedule=TimeDecay(decay_factor=0.9),
                                         optimizer=optimizer)
         estimators[optimizer.name].fit()
         d = {}
+        d['DateTime'] = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         d['Objective'] = estimators[optimizer.name].objective.name
         d['Optimizer'] = optimizer.name
-        d['Epochs'] = estimators[optimizer.name].epochs
-        d['Schedule'] = estimators[optimizer.name].schedule.name
+        d['Epochs'] = estimators[optimizer.name].epochs        
+        d['Starting Learning Rate'] = estimators[optimizer.name].learning_rate
         d['Final Learning Rate'] = estimators[optimizer.name].eta
+        d['Schedule'] = estimators[optimizer.name].schedule.name
+        d['Decay Factor'] = estimators[optimizer.name].schedule.decay_factor
         d['True'] = np.linalg.norm(objective.minimum)
         d['Size'] = np.linalg.norm(estimators[optimizer.name].theta_)
         d['Diff'] = d['Size'] - d['True']
@@ -89,25 +92,13 @@ for objective in objectives:
 
     packages[objective.name] = estimators   
     objectives_results[objective.name] = optimizers_results 
-df1 = pd.DataFrame(results)
-df2 = df1.groupby('Optimizer')[['Size', 'Diff']].mean()
-
-t = datetime.now()
-formatted_time = t.strftime('%y-%m-%d %H%M')
-
-df1_filename = "Benchmark Optimizations " + formatted_time + '.csv'
-df2_filename = "Benchmark Optimization Summary" + formatted_time + '.csv'
-df1_filepath = os.path.join(figures, df1_filename)
-df2_filepath = os.path.join(figures, df2_filename)
-df1.to_csv(df1_filepath)
-df2.to_csv(df2_filepath)
-print(df2)
-
-# for optimizer in optimizers:
+df = pd.DataFrame(results)
+df_filename = "Benchmark Optimizations.csv"
+save_df(df, figures, df_filename)
 
 # --------------------------------------------------------------------------  #
 # Render plots
 for title, package in packages.items():        
-    v = Benchmark()
+    v = Surface()
     v.animate(estimators=package, directory=figures, filename=title + " Optimization.html")        
 

@@ -32,7 +32,18 @@ from  mlstudio.utils.format import snake
 
 def check_directory(directory):    
     if not os.path.exists(directory):
-        os.makedirs(directory)                
+        os.makedirs(directory)               
+
+def save_df(df, directory, filename, mode='a'):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    path = os.path.join(os.path.abspath(directory), filename)
+    
+    if os.path.exists(path) and mode == 'a':
+        df.to_csv(path, mode=mode, header=False)
+    else:
+        df.to_csv(path)        
 
 def save_fig(fig, directory, filename):
     if os.path.exists(directory):

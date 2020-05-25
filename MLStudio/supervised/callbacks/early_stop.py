@@ -43,7 +43,7 @@ class EarlyStop(Callback, ABC):
         pass
 
     @abstractmethod
-    def on_epoch_begin(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):
         pass
 
 # --------------------------------------------------------------------------- #
@@ -119,7 +119,7 @@ class Stability(EarlyStop):
             epsilon=self.epsilon, patience=self.patience)    
         self._observer.initialize()        
 
-    def on_epoch_begin(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):
         """Determines whether convergence has been achieved.
 
         Parameters

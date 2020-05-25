@@ -403,7 +403,7 @@ class BartelsConn(Benchmark):
     
     @property
     def start(self):
-        return np.array([-500,500])
+        return np.array([-500,0])
 
     @property
     def minimum(self):
@@ -443,7 +443,7 @@ class Himmelblau(Benchmark):
 
     @property
     def start(self):
-        return np.array([6,-6])
+        return np.array([5,5])
 
     @property
     def minimum(self):
@@ -452,8 +452,8 @@ class Himmelblau(Benchmark):
     @property
     def range(self):
         """Returns the x and y ranges for plotting."""
-        x = {'min': -6, 'max': 6}
-        y = {'min': -6, 'max': 6}
+        x = {'min': -5, 'max': 5}
+        y = {'min': -5, 'max': 5}
         return x, y    
 
     def __call__(self, theta):
@@ -476,7 +476,7 @@ class Leon(Benchmark):
 
     @property
     def start(self):
-        return np.array([6,6])
+        return np.array([-1.5,1.5])
 
     @property
     def minimum(self):
@@ -485,8 +485,8 @@ class Leon(Benchmark):
     @property
     def range(self):
         """Returns the x and y ranges for plotting."""
-        x = {'min': -6, 'max': 6}
-        y = {'min': -6, 'max': 6}
+        x = {'min': -1.5, 'max': 1.5}
+        y = {'min': -2, 'max': 2}
         return x, y            
 
     def __call__(self, theta):
@@ -511,7 +511,7 @@ class Rosenbrock(Benchmark):
 
     @property
     def start(self):
-        return np.array([10,10])
+        return np.array([-5,10])
 
     @property
     def minimum(self):
@@ -547,7 +547,7 @@ class StyblinskiTank(Benchmark):
 
     @property
     def start(self):
-        return np.array([5,-5])
+        return np.array([-5,-4])
 
     @property
     def minimum(self):
@@ -618,7 +618,7 @@ class ThreeHumpCamel(Benchmark):
 
     @property
     def start(self):
-        return np.array([100,100])
+        return np.array([-2,2])
         
     @property
     def minimum(self):

@@ -124,10 +124,10 @@ def validate_objective(objective):
         return True      
 # --------------------------------------------------------------------------  #
 def validate_gradient_scaler(scaler):        
-    from mlstudio.utils.data_manager import VectorScaler
-    if not isinstance(scaler, VectorScaler):
-        msg = "{s} is an invalid VectorScaler object. The valid Optimizer \
-        classes include : {v}".format(s=scaler, v=str(data_manager.VectorScaler.__name__))
+    from mlstudio.utils.data_manager import GradientScaler
+    if not isinstance(scaler, GradientScaler):
+        msg = "{s} is an invalid GradientScaler object. The valid Optimizer \
+        classes include : {v}".format(s=scaler, v=str(data_manager.GradientScaler.__name__))
         raise ValueError(msg)
     else:
         return True     

@@ -41,7 +41,7 @@ from mlstudio.supervised.machine_learning.gradient_descent import GradientDescen
 from mlstudio.supervised.core.scorers import Accuracy
 from mlstudio.supervised.core.objectives import CrossEntropy
 from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
-from mlstudio.utils.data_manager import VectorScaler
+from mlstudio.utils.data_manager import GradientScaler
 
 
 # --------------------------------------------------------------------------  #
@@ -50,7 +50,7 @@ from mlstudio.utils.data_manager import VectorScaler
 scenarios = [
     GradientDescentClassifier(objective=CrossEntropy()),
     GradientDescentClassifier(
-                              objective=CrossEntropy(gradient_scaler=VectorScaler())),
+                              objective=CrossEntropy(gradient_scaler=GradientScaler())),
     GradientDescentClassifier(
                              objective=CrossEntropy(regularizer=L1_L2())),
     GradientDescentClassifier(gradient_check=GradientCheck()),
@@ -97,21 +97,21 @@ def test_logistic_regression_regularizer_II(get_logistic_regression_data_split, 
 # --------------------------------------------------------------------------  #
 scenarios = [
     GradientDescentClassifier(
-                             objective=CrossEntropy(gradient_scaler=VectorScaler(method='c'))),
+                             objective=CrossEntropy(gradient_scaler=GradientScaler(method='c'))),
     GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L1(),gradient_scaler=VectorScaler(method='c'))),
+                             objective=CrossEntropy(regularizer=L1(),gradient_scaler=GradientScaler(method='c'))),
     GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L2(),gradient_scaler=VectorScaler(method='c'))),                             
+                             objective=CrossEntropy(regularizer=L2(),gradient_scaler=GradientScaler(method='c'))),                             
     GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L1_L2(),gradient_scaler=VectorScaler(method='c'))),
+                             objective=CrossEntropy(regularizer=L1_L2(),gradient_scaler=GradientScaler(method='c'))),
     GradientDescentClassifier(
-                             objective=CrossEntropy(gradient_scaler=VectorScaler(method='n'))),
+                             objective=CrossEntropy(gradient_scaler=GradientScaler(method='n'))),
     GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L1(),gradient_scaler=VectorScaler(method='n'))),
+                             objective=CrossEntropy(regularizer=L1(),gradient_scaler=GradientScaler(method='n'))),
     GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L2(),gradient_scaler=VectorScaler(method='n'))),                             
+                             objective=CrossEntropy(regularizer=L2(),gradient_scaler=GradientScaler(method='n'))),                             
     GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L1_L2(),gradient_scaler=VectorScaler(method='n')))                             
+                             objective=CrossEntropy(regularizer=L1_L2(),gradient_scaler=GradientScaler(method='n')))                             
 ]
 
 @mark.logistic_regression

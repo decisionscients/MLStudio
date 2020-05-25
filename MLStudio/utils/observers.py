@@ -174,8 +174,6 @@ class Performance(Observer):
         except:
             raise ValueError("{m} is not a valid metric for this optimization."\
                 .format(m=self._metric))      
-        if self._metric in ['gradient', 'theta']:
-            current = np.linalg.norm(current)  
         return current
 
     def _resolve_metric(self, logs):
@@ -185,6 +183,9 @@ class Performance(Observer):
                 self._metric = 'val_' + self._metric 
             else:
                 self._metric = 'train_' + self._metric
+
+        elif self._metric in ['gradient', 'theta']:
+            self._metric = self._metric + "_norm"
 
     def _handle_first_iteration(self, current, logs):
         """First iteration processing."""

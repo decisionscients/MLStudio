@@ -110,7 +110,7 @@ class GradientCheck(Callback):
 
 
 
-    def on_epoch_begin(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):
         """Checks gradient each self.iterations number of iterations.
 
         Parameters
