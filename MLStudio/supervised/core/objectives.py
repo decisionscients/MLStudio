@@ -25,6 +25,7 @@ import numpy as np
 from sklearn.base import BaseEstimator
 
 from mlstudio.supervised.core.regularizers import Nill
+from mlstudio.utils.data_manager import GradientScaler    
 
 # --------------------------------------------------------------------------  #
 #                        OBJECTIVE BASE CLASS                                 #
@@ -37,11 +38,12 @@ class Objective(ABC, BaseEstimator):
     regularizer : a Regularizer object
         Object to perform L1, L2, or L1_L2 regularization of the gradient
 
-    gradient_scaler : a GradientScaler object
-        Performs gradient scaling 
+    gradient_scaler : a GradientScaler object or None
+        Defaults to a GradientScaler object with default lower 
+        threshold = 1e-10 and upper threshold = 1.
     """
 
-    def __init__(self, regularizer=None, gradient_scaler=None):
+    def __init__(self, regularizer=None, gradient_scaler=GradientScaler()):
         self.regularizer = regularizer
         self.gradient_scaler = gradient_scaler
         if not regularizer:
@@ -50,7 +52,17 @@ class Objective(ABC, BaseEstimator):
     def _validation(self):
         from mlstudio.utils.validation import validate_regularizer                
         validate_regularizer(self.regularizer)
-        validate_gradient_scaler(self.gradient_scaler)
+        if self.gradient_scaler:
+            validate_gradient_scaler(self.gradient_scaler)
+
+    def _check_gradient_scale(self, gradient):
+        if self.gradient_scaler:
+            gradient = self.gradient_scaler.fit_transform(gradient)
+        return gradient
+
+    @property
+    def turn_off_gradient_scaling(self):
+        self.gradient_scaler = False
 
     @abstractmethod
     def name(self):
@@ -165,11 +177,10 @@ class MSE(Cost):
         n_samples = X.shape[0]
         dZ = y_out-y
         dW = float(1. / n_samples) * X.T.dot(dZ) 
+        # Check gradient scale  before applying regularization
+        dW = self._check_gradient_scale(dW)
         # Add the gradient of regularizer of weights 
         dW += self.regularizer.gradient(theta) / n_samples        
-        # Check scale of gradient if requested
-        if self.gradient_scaler:
-            dW = self.gradient_scaler.fit_transform(dW)                
         return(dW)        
 
 # --------------------------------------------------------------------------  #
@@ -232,10 +243,10 @@ class CrossEntropy(Cost):
         n_samples = X.shape[0]
         dZ = y_out-y
         dW = float(1./n_samples) * (dZ).dot(X)
+        # Check gradient scale before applying regularization
+        dW = self._check_gradient_scale(dW)
+        # Apply regularization as appropriate        
         dW += self.regularizer.gradient(theta) / n_samples        
-        # Check scale of gradient if requested
-        if self.gradient_scaler:
-            dW = self.gradient_scaler.fit_transform(dW)                         
         return(dW)          
 
 # --------------------------------------------------------------------------  #
@@ -300,11 +311,10 @@ class CategoricalCrossEntropy(Cost):
         n_samples = y.shape[0]
         dZ = y_out-y
         dW = 1/n_samples * X.T.dot(dZ)
+        # Check gradient scale before applying regularization
+        dW = self._check_gradient_scale(dW)        
         # Add regularizer of weights 
         dW += self.regularizer.gradient(theta) / n_samples        
-        # Check scale of gradient if requested
-        if self.gradient_scaler:
-            dW = self.gradient_scaler.fit_transform(dW)                             
         return(dW)                  
 # --------------------------------------------------------------------------  #
 #                         BENCHMARK FUNCTIONS                                 #        
@@ -335,21 +345,7 @@ class Benchmark(Objective):
     def range(self):
         """Returns x and y ranges for plotting."""
         pass
-
-    def mesh(self):
-        """Returns the mesh grid for the function."""       
-        x, y = self.range
-        density_x = (x['max']-x['min']) * self.density
-        density_y = (y['max']-y['min']) * self.density
-        density = np.max(density_x, density_y)
-        x = np.linspace(x['min'], x['max'], density)
-        y = np.linspace(y['min'], y['max'], density)
-        x, y = np.meshgrid(x, y)
-        z = np.array([self.__call__(THETA)
-                    for THETA in zip(np.ravel(x), np.ravel(y))])
-        z = z.reshape(x.shape)  
-        d = {'x': x, 'y': y, 'z':z}
-        return d    
+   
     
     @abstractmethod
     def __call__(self, theta):
@@ -391,7 +387,10 @@ class Adjiman(Benchmark):
         """Computes the gradient of the objective function."""
         dfdx = -(1/(theta[1]**2+1))*((theta[1]**2+1)*np.sin(theta[0])*np.sin(theta[1])+1)
         dfdy = 2*theta[0]*theta[1] /(theta[1]**2+1)**2 + np.cos(theta[0])*np.cos(theta[1])
-        return np.array([dfdx, dfdy])
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df
 
 # --------------------------------------------------------------------------  #
 class BartelsConn(Benchmark):
@@ -431,7 +430,11 @@ class BartelsConn(Benchmark):
         a = (theta[0] + 2 * theta[1]) * np.sign(theta[0]**2 + theta[0] * theta[1] + theta[1]**2)
         b = np.sin(theta[1]) * np.sign(np.cos(theta[1]))
         dfdy = a - b
-        return np.array([dfdx, dfdy])
+        # Package into gradient vector
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df        
 
 # --------------------------------------------------------------------------  #
 class Himmelblau(Benchmark):
@@ -464,7 +467,12 @@ class Himmelblau(Benchmark):
         """Computes the gradient of the objective function."""
         dfdx = 4*theta[0]*(theta[0]**2+theta[1]-11)+2*theta[0]+2*theta[1]**2-14
         dfdy = 2*theta[0]**2 + 4*theta[1] * (theta[0]+theta[1]**2-7)+2*theta[1]-22
-        return np.array([dfdx, dfdy])        
+        # Package into gradient vector
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df        
+        
 
 # --------------------------------------------------------------------------  #
 class Leon(Benchmark):
@@ -497,7 +505,12 @@ class Leon(Benchmark):
         """Computes the gradient of the objective function."""
         dfdx = -400*(-theta[0]**2+theta[1]) + 2*theta[0] - 2
         dfdy = -200*theta[0]**2 + 200 * theta[1]
-        return np.array([dfdx, dfdy])             
+        # Package into gradient vector
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df        
+             
 
    
 
@@ -535,7 +548,12 @@ class Rosenbrock(Benchmark):
         """Computes the gradient of the objective function."""
         dfdx = -400*theta[0]*(-theta[0]**2+theta[1])+2*theta[0]-2
         dfdy = -200*theta[0]**2 + 200 * theta[1]
-        return np.array([dfdx, dfdy])      
+        # Package into gradient vector
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df        
+      
 
 # --------------------------------------------------------------------------  #
 class StyblinskiTank(Benchmark):
@@ -573,7 +591,12 @@ class StyblinskiTank(Benchmark):
         """Computes the gradient of the objective function."""
         dfdx = 2*theta[0]**3 - 16 * theta[0] + 5/2
         dfdy = 2*theta[1]**3 - 16*theta[1] + 5/2
-        return np.array([dfdx, dfdy])                  
+        # Package into gradient vector
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df        
+       
 
 # --------------------------------------------------------------------------  #
 class SumSquares(Benchmark):
@@ -606,7 +629,11 @@ class SumSquares(Benchmark):
         """Computes the gradient of the objective function."""
         dfdx = 2 * theta[0]
         dfdy = 2 * theta[1]
-        return np.array([dfdx, dfdy])        
+        # Package into gradient vector
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df                
 
 # --------------------------------------------------------------------------  #
 class ThreeHumpCamel(Benchmark):
@@ -639,4 +666,9 @@ class ThreeHumpCamel(Benchmark):
         """Computes the gradient of the objective function."""
         dfdx = theta[0]**5-((21*theta[0]**3)/5)+4*theta[0]+theta[1]
         dfdy = theta[0]+2*theta[1]
-        return np.array([dfdx, dfdy]) 
+        # Package into gradient vector
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df        
+

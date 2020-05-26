@@ -47,15 +47,12 @@ from mlstudio.utils.data_manager import GradientScaler
 # --------------------------------------------------------------------------  #
 #                               Q&D TEST                                      #
 # --------------------------------------------------------------------------  #
-scenarios = [
-    GradientDescentRegressor( objective=MSE()),
-    GradientDescentRegressor( 
-                             objective=MSE(gradient_scaler=GradientScaler())),
-    GradientDescentRegressor( 
-                             objective=MSE(regularizer=L1_L2())),
-    GradientDescentRegressor(gradient_check=GradientCheck()),
-    GradientDescentRegressor( early_stop=Stability()),                                           
-    GradientDescentRegressor( schedule=BottouSchedule()),                                           
+scenarios = [    
+    GradientDescentRegressor(),
+    GradientDescentRegressor(objective=MSE(regularizer=L1_L2())),
+    GradientDescentRegressor(gradient_check=True),
+    GradientDescentRegressor(early_stop=Stability()),                                           
+    GradientDescentRegressor(schedule=BottouSchedule()),                                           
 ]
 @mark.regression
 @mark.regression_qnd
@@ -66,7 +63,7 @@ def test_regression_qnd(estimator, check):
 #                        REGULARIZATION TESTING                               #
 # --------------------------------------------------------------------------  #
 scenarios = [
-    GradientDescentRegressor( objective=MSE()),
+    GradientDescentRegressor(objective=MSE()),
     GradientDescentRegressor(objective=MSE(regularizer=L1())),
     GradientDescentRegressor(objective=MSE(regularizer=L2())),
     GradientDescentRegressor(objective=MSE(regularizer=L1_L2()))
@@ -89,50 +86,6 @@ def test_regression_regularizer_II(get_regression_data_split, get_regression_dat
         msg = "Poor score from " + regularizer + ' on ' + str(X_train.shape[0]) + ' observations.'
         score = est.score(X_val, y_val)
         assert score > 0.5, msg
-
-# --------------------------------------------------------------------------  #
-#                REGULARIZATION TESTING w/ VECTOR SCALING                     #
-# --------------------------------------------------------------------------  #
-scenarios = [
-    GradientDescentRegressor( 
-                             objective=MSE(gradient_scaler=GradientScaler(method='c'))),
-    GradientDescentRegressor(
-                             objective=MSE(regularizer=L1(),gradient_scaler=GradientScaler(method='c'))),
-    GradientDescentRegressor(
-                             objective=MSE(regularizer=L2(),gradient_scaler=GradientScaler(method='c'))),                             
-    GradientDescentRegressor(
-                             objective=MSE(regularizer=L1_L2(),gradient_scaler=GradientScaler(method='c'))),
-    GradientDescentRegressor( 
-                             objective=MSE(gradient_scaler=GradientScaler(method='n'))),
-    GradientDescentRegressor(
-                             objective=MSE(regularizer=L1(),gradient_scaler=GradientScaler(method='n'))),
-    GradientDescentRegressor(
-                             objective=MSE(regularizer=L2(),gradient_scaler=GradientScaler(method='n'))),                             
-    GradientDescentRegressor(
-                             objective=MSE(regularizer=L1_L2(),gradient_scaler=GradientScaler(method='n')))                             
-]
-
-@mark.regression
-@mark.regression_regularizer
-@mark.regression_gradient_scaling
-@parametrize_with_checks(scenarios)
-def test_regression_regularizer_gradient_scaling(estimator, check):
-    check(estimator)
-
-@mark.regression
-@mark.regression_regularizer
-@mark.regression_gradient_scaling
-@mark.regression_gradient_scaling_II
-def test_regression_regularizer_gradient_scaling_II(get_regression_data_split, get_regression_data_features):
-    X_train, X_val, y_train, y_val = get_regression_data_split
-    for est in scenarios:
-        est.fit(X_train, y_train)            
-        regularizer = est.objective.regularizer.__class__.__name__     
-        msg = "Poor score from " + regularizer + ' on ' + str(X_train.shape[0]) + ' observations.'
-        score = est.score(X_val, y_val)
-        assert score > 0.5, msg
-
-
 
 # --------------------------------------------------------------------------  #
 #                          TEST GRADIENTS                                     #

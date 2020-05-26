@@ -26,7 +26,7 @@ import numpy as np
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.utils.validation import validate_bool, validate_early_stop
-from mlstudio.utils.validation import validate_gradient_check, validate_int
+from mlstudio.utils.validation import validate_int
 from mlstudio.utils.validation import validate_learning_rate_schedule
 from mlstudio.utils.validation import validate_objective, validate_optimizer
 from mlstudio.utils.validation import validate_scorer, validate_string

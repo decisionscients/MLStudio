@@ -92,56 +92,12 @@ def test_logistic_regression_regularizer_II(get_logistic_regression_data_split, 
         score = est.score(X_val, y_val)
         assert score > 0.5, msg
 
-# --------------------------------------------------------------------------  #
-#                REGULARIZATION TESTING w/ VECTOR SCALING                     #
-# --------------------------------------------------------------------------  #
-scenarios = [
-    GradientDescentClassifier(
-                             objective=CrossEntropy(gradient_scaler=GradientScaler(method='c'))),
-    GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L1(),gradient_scaler=GradientScaler(method='c'))),
-    GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L2(),gradient_scaler=GradientScaler(method='c'))),                             
-    GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L1_L2(),gradient_scaler=GradientScaler(method='c'))),
-    GradientDescentClassifier(
-                             objective=CrossEntropy(gradient_scaler=GradientScaler(method='n'))),
-    GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L1(),gradient_scaler=GradientScaler(method='n'))),
-    GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L2(),gradient_scaler=GradientScaler(method='n'))),                             
-    GradientDescentClassifier(
-                             objective=CrossEntropy(regularizer=L1_L2(),gradient_scaler=GradientScaler(method='n')))                             
-]
-
-@mark.logistic_regression
-@mark.logistic_regression_regularizer
-@mark.logistic_regression_gradient_scaling
-@parametrize_with_checks(scenarios)
-def test_logistic_regression_regularizer_gradient_scaling(estimator, check):
-    check(estimator)
-
-@mark.logistic_regression
-@mark.logistic_regression_regularizer
-@mark.logistic_regression_gradient_scaling
-@mark.logistic_regression_gradient_scaling_II
-def test_logistic_regression_regularizer_gradient_scaling_II(get_logistic_regression_data_split, get_logistic_regression_data_features):
-    X_train, X_val, y_train, y_val = get_logistic_regression_data_split
-    for est in scenarios:
-        est.fit(X_train, y_train)            
-        regularizer = est.objective.regularizer.__class__.__name__     
-        msg = "Poor score from " + regularizer + ' on ' + str(X_train.shape[0]) + ' observations.'
-        score = est.score(X_val, y_val)
-        assert score > 0.5, msg
-
-
 
 # --------------------------------------------------------------------------  #
 #                          TEST GRADIENTS                                     #
 # --------------------------------------------------------------------------  #
 scenarios = [
-    GradientDescentClassifier(
-                             objective=CrossEntropy(), 
+    GradientDescentClassifier(objective=CrossEntropy(gradient_scaler=False), 
                              gradient_check=True)
 ]
 @mark.logistic_regression

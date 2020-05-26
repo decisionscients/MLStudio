@@ -162,14 +162,6 @@ def validate_task(task):
     else:
         return True           
 # --------------------------------------------------------------------------  #
-def validate_gradient_check(gradient_check):    
-    from mlstudio.supervised.callbacks.debugging import GradientCheck    
-    if not isinstance(gradient_check, GradientCheck):
-        msg = "{s} must be a valid GradientCheck object.".format(s=gradient_check)
-        raise ValueError(msg)
-    else:
-        return True                            
-# --------------------------------------------------------------------------  #
 def validate_metric(metric):
     valid_metrics = ['cost', 'score','theta', 'gradient']
     if metric not in valid_metrics:

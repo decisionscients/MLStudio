@@ -19,6 +19,7 @@
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
 """Call back that performs gradient checking."""
+import copy
 import numpy as np
 import pandas as pd
 
@@ -55,7 +56,10 @@ class GradientCheck(Callback):
         self._gradients = []
         self._approximations = []
         self._differences = []
-        self._results = []      
+        self._results = []    
+        # Obtain a copy of the objective function and turn gradient_scaling off
+        self._objective = copy.deepcopy(self.model.objective)
+        self._objective.turn_off_gradient_scaling
 
     def _check_cost_functions(self, logs):
         """Computes gradient and approximation for cost functions."""
@@ -73,9 +77,9 @@ class GradientCheck(Callback):
             theta_minus[i] = theta_minus[i] - self.epsilon
             # Compute associated costs
             y_pred = self.model.task.compute_output(theta_plus, X)
-            J_plus = self.model.objective(theta_plus, y, y_pred)
+            J_plus = self._objective(theta_plus, y, y_pred)
             y_pred = self.model.task.compute_output(theta_minus, X)
-            J_minus = self.model.objective(theta_minus, y, y_pred)
+            J_minus = self._objective(theta_minus, y, y_pred)
 
             # Estimate the gradient
             grad_approx_i = (J_plus - J_minus) / (2 * self.epsilon)         
@@ -83,7 +87,7 @@ class GradientCheck(Callback):
         
         # Compute gradient via back-propagation
         y_pred = self.model.task.compute_output(theta, X)
-        grad = self.model.objective.gradient(theta, X, y, y_pred)         
+        grad = self._objective.gradient(theta, X, y, y_pred)         
         return grad, grad_approx
 
     def _check_benchmark_functions(self, logs):
@@ -98,14 +102,14 @@ class GradientCheck(Callback):
             theta_plus[i] = theta_plus[i] + self.epsilon
             theta_minus[i] = theta_minus[i] - self.epsilon
             # Compute associated costs            
-            J_plus = self.model.objective(theta_plus)            
-            J_minus = self.model.objective(theta_minus)
+            J_plus = self._objective(theta_plus)            
+            J_minus = self._objective(theta_minus)
             # Estimate the gradient
             grad_approx_i = (J_plus - J_minus) / (2 * self.epsilon)         
             grad_approx.append(grad_approx_i)
         
         # Compute gradient via back-propagation        
-        grad = self.model.objective.gradient(theta)         
+        grad = self._objective.gradient(theta)         
         return grad, grad_approx        
 
 
@@ -125,7 +129,7 @@ class GradientCheck(Callback):
         """
         if self.model.gradient_check:
             if logs.get('epoch') % self.iterations == 0:                                         
-                if isinstance(self.model.objective, Cost):
+                if isinstance(self._objective, Cost):
                     grad, grad_approx = self._check_cost_functions(logs)
                 else:
                     grad, grad_approx = self._check_benchmark_functions(logs)               
@@ -174,10 +178,10 @@ class GradientCheck(Callback):
                 a=self._approximations[p]))
             print("  Iteration: {i} Difference {a}".format(i=str(p), \
                 a=self._differences[p]))                
-        msg = "Gradient check failed for " + self.model.objective.name 
-        if hasattr(self.model.objective, 'regularization'):
-            if not isinstance(self.model.objective.regularization, Nill):        
-                msg = msg + ' with ' + self.model.objective.regularization.name 
+        msg = "Gradient check failed for " + self._objective.name 
+        if hasattr(self._objective, 'regularization'):
+            if not isinstance(self._objective.regularization, Nill):        
+                msg = msg + ' with ' + self._objective.regularization.name 
         raise Exception(msg)        
 
     def on_train_end(self, logs=None):

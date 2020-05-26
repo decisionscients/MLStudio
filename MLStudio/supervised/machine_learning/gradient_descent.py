@@ -54,7 +54,6 @@ from mlstudio.utils.validation import validate_learning_rate_schedule
 from mlstudio.utils.validation import validate_int, validate_string
 from mlstudio.utils.validation import validate_early_stop, validate_metric
 from mlstudio.utils.validation import validate_scorer, validate_bool
-from mlstudio.utils.validation import validate_gradient_check
 # =========================================================================== #
 #                          GRADIENT DESCENT                                   #
 # =========================================================================== #        
@@ -63,7 +62,7 @@ class GradientDescent(BaseEstimator):
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
                  optimizer=Classic(), objective=MSE(), schedule=None,                  
                  early_stop=None, verbose=False, checkpoint=100, 
-                 random_state=None, gradient_check=None):
+                 random_state=None, gradient_check=False):
 
         self.learning_rate = learning_rate
         self.epochs = epochs
@@ -140,8 +139,6 @@ class GradientDescent(BaseEstimator):
         validate_int(param=self.checkpoint, param_name='checkpoint')
         if self.random_state:
             validate_int(param=self.random_state, param_name='random_state')
-        if self.gradient_check:
-            validate_gradient_check(self.gradient_check)
 
 
 # --------------------------------------------------------------------------- #
@@ -171,8 +168,6 @@ class GradientDescent(BaseEstimator):
         self._objective = copy.deepcopy(self.objective)        
         self._early_stop = copy.deepcopy(self.early_stop) if self.early_stop \
             else self.early_stop
-        self._gradient_check = copy.deepcopy(self.gradient_check) if \
-            self.gradient_check else self.gradient_check
         self._schedule = copy.deepcopy(self.schedule) if \
             self.schedule else self.schedule            
         
@@ -181,20 +176,19 @@ class GradientDescent(BaseEstimator):
         # Copy mutable classes and parameters that will be modified during
         # training. 
         self._copy_mutable_parameters()  
-        # Initialize implicit dependencies. Yeah, yeah I know... But adding these
-        # to the constructor seemed a bit much.         
-        self._cbks = CallbackList()       
-        self._progress = Progress()
+
+        # Initialize implicit dependencies.    
+        self._cbks = CallbackList()               
         self.blackbox_ = BlackBox()        
 
         # Add callbacks to callback list         
-        self._cbks.append(self.blackbox_)        
+        self._cbks.append(self.blackbox_)    
+        if self.gradient_check:
+            self._cbks.append(GradientCheck())    
         if self.verbose:
-            self._cbks.append(self._progress)        
+            self._cbks.append(Progress())        
         if isinstance(self._early_stop, EarlyStop):
-            self._cbks.append(self._early_stop)        
-        if isinstance(self._gradient_check, GradientCheck):
-            self._cbks.append(self._gradient_check)        
+            self._cbks.append(self._early_stop)            
         if isinstance(self._schedule, LearningRateSchedule):
             self._cbks.append(self._schedule)                
 

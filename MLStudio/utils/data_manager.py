@@ -213,6 +213,7 @@ class NormScaler(TransformerMixin, BaseEstimator):
 
         """
         self.r_= np.linalg.norm(X)
+        return self
 
     def transform(self, X):
         """Scales features to have a norm of 1
@@ -301,6 +302,7 @@ class MinMaxScaler(TransformerMixin, BaseEstimator):
         self.data_min_ = np.amin(X, axis=0)
         self.data_max_ = np.amax(X, axis=0)
         self.data_range_ = self.data_max_ - self.data_min_
+        return self
 
     def transform(self, X):
         """Scales features to range 0 to 1.
@@ -403,6 +405,7 @@ class StandardScaler(TransformerMixin, BaseEstimator):
             self.mean_ = np.mean(X,axis=0)
         if self.scale:
             self.std_ = np.std(X,axis=0)
+        return self
 
     def transform(self, X):
         """Center and scale the data.
@@ -446,45 +449,41 @@ class StandardScaler(TransformerMixin, BaseEstimator):
 # --------------------------------------------------------------------------  #        
 class GradientScaler(BaseEstimator, TransformerMixin):
     """Scales and/or normalizes exploding and vanishing gradients. 
+
+    If the norm of the gradient is below the lower threshold, the gradient
+    is rescaled to a unit vector. If it is greater than the upper threshold
+    then the new gradient is given by:
+
+    ..math:: \nabla_{new} = \frac{\text{upper_threshold}}{\lVert \nabla \rVert} \times \nabla
     
     Parameters
     ----------
-    method : str (default='c')
-        The method used to scale the vector. Choices are 'n' for normalize and
-        'c' for clipping.
-
     lower_threshold : float (default=1e-15)
         The lower threshold for the magnitude of the vector.
 
     upper_threshold : float (default=1e15)
         The upper threshold for the magnitude of the vector.   
 
-    clip_norm : float (default=1)
-        If method is 'n' for normalize, vectors with magnitudes below lower_threshold
-        or above upper_threshold will be normalized to have magnitudes of this value.  
-
     """
 
-    def __init__(self, method='c', lower_threshold=1e-15, upper_threshold=1e15, clip_norm=1): 
-        self.method = method
+    def __init__(self, lower_threshold=1e-10, upper_threshold=1): 
         self.lower_threshold  = lower_threshold
         self.upper_threshold = upper_threshold
-        self.clip_norm = clip_norm
         self.normalizer_ = None
 
     def fit(self, X, y=None):
         """Fits the transformer to the data. """
-        if self.method == "n":
-            self.normalizer_ = NormScaler(clip_norm=self.clip_norm)        
+        self._r = np.linalg.norm(X)
+        return self       
 
     def transform(self, X):
-        """Transforms the data."""
-        r_x = np.linalg.norm(X) 
-        if r_x < self.lower_threshold or r_x > self.upper_threshold:
-            if self.method == 'n':
-                X = self.normalizer_.fit_transform(X)                  
-            else:
-                X = np.clip(X, self.lower_threshold, self.upper_threshold)   
+        """Transforms the data."""        
+        # If lower than threshold, return unit vector
+        if self._r < self.lower_threshold:
+            X = np.divide(X, self._r) 
+        elif self._r > self.upper_threshold:
+            # Rescale
+            X = self.upper_threshold / self._r * X
         return X
 
     def fit_transform(self, X):
@@ -494,10 +493,7 @@ class GradientScaler(BaseEstimator, TransformerMixin):
 
     def inverse_transform(self, X):
         """Apply the inverse transformation. Only works for normalized data."""
-        if self.method == 'c':
-            raise ValueError("Inverse transform is limited to normalized data.")
-        else:
-            return self.normalizer_.inverse_transform(X)
+        return self._r
 
 # --------------------------------------------------------------------------- #
 #                              VALID ARRAY                                    #
@@ -743,5 +739,3 @@ def todf(x, stub):
         df_vec = pd.DataFrame(vec, columns=[colname])
         df = pd.concat([df, df_vec], axis=1)
     return(df)  
-
-#%%%
