@@ -41,7 +41,7 @@ from mlstudio.supervised.callbacks.early_stop import EarlyStop
 from mlstudio.supervised.callbacks.debugging import GradientCheck
 from mlstudio.supervised.callbacks.base import CallbackList
 from mlstudio.supervised.callbacks.early_stop import Stability
-from mlstudio.supervised.callbacks.monitor import BlackBox, Progress
+from mlstudio.supervised.callbacks.monitor import BlackBox, Progress, Monitor
 from mlstudio.supervised.callbacks.learning_rate import LearningRateSchedule
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
 from mlstudio.utils.data_manager import add_bias_term, encode_labels, one_hot_encode
@@ -61,8 +61,8 @@ class GradientDescent(BaseEstimator):
     """Performs pure optimization of a 2d objective function."""
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
                  optimizer=Classic(), objective=MSE(), schedule=None,                  
-                 early_stop=None, verbose=False, checkpoint=100, 
-                 random_state=None, gradient_check=False):
+                 monitor=Monitor(), early_stop=None, verbose=False, 
+                 checkpoint=100, random_state=None, gradient_check=False):
 
         self.learning_rate = learning_rate
         self.epochs = epochs
@@ -70,6 +70,7 @@ class GradientDescent(BaseEstimator):
         self.optimizer = optimizer
         self.objective  = objective
         self.schedule = schedule
+        self.monitor = monitor
         self.early_stop = early_stop
         self.verbose = verbose
         self.checkpoint = checkpoint
@@ -107,7 +108,23 @@ class GradientDescent(BaseEstimator):
 
     @stabilized.setter
     def stabilized(self, x):
-        self._stabilized = x 
+        """Updates stabilized indicator and critical points
+
+        Critical points are only updated if there is a state change, i.e. 
+        the model goes from not stabilized to stabilized, or vice-versa.
+        
+        Parameters
+        ----------
+        x : bool or int
+            Value may be False or an integer. If the later, the value
+            indicates the point (epoch) in which performance stabilized.
+        """
+        if x:
+            self._stabilized = True
+            if self._state_has_changed():
+                self._critical_points.append(x) 
+        else:
+            self._stabilized = x
 
     @property
     def critical_points(self):
@@ -142,21 +159,14 @@ class GradientDescent(BaseEstimator):
 
 
 # --------------------------------------------------------------------------- #
-#                                 CHECK STATE                                 #
+#                          CHECK STATE CHANGE                                 #
 # --------------------------------------------------------------------------- #   
-    def _check_state(self):
-        d = {}
-        d['Epoch'] = self._epoch_log.get('epoch')
-        d['Learning Rate'] = self._epoch_log.get('learning_rate')
-        d['Theta'] = self._epoch_log.get('theta_norm')
-        d['Gradient'] = self._epoch_log.get('gradient_norm')
-        kv = d.items()
-        sp = {str(key): str(value) for key, value in kv}
+    def _state_has_changed(self):
         if self._stabilized != self._last_state:
-            self._last_state = self._stabilized     
-            if self._stabilized:       
-                self._critical_points.append(sp)  
-
+            self._last_state = self._stabilized   
+            return True
+        else:
+            return False
 
 # --------------------------------------------------------------------------- #
 #                               COMPILE                                       #
@@ -170,6 +180,8 @@ class GradientDescent(BaseEstimator):
             else self.early_stop
         self._schedule = copy.deepcopy(self.schedule) if \
             self.schedule else self.schedule            
+        self._monitor = copy.deepcopy(self.monitor) if \
+            self.monitor else self.monitor
         
     def _compile(self):
         """Initializes all callbacks."""
@@ -179,7 +191,7 @@ class GradientDescent(BaseEstimator):
 
         # Initialize implicit dependencies.    
         self._cbks = CallbackList()               
-        self.blackbox_ = BlackBox()        
+        self.blackbox_ = BlackBox()                
 
         # Add callbacks to callback list         
         self._cbks.append(self.blackbox_)    
@@ -187,7 +199,9 @@ class GradientDescent(BaseEstimator):
             self._cbks.append(GradientCheck())    
         if self.verbose:
             self._cbks.append(Progress())        
-        if isinstance(self._early_stop, EarlyStop):
+        if isinstance(self._monitor, Monitor):            
+            self._cbks.append(self._monitor)                
+        if isinstance(self._early_stop, EarlyStop):            
             self._cbks.append(self._early_stop)            
         if isinstance(self._schedule, LearningRateSchedule):
             self._cbks.append(self._schedule)                
@@ -209,10 +223,26 @@ class GradientDescent(BaseEstimator):
         else:            
             rng = np.random.RandomState(self.random_state)         
             self.theta_ = rng.randn(2)
-
+# --------------------------------------------------------------------------- #
+#                           EVALUATE EPOCH                                    #
+# --------------------------------------------------------------------------- #
+    def _evaluate_epoch(self, log=None):
+        log = log or {}
+        log['epoch'] = self._epoch
+        log['learning_rate'] = self._eta
+        log['theta'] = self.theta_
+        # Grab training cost if available
+        if self._cost:
+            log['train_cost'] = self._cost
+        # Otherwise this is being called at train_begin and must be computed.
+        else:
+            log['train_cost'] = self._objective(self.theta_)
+        log['gradient'] = self._objective.gradient(self.theta_)
+        log['gradient_norm'] = np.linalg.norm(log['gradient'])
+        return log
 
 # --------------------------------------------------------------------------- #
-#                  INTERNAL AND EXTERNAL CALLBACKS                            #
+#                     INTERNAL AND EXTERNAL CALLBACKS                         #
 # --------------------------------------------------------------------------- #
 
     def _begin_training(self, log=None):
@@ -226,14 +256,16 @@ class GradientDescent(BaseEstimator):
         self._converged = False
         self._stabilized = False
         self._eta = copy.copy(self.learning_rate)
+        self._gradient = None
+        self._theta_new = None
+        self._cost = None
         self._feature_names = None
-        self._epoch_log = {}
-        # Attributes
         self._critical_points = []   
         # Dependencies, data, and weights.
         self._compile()              
-        self._init_weights()            
-        self._cbks.on_train_begin() 
+        self._init_weights()          
+        log = self._evaluate_epoch(log)  
+        self._cbks.on_train_begin(log) 
 
     def _end_training(self, log=None):
         """Closes history callout and assign final and best weights."""                    
@@ -246,24 +278,17 @@ class GradientDescent(BaseEstimator):
     def _begin_epoch(self, log=None):
         """Runs 'begin_epoch' methods on all callbacks."""            
         log = log or {}
-        self._epoch += 1 
-        # Capture the current model parameters 
-        self._epoch_log = {'theta': copy.copy(self.theta_)}       
-        self._cbks.on_epoch_begin(self._epoch)              
+        self._epoch += 1            
+        self.theta_ = self._theta_new if self._theta_new is not None else self.theta_
 
     def _end_epoch(self, log=None):        
         """Performs end-of-epoch evaluation and scoring."""        
         log = log or {}
         # Capture current data representing current state of the optimization  
-        self._epoch_log['epoch'] = self._epoch      
-        self._epoch_log['learning_rate'] = self._eta
-        self._epoch_log['train_cost'] = self._cost
-        self._epoch_log['gradient'] = copy.copy(self.gradient_)
-        self._epoch_log['theta_norm'] = np.linalg.norm(self._epoch_log['theta'])
-        self._epoch_log['gradient_norm'] = np.linalg.norm(self._epoch_log['gradient'])
+        log = self._evaluate_epoch(log)
         # Call 'on_epoch_end' methods on callbacks.
-        self._cbks.on_epoch_end(self._epoch, self._epoch_log)   
-        self._check_state()  
+        self._cbks.on_epoch_end(self._epoch, log)   
+        self._state_has_changed()  
         
 
 # --------------------------------------------------------------------------- #
@@ -284,13 +309,13 @@ class GradientDescent(BaseEstimator):
         
         self._begin_training()
 
-        while (self._epoch < self.epochs and not self._converged):
+        while (self._epoch < self.epochs-1 and not self._converged):
 
             self._begin_epoch()
 
             self._cost = self._objective(self.theta_)
 
-            self.theta_, self.gradient_ = self._optimizer(gradient=self._objective.gradient, \
+            self._theta_new, self._gradient = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.deepcopy(self.theta_))                    
 
             self._end_epoch()
@@ -307,9 +332,10 @@ class GradientDescentEstimator(ABC, GradientDescent):
 
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
                  optimizer=Classic(), objective=MSE(), batch_size=None, 
-                 val_size=0.3, schedule=None, scorer=R2(), early_stop=None, 
+                 val_size=0.3, schedule=None, monitor=Monitor(),
+                 scorer=R2(), early_stop=None, 
                  verbose=False, checkpoint=100, random_state=None, 
-                 gradient_check=None):
+                 gradient_check=False):
                  
         super(GradientDescentEstimator, self).__init__(
             learning_rate = learning_rate,      
@@ -318,6 +344,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
             optimizer = optimizer,
             objective = objective,                                          
             schedule=schedule,
+            monitor=monitor,
             early_stop = early_stop,
             verbose = verbose,
             checkpoint = checkpoint,
@@ -379,6 +406,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         """Copies mutable parameters for sklearn compliance."""
         super(GradientDescentEstimator, self)._copy_mutable_parameters()
         self._scorer = copy.deepcopy(self.scorer)
+
 # --------------------------------------------------------------------------- #
 #                            INITIALIZATION                                   #
 # --------------------------------------------------------------------------- #                                        
@@ -394,6 +422,44 @@ class GradientDescentEstimator(ABC, GradientDescent):
         """Prepares X and y data for training."""
         pass
 
+# --------------------------------------------------------------------------- #
+#                               EVALUATION                                    #
+# --------------------------------------------------------------------------- #
+    def _evaluate_epoch(self, log=None):
+        """Computes training costs, and optionally scores, for each epoch."""   
+        log = log or {}
+        log['epoch'] = self._epoch      
+        log['learning_rate'] = self._eta    
+        log['theta'] = self.theta_            
+        # Compute training costs and scores
+        y_out = self._task.compute_output(self.theta_, self.X_train_)
+        log['train_cost'] = self._objective(self.theta_, self.y_train_, y_out)
+        # If there is a scoring object, compute scores
+        if self.scorer:
+            y_pred = self._task.predict(self.theta_, self.X_train_)
+            log['train_score'] = self._scorer(self.y_train_orig_, y_pred)
+
+        # If we have a validation set, compute validation error and score
+        if hasattr(self, 'X_val_'):
+            if self.X_val_.shape[0] > 0:
+                y_out_val = self._task.compute_output(self.theta_, self.X_val_)
+                log['val_cost'] = self._objective(self.theta_, self.y_val_, y_out_val)        
+                if self.scorer:
+                    y_pred_val = self._task.predict(self.theta_, self.X_val_)
+                    log['val_score'] = self._scorer(self.y_val_orig_, y_pred_val)
+
+        # If we have the gradient, i.e. not the first iteration, grab it
+        if self._gradient is not None:
+            log['gradient'] = self._gradient
+        # Otherwise, compute it
+        else:
+            log['gradient'] = \
+                self._objective.gradient(theta=self.theta_, X=self.X_train_,
+                                         y=self.y_train_, y_out=y_out)            
+        # Compute the gradient norm        
+        log['gradient_norm'] = \
+                np.linalg.norm(log['gradient']) 
+        return log      
 
 # --------------------------------------------------------------------------- #
 #                  INTERNAL AND EXTERNAL CALLBACKS                            #
@@ -410,22 +476,23 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self._converged = False
         self._stabilized = False
         self._eta = copy.copy(self.learning_rate)
+        self._gradient = None
+        self._theta_new = None
+        self._cost = None
         self._feature_names = None
         self._critical_points = []        
-        # Attributes   
-        self.theta_ = 0
-        self.gradient_ = 0
         # Dependencies, data, and weights.
         self._compile()              
         self._prepare_training_data(log.get("X"),log.get("y"))        
         self._init_weights()            
-        self._cbks.on_train_begin()        
+        # Perform an epoch 0 evaluation on initial weights
+        log = self._evaluate_epoch(log)
+        self._cbks.on_train_begin(log)        
 
     def _begin_epoch(self, log=None):
         """Increment the epoch, evaluate using current parameters and shuffle the data."""            
         log = log or {}
-        self._epoch += 1
-        self._epoch_log = {'theta': copy.copy(self.theta_)}
+        self._epoch += 1        
         # Shuffle data      
         rs = None
         if self.random_state:
@@ -437,58 +504,29 @@ class GradientDescentEstimator(ABC, GradientDescent):
     def _end_epoch(self, log=None):        
         """Performs end-of-epoch evaluation and scoring."""            
         log = log or {}
-        # Capture current data representing current state of the optimization  
-        self._epoch_log['epoch'] = self._epoch      
-        self._epoch_log['learning_rate'] = self._eta
-        self._epoch_log['gradient'] = copy.copy(self.gradient_)
-        self._epoch_log['theta_norm'] = np.linalg.norm(self._epoch_log['theta'])
-        self._epoch_log['gradient_norm'] = np.linalg.norm(self._epoch_log['gradient'])        
         # Compute performance statistics for epoch and post to history
-        self._evaluate_epoch()                
+        log = self._evaluate_epoch(log)                
         # Call 'on_epoch_end' methods on callbacks.
-        self._cbks.on_epoch_end(self._epoch, self._epoch_log)      
+        self._cbks.on_epoch_end(self._epoch, log)      
         # Once the performance callback has executed, check whether the optimization has stabilized.
-        self._check_state()           
+        self._state_has_changed()           
 
     def _begin_batch(self, log=None):
         log = log or {}
         self._batch += 1
-        self._batch_log = {'theta': copy.copy(self.theta_)}            
-        self._cbks.on_batch_begin(self._batch)
-        self._batch += 1
+        self.theta_ = self._theta_new if self._theta_new is not None else self.theta_
 
     def _end_batch(self, log=None):        
         log = log or {}
-        self._batch_log['batch'] = self._batch
-        self._batch_log['learning_rate'] = self._eta
-        self._batch_log['train_cost'] = self._cost
-        self._batch_log['gradient'] = copy.copy(self.gradient_)
-        self._batch_log['theta_norm'] = np.linalg.norm(self._batch_log['theta'])
-        self._batch_log['gradient_norm'] = np.linalg.norm(self._batch_log['gradient'])            
-        self._cbks.on_batch_end(self._batch, self._batch_log)
+        log['batch'] = self._batch
+        log['learning_rate'] = self._eta
+        log['theta'] = self.theta_
+        log['train_cost'] = self._cost
+        log['gradient'] = copy.copy(self._gradient)
+        log['gradient_norm'] = np.linalg.norm(log['gradient'])            
+        self._cbks.on_batch_end(self._batch, log)
 
-# --------------------------------------------------------------------------- #
-#                               EVALUATION                                    #
-# --------------------------------------------------------------------------- #
-    def _evaluate_epoch(self):
-        """Computes training costs, and optionally scores, for each epoch."""
-                
-        # Compute training costs and scores
-        y_out = self._task.compute_output(self.theta_, self.X_train_)
-        self._epoch_log['train_cost'] = self._objective(self.theta_, self.y_train_, y_out)
-        # If there is a scoring object, compute scores
-        if self.scorer:
-            y_pred = self._task.predict(self.theta_, self.X_train_)
-            self._epoch_log['train_score'] = self._scorer(self.y_train_orig_, y_pred)
-
-        # If we have a validation set, compute validation error and score
-        if hasattr(self, 'X_val_'):
-            if self.X_val_.shape[0] > 0:
-                y_out_val = self._task.compute_output(self.theta_, self.X_val_)
-                self._epoch_log['val_cost'] = self._objective(self.theta_, self.y_val_, y_out_val)        
-                if self.scorer:
-                    y_pred_val = self._task.predict(self.theta_, self.X_val_)
-                    self._epoch_log['val_score'] = self._scorer(self.y_val_orig_, y_pred_val)
+              
 
 # --------------------------------------------------------------------------- #
 #                                  FIT                                        #
@@ -511,7 +549,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         train_log = {'X': X, 'y': y}
         self._begin_training(train_log)        
 
-        while (self._epoch < self.epochs and not self._converged):            
+        while (self._epoch < self.epochs-1 and not self._converged):            
 
             self._begin_epoch()
 
@@ -526,7 +564,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
                 self._cost = self._objective(self.theta_, y_batch, y_out)
                 
                 # Compute the parameter updates.
-                self.theta_, self.gradient_ = self._optimizer(gradient=self._objective.gradient, \
+                self._theta_new, self._gradient = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.copy(self.theta_),  X=X_batch, y=y_batch,\
                         y_out=y_out)
 
@@ -582,7 +620,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         return self._scorer(y, y_pred)
 
     def summary(self, features=None):
-        observer = Performance()
+        observer = Monitor()
         observer.report(self, features)
 
 # --------------------------------------------------------------------------- #
@@ -595,7 +633,7 @@ class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
                  optimizer=Classic(), objective=MSE(), batch_size=None, 
                  val_size=0.3, schedule=None, scorer=R2(), early_stop=None, 
                  verbose=False, checkpoint=100, random_state=None, 
-                 gradient_check=None):
+                 gradient_check=False):
         
         super(GradientDescentRegressor, self).__init__(\
             learning_rate = learning_rate,
@@ -648,7 +686,7 @@ class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
                  optimizer=Classic(), objective=CrossEntropy(), batch_size=None, 
                  val_size=0.3, schedule=None, scorer=Accuracy(), early_stop=None, 
                  verbose=False, checkpoint=100, random_state=None, 
-                 gradient_check=None):
+                 gradient_check=False):
         
         super(GradientDescentClassifier, self).__init__(\
             learning_rate = learning_rate,

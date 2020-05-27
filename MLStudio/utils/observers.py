@@ -29,10 +29,10 @@ import types
 from sklearn.base import BaseEstimator
 from tabulate import tabulate
 
-from mlstudio.supervised.core.scorers import MSE
+from mlstudio.supervised.core.scorers import R2
 from mlstudio.utils.print import Printer
 from mlstudio.utils.validation import validate_metric, validate_scorer
-from mlstudio.utils.validation import validate_zero_to_one
+from mlstudio.utils.validation import validate_zero_to_one, validate_int
 # --------------------------------------------------------------------------- #
 #                          OBSERVER BASE CLASS                                #
 # --------------------------------------------------------------------------- #
@@ -48,7 +48,7 @@ class Observer(ABC, BaseEstimator):
         pass
 
     @abstractmethod
-    def evaluate(self, logs=None):
+    def model_is_stable(self, logs=None):
         pass
 
 # --------------------------------------------------------------------------- #
@@ -65,15 +65,14 @@ class Performance(Observer):
 
     Parameters
     ----------
-    metric : str, optional (default='val_score')
+    metric : str, optional (default='train_cost')
         Specifies which statistic to metric for evaluation purposes.
 
         'train_cost': Training set costs
         'train_score': Training set scores based upon the model's metric parameter
         'val_cost': Validation set costs
         'val_score': Validation set scores based upon the model's metric parameter
-        'theta': The norm of the parameters of the model
-        'gradient': The norm of the gradient of the objective function w.r.t. theta
+        'gradient_norm': The norm of the gradient of the objective function w.r.t. theta
 
     epsilon : float, optional (default=0.0001)
         The factor by which performance is considered to have improved. For 
@@ -85,7 +84,7 @@ class Performance(Observer):
         stop training.    
     """
 
-    def __init__(self, metric='cost', scorer=MSE(), epsilon=0.01, patience=5):        
+    def __init__(self, metric='train_cost', scorer=None, epsilon=0.01, patience=5):        
         self.name = "Performance Observer"
         self.metric = metric        
         self.scorer = scorer
@@ -94,8 +93,10 @@ class Performance(Observer):
        
     def _validate(self):        
         validate_metric(self.metric)
-        validate_scorer(self.scorer)
+        if 'score' in self.metric:
+            validate_scorer(self.scorer)
         validate_zero_to_one(param=self.epsilon, param_name='epsilon')       
+        validate_int(param=self.patience, param_name='patience')
 
     def initialize(self, logs=None):        
         """Sets key variables at beginning of training.
@@ -107,8 +108,6 @@ class Performance(Observer):
         """        
         # Attributes
         self.best_performance_ = None
-        self.improved = False
-        self.best_weights_ = None        
         # Instance variables
         self._iter_no_improvement = 0
         self._better = None   
@@ -117,18 +116,17 @@ class Performance(Observer):
         # in a specific direction. For 'gradient' and 'theta', we don't 
         # care about the direction of the change in so much as we care about
         # the magnitude of the change.
-        self._directional_metric = self.metric in ['score', 'cost']    
-        # Take a copy of the metric because we may change it by prepend it with
-        # 'train_' or 'val_'   
-        self._metric = copy.copy(self.metric) 
+        self._directional_metric = self.metric in ['train_cost', 'train_score',
+                                                   'val_cost', 'val_score']    
         
         logs = logs or {}
         self._validate()
-        # If 'score' is the metric, obtain the 'better' function from the scorer.
-        # Otherwise, the better function is np.less since we improve be reducing
-        # cost or the magnitudes of the parameters        
-        if 'score' in self.metric:            
+        # If 'score' is the metric and the scorer object exists, 
+        # obtain the 'better' function from the scorer.        
+        if 'score' in self.metric and self.scorer:            
             self._better = self.scorer.better
+        # Otherwise, the better function is np.less since we improve be reducing
+        # cost or the magnitudes of the parameters                
         else:
             self._better = np.less
 
@@ -157,8 +155,7 @@ class Performance(Observer):
     def _process_improvement(self, current, logs):
         """Sets values of parameters and attributes if improved."""
         self._iter_no_improvement = 0
-        self.best_performance_ = current
-        self.best_weights_ = logs.get('theta')
+        self.best_performance_ = current        
         self._stabilized = False        
 
     def _process_no_improvement(self):
@@ -169,31 +166,13 @@ class Performance(Observer):
 
     def _get_current_value(self, logs):
         """Obtain the designated metric from the logs."""
-        try:
-            current = logs.get(self._metric)
-        except:
-            raise ValueError("{m} is not a valid metric for this optimization."\
-                .format(m=self._metric))      
+        current = logs.get(self.metric)
+        if not current:
+            msg = "{m} was not found in the log.".format(m=self.metric)
+            raise KeyError(msg)     
         return current
 
-    def _resolve_metric(self, logs):
-        """Prepends the metric to match the log if necessary."""
-        if self._metric in ['cost', 'score']:
-            if 'val' in logs.keys():  
-                self._metric = 'val_' + self._metric 
-            else:
-                self._metric = 'train_' + self._metric
-
-        elif self._metric in ['gradient', 'theta']:
-            self._metric = self._metric + "_norm"
-
-    def _handle_first_iteration(self, current, logs):
-        """First iteration processing."""
-        self._resolve_metric(logs)        
-        self._process_improvement(current, logs)
-
-
-    def evaluate(self, epoch, logs=None):
+    def model_is_stable(self, epoch, logs=None):
         """Determines whether performance is improving or stabilized.
 
         Parameters
@@ -213,9 +192,10 @@ class Performance(Observer):
         logs = logs or {}
         # Obtain current performance
         current = self._get_current_value(logs)
-        # Handle first iteration
+
+        # Handle first iteration as an improvement by default
         if self.best_performance_ is None:
-            self._handle_first_iteration(current, logs)        
+            self._process_improvement(current, logs)        
 
         # Otherwise, evaluate directional or non-directional performance
         else:
@@ -228,9 +208,11 @@ class Performance(Observer):
                 if self._evaluate_non_directional_change(current):
                     self._process_improvement(current, logs)
                 else:
-                    self._process_no_improvement()                    
+                    self._process_no_improvement()  
 
-        return self._stabilized       
-
+        if self._stabilized:
+            return epoch - self._iter_no_improvement
+        else:
+            return False
 
 

@@ -205,3 +205,25 @@ def get_estimator():
                           optimizer=optimizer)
     est.fit()    
     return est
+
+@fixture(scope='session')
+def get_log():
+    filepath = "tests/test_data/test_monitor.csv"
+    df = pd.read_csv(filepath)
+    log = []
+    for idx, row in df.iterrows():
+        epoch_log = {'epoch': row['epoch'],
+                    'train_cost': row['train_cost'],
+                    'train_score': row['train_score'],
+                    'val_cost': row['val_cost'],
+                    'val_score': row['val_score'],
+                    'theta_norm': row['theta_norm'],
+                    'gradient_norm': row['gradient_norm']                    
+                    }
+        log.append(epoch_log)
+    log = np.array(log)
+    return log
+
+
+
+

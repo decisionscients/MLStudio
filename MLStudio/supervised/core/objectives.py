@@ -370,7 +370,7 @@ class Adjiman(Benchmark):
 
     @property
     def minimum(self):
-        return np.array([0,0])
+        return np.array([2,0.10578])
 
     @property
     def range(self):
@@ -553,7 +553,61 @@ class Rosenbrock(Benchmark):
         # Check gradient scale 
         df = self._check_gradient_scale(df)                
         return df        
-      
+
+# --------------------------------------------------------------------------  #
+class Branin02(Benchmark):
+    """Branin02 objective functions."""    
+
+    @property
+    def name(self):
+        return "Branin02 Objective Function"    
+
+    @property
+    def start(self):
+        return np.array([-5,-5])
+        
+    @property
+    def minimum(self):
+        return np.array([-3.2,12.53])           
+    
+    @property
+    def range(self):
+        """Returns the x and y ranges for plotting."""
+        x = {'min': -5, 'max': 15}
+        y = {'min': -5, 'max': 15}
+        return x, y
+    
+    def __call__(self, theta):
+        """Computes the objective function value"""        
+        return (-1.275*theta[0]**2/np.pi**2 + 5*theta[0]/np.pi + theta[1]-6)**2\
+            + (10-5/4*np.pi) * np.cos(theta[0]) * np.cos(theta[1]) \
+                + np.log(theta[0]**2+theta[1]**2+1) + 10
+
+    def gradient(self, theta):
+        """Computes the gradient of the objective function."""
+        # dfdx
+        a = 1/(4*np.pi**4*(theta[0]**2+theta[1]**2+1))
+        b = 8 * np.pi**4 * theta[0]
+        c = 5*(theta[0] - 2 * np.pi)
+        d = (theta[0]**2+theta[1]**2+1)
+        e = (5 * theta[0]**2 - 20*np.pi*theta[0]+4*np.pi**2*(6-theta[1]))
+        f = 5*np.pi**3 *  (-1+8*np.pi) * (theta[0]**2+theta[1]**2+1) \
+            * np.sin(theta[0]) * np.cos(theta[1])
+        dfdx = a * (b+c*d*e - f)
+        # dfdy
+        a = -(5*theta[0]^2/(2*(np.pi**2)))
+        b = (10 * theta[0])/np.pi
+        c = 2 * theta[1]
+        d = (2*theta[1]) / (theta[0]**2+theta[1]**2+1)
+        e = (10-(5/(np.pi*4)))
+        f = np.sin(theta[1]) * np.cos(theta[0])
+        dfdy = a + b + c + d - e * f - 12
+        # Package into gradient vector
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df        
+
 
 # --------------------------------------------------------------------------  #
 class StyblinskiTank(Benchmark):
@@ -645,7 +699,7 @@ class ThreeHumpCamel(Benchmark):
 
     @property
     def start(self):
-        return np.array([-2,2])
+        return np.array([-1.5,1.5])
         
     @property
     def minimum(self):
@@ -672,3 +726,41 @@ class ThreeHumpCamel(Benchmark):
         df = self._check_gradient_scale(df)                
         return df        
 
+# --------------------------------------------------------------------------  #
+class Ursem01(Benchmark):
+    """Ursem01 objective functions."""    
+
+    @property
+    def name(self):
+        return "Ursem01 Objective Function"    
+
+    @property
+    def start(self):
+        return np.array([0,2.5])
+        
+    @property
+    def minimum(self):
+        return np.array([1.69714,0])           
+    
+    @property
+    def range(self):
+        """Returns the x and y ranges for plotting."""
+        x = {'min': -2, 'max': 3}
+        y = {'min': -2, 'max': 2.5}
+        return x, y
+    
+    def __call__(self, theta):
+        """Computes the objective function value"""        
+        return -np.sin(2*theta[0] - 0.5 * np.pi) - 3 * np.cos(theta[1]) - 0.5 * theta[0]
+
+    def gradient(self, theta):
+        """Computes the gradient of the objective function."""
+        dfdx = -2 * np.sin(2 * theta[0]) - 0.5
+        dfdy = 3 * np.sin(theta[1])
+        # Package into gradient vector
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df        
+
+     

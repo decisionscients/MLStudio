@@ -115,10 +115,10 @@ scenarios_early_stop = [
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), early_stop=Stability(metric='val_cost')),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2(alpha=0.0001)), early_stop=Stability(metric='train_score')),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), early_stop=Stability(metric='train_cost')),
-    GradientDescentClassifier(objective=CrossEntropy(), early_stop=Stability(metric='gradient', mode='passive')),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), early_stop=Stability(metric='theta', mode='passive')),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), early_stop=Stability(metric='gradient', mode='active')),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), early_stop=Stability(metric='theta', mode='passive'))
+    GradientDescentClassifier(objective=CrossEntropy(), early_stop=Stability(metric='gradient')),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), early_stop=Stability(metric='theta')),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), early_stop=Stability(metric='gradient')),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), early_stop=Stability(metric='theta'))
 ]   
 
 

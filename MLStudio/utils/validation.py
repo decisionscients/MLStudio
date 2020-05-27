@@ -59,7 +59,7 @@ def is_multilabel(y):
 def validate_bool(param, param_name=""):        
     if not isinstance(param, bool):
         msg = "{s} must be a boolean value.".format(s=param_name)
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True             
 # --------------------------------------------------------------------------  #
@@ -67,7 +67,7 @@ def validate_int(param, param_name="", minimum=0, maximum=np.inf, left="closed",
                  right='closed'):        
     if not isinstance(param, int):
         msg = "{s} must be an integer.".format(s=param_name)
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True           
 # --------------------------------------------------------------------------  #
@@ -78,7 +78,7 @@ def validate_learning_rate_schedule(schedule):
         msg = "{s} is an invalid LearningRateSchedule object. \
             The valid LearningRateSchedule classes include : \
             {v}".format(s=schedule, v=str(valid_learning_rate_schedules))
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True         
 # --------------------------------------------------------------------------  #
@@ -88,7 +88,7 @@ def validate_early_stop(stop):
     if not isinstance(stop, EarlyStop):
         msg = "{s} is an invalid EarlyStop object. The valid EarlyStop classes include : \
             {v}".format(s=stop, v=str(valid_early_stops))
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True        
 # --------------------------------------------------------------------------  #
@@ -98,7 +98,7 @@ def validate_scorer(scorer):
     if not isinstance(scorer, Scorer):
         msg = "{s} is an invalid Scorer object. The valid Scorer classes include : \
             {v}".format(s=scorer, v=str(valid_scorers))
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True
 # --------------------------------------------------------------------------  #
@@ -108,7 +108,7 @@ def validate_activation(activation):
     if not isinstance(activation, Activation):
         msg = "{s} is an invalid Activation object. The valid Activation classes include : \
             {v}".format(s=activation, v=str(valid_activations))
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True
 
@@ -119,7 +119,7 @@ def validate_objective(objective):
     if not isinstance(objective, Objective):
         msg = "{s} is an invalid Objective function object. The valid Objective \
         function classes include : {v}".format(s=objective, v=str(valid_objectives))
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True      
 # --------------------------------------------------------------------------  #
@@ -128,7 +128,7 @@ def validate_gradient_scaler(scaler):
     if not isinstance(scaler, GradientScaler):
         msg = "{s} is an invalid GradientScaler object. The valid Optimizer \
         classes include : {v}".format(s=scaler, v=str(data_manager.GradientScaler.__name__))
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True     
 # --------------------------------------------------------------------------  #
@@ -138,7 +138,7 @@ def validate_optimizer(optimizer):
     if not isinstance(optimizer, Optimizer):
         msg = "{s} is an invalid Optimizer object. The valid Optimizer \
         classes include : {v}".format(s=optimizer, v=str(valid_optimizers))
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True         
 # --------------------------------------------------------------------------  #
@@ -148,7 +148,7 @@ def validate_regularizer(regularizer):
     if not isinstance(regularizer, Regularizer):
         msg = "{s} is an invalid Regularizer object. The valid Regularizer \
         classes include : {v}".format(s=regularizer, v=str(valid_regularizers))
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True   
 # --------------------------------------------------------------------------  #
@@ -158,13 +158,18 @@ def validate_task(task):
     if not isinstance(task, Task):
         msg = "{s} is an invalid Task object. The valid Task \
         classes include : {v}".format(s=task, v=str(valid_tasks))
-        raise ValueError(msg)
+        raise TypeError(msg)
     else:
         return True           
 # --------------------------------------------------------------------------  #
 def validate_metric(metric):
-    valid_metrics = ['cost', 'score','theta', 'gradient']
-    if metric not in valid_metrics:
+    valid_metrics = ['train_cost', 'train_score', 'val_cost' 'val_score',
+                     'gradient_norm']
+    if not isinstance(metric, str):
+        msg = "The metric parameter must be a string including one of {v}.".\
+            format(v=str(valid_metrics))
+        raise TypeError(msg)
+    elif metric not in valid_metrics:
         msg = "{m} is an invalid metric. The valid metrics include : {v}".\
             format(m=metric,
                    v=str(valid_metrics))
@@ -176,7 +181,7 @@ def validate_metric(metric):
 def validate_string(param, param_name="", valid_values=None):
     if not isinstance(param, str) and not valid_values:
         msg = param_name + " must be a string."
-        raise ValueError(msg)
+        raise TypeError(msg)
     elif param not in valid_values:
         msg = param_name + " must be in {v}".format(v=str(valid_values))
         raise ValueError(msg)
@@ -185,15 +190,25 @@ def validate_string(param, param_name="", valid_values=None):
 # --------------------------------------------------------------------------  #
 def validate_zero_to_one(param, param_name = "", left='closed', right='closed'):
     """Validates a parameter whose values should be 0 and 1."""
-    assert isinstance(param, (int,float)), param_name + " hyperparameter must be numeric."
-    if left == 'open' and right == 'open':
-        assert param > 0 and param < 1, param_name + " hyperparameter must be in (0,1)."      
+    if not isinstance(param, (int,float)):
+        msg = param_name + " hyperparameter must be numeric."
+        raise TypeError(msg)
+    elif left == 'open' and right == 'open':
+        if param <= 0 or param >= 1:
+            msg = param_name + " hyperparameter must be in (0,1)."      
+            raise ValueError(msg)
     elif left == 'open' and right != 'open':
-        assert param > 0 and param <= 1, param_name + " hyperparameter must be in (0,1]."      
+        if param <= 0 or param > 1:
+            msg = param_name + " hyperparameter must be in (0,1]."      
+            raise ValueError(msg)
     elif left != 'open' and right == 'open':
-        assert param >= 0 and param < 1, param_name + " hyperparameter must be in [0,1)"      
+        if param < 0 or param >= 1:
+            msg = param_name + " hyperparameter must be in [0,1)"      
+            raise ValueError(msg)
     else:
-        assert param >= 0 and param <= 1, param_name + " hyperparameter must be in [0,1]."      
+        if param < 0 or param > 1:
+            msg = param_name + " hyperparameter must be in [0,1]."      
+            raise ValueError(msg)
 # --------------------------------------------------------------------------  #
 def search_all_subclasses(cls):
     return set(cls.__subclasses__()).union(

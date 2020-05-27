@@ -57,26 +57,18 @@ class Stability(EarlyStop):
     performance must improve by a relative factor greater than the 'epsilon', 
     to be considered significant enough. 'patience' parameter indicates how long 
     the optimizer has to show improvement before the algorithm signals that 
-    performance has stabilized.  The object has two modes: 'active' and 
-    'passive'. If 'active', then the algorithm stops when performance hasn't
-    improved. If 'passive', just messages the estimator signalling that performance
-    has stabilized.
+    performance has stabilized. 
 
     Parameters
     ----------
-    metric : str, optional (default='cost')
-        Valid values include 'cost', 'score', 'theta', and 'gradient'. If 
-        'cost' or 'score is selected, this metric will be evaluated on the
-        validation set if designated; otherwise, it will be assessed on the 
-        training set.  If 'theta' or 'gradient' is specified, we measure the
-        change in the magnitude of the vector. The full list of metrics include:
+    metric : str, optional (default='train_score')
+        Specifies which statistic to metric for evaluation purposes.
 
         'train_cost': Training set costs
         'train_score': Training set scores based upon the model's metric parameter
         'val_cost': Validation set costs
         'val_score': Validation set scores based upon the model's metric parameter
-        'theta': The parameters of the model
-        'gradient': The gradient of the objective function w.r.t. theta
+        'gradient_norm': The norm of the gradient of the objective function w.r.t. theta
 
     epsilon : float, optional (default=0.001)
         The factor by which performance is considered to have improved. For 
@@ -86,20 +78,14 @@ class Stability(EarlyStop):
     patience : int, optional (default=5)
         The number of consecutive epochs of non-improvement that would 
         stop training.    
-
-    mode : str (default="passive")
-        Indicates whether to stop training when performance stops improving
-        or to just indicate that training has stabilized.
     """
 
-    def __init__(self, metric='cost', epsilon=1e-2, patience=50, mode='passive'):
+    def __init__(self, metric='train_cost', epsilon=1e-2, patience=50):
         super(Stability, self).__init__()
         self.name = "Stability"
         self.metric = metric
         self.epsilon = epsilon
         self.patience = patience
-        self.mode = mode
-       
 
     def _validate(self):        
         validate_metric(self.metric)
@@ -136,14 +122,11 @@ class Stability(EarlyStop):
         Bool if True convergence has been achieved. 
 
         """
-        super(Stability, self).on_epoch_begin(epoch, logs)        
+        super(Stability, self).on_epoch_end(epoch, logs)        
         logs = logs or {}        
         
-        if self._observer.evaluate(epoch, logs):
-            self.model.stabilized = True
-            if self.mode == "active":
-                self.model.converged = True
-        else:
-            self.model.stabilized = False
+        if self._observer.model_is_stable(epoch, logs):
+            self.model.converged = True
+        else:            
             self.model.converged = False
 

@@ -27,7 +27,96 @@ import types
 from collections import OrderedDict 
 
 from mlstudio.supervised.callbacks.base import Callback
+from mlstudio.utils.observers import Performance
 from mlstudio.utils.print import Printer
+from mlstudio.utils.validation import validate_int, validate_zero_to_one
+from mlstudio.utils.validation import validate_metric
+
+# --------------------------------------------------------------------------- #
+#                             MONITOR                                         #
+# --------------------------------------------------------------------------- #
+class Monitor(Callback):
+    """Monitors progress and signals the model when performance has stabilized. 
+    
+    This class delegates performance evaluation to an observer object. If
+    performance has improved according to the patients and epsilon parameters,
+    the observer returns False. If performance has not improved, the observer
+    returns the epoch at the point of stabilization. 
+
+    Parameters
+    ----------
+    metric : str, optional (default='train_score')
+        Specifies which statistic to metric for evaluation purposes.
+
+        'train_cost': Training set costs
+        'train_score': Training set scores based upon the model's metric parameter
+        'val_cost': Validation set costs
+        'val_score': Validation set scores based upon the model's metric parameter
+        'gradient_norm': The norm of the gradient of the objective function w.r.t. theta
+
+    epsilon : float, optional (default=0.001)
+        The factor by which performance is considered to have improved. For 
+        instance, a value of 0.01 means that performance must have improved
+        by a factor of 1% to be considered an improvement.
+
+    patience : int, optional (default=5)
+        The number of consecutive epochs of non-improvement that would 
+        stop training.    
+    """
+
+    def __init__(self, metric='train_cost', epsilon=1e-2, patience=50):
+        super(Monitor, self).__init__()
+        self.name = "Monitor"
+        self.metric = metric
+        self.epsilon = epsilon
+        self.patience = patience
+
+    def _validate(self):        
+        validate_metric(self.metric)
+        if 'score' in self.metric:
+            validate_scorer(self.model.scorer)
+        validate_zero_to_one(param=self.epsilon, param_name='epsilon')       
+        validate_int(param=self.patience, param_name='patience')
+
+    def on_train_begin(self, logs=None):        
+        """Sets key variables at beginning of training.
+        
+        Parameters
+        ----------
+        log : dict
+            Contains no information
+        """
+        super(Monitor, self).on_train_begin(logs)
+        self._validate()        
+        # Obtain scorer from model if it has one
+        scorer = None
+        if hasattr(self.model, 'scorer'):
+            scorer = self.model.scorer
+        # Create and initialize the observer object.
+        self._observer = Performance(metric=self.metric, scorer=scorer, \
+            epsilon=self.epsilon, patience=self.patience)    
+        self._observer.initialize()        
+
+    def on_epoch_end(self, epoch, logs=None):
+        """Determines whether convergence has been achieved.
+
+        Parameters
+        ----------
+        epoch : int
+            The current epoch number
+
+        logs : dict
+            Dictionary containing training cost, (and if metric=score, 
+            validation cost)  
+
+        Returns
+        -------
+        Bool if True convergence has been achieved. 
+
+        """
+        super(Monitor, self).on_epoch_end(epoch, logs)        
+        logs = logs or {}                
+        self.model.stabilized = self._observer.model_is_stable(epoch, logs)
 
 # --------------------------------------------------------------------------- #
 #                             HISTORY CLASS                                   #
@@ -46,7 +135,13 @@ class BlackBox(Callback):
         self.total_batches = 0
         self.start = datetime.datetime.now()
         self.epoch_log = {}
-        self.batch_log = {}                
+        self.batch_log = {}
+        # If a log has been passed, update the epoch log. This is used
+        # to add epoch 0 evaluation data to the log before training
+        if logs:
+            for k,v in logs.items():
+                self.epoch_log.setdefault(k,[]).append(v)            
+
 
     def on_train_end(self, logs=None):        
         """Sets instance variables at end of training.

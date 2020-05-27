@@ -66,6 +66,9 @@ class Optimizer(ABC, BaseEstimator):
 # --------------------------------------------------------------------------  #
 class Classic(Optimizer):
     """Standard gradient descent optimizer."""
+
+    def __init__(self):
+        self.name = "Gradient Descent"
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):        
         grad = gradient(theta, **kwargs)

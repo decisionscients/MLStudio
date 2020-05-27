@@ -110,10 +110,10 @@ scenarios_early_stop = [
     GradientDescentRegressor(objective=MSE(regularizer=L1()), early_stop=Stability(metric='val_cost')),
     GradientDescentRegressor(objective=MSE(regularizer=L2(alpha=0.0001)), early_stop=Stability(metric='train_score')),
     GradientDescentRegressor(objective=MSE(regularizer=L1_L2()), early_stop=Stability(metric='train_cost')),
-    GradientDescentRegressor(objective=MSE(), early_stop=Stability(metric='gradient', mode='passive')),
-    GradientDescentRegressor(objective=MSE(regularizer=L1()), early_stop=Stability(metric='theta', mode='passive')),
-    GradientDescentRegressor(objective=MSE(regularizer=L2()), early_stop=Stability(metric='gradient', mode='active')),
-    GradientDescentRegressor(objective=MSE(regularizer=L1_L2()), early_stop=Stability(metric='theta', mode='passive'))
+    GradientDescentRegressor(objective=MSE(), early_stop=Stability(metric='gradient')),
+    GradientDescentRegressor(objective=MSE(regularizer=L1()), early_stop=Stability(metric='theta')),
+    GradientDescentRegressor(objective=MSE(regularizer=L2()), early_stop=Stability(metric='gradient')),
+    GradientDescentRegressor(objective=MSE(regularizer=L1_L2()), early_stop=Stability(metric='theta'))
 ]   
 
 

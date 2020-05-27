@@ -40,61 +40,70 @@ from mlstudio.utils.file_manager import check_directory
 class Surface:
     """Animates gradient descent on several benchmark functions."""
     def __init__(self):
-        pass
+        pass    
 
     def animate(self, estimators, directory=None, filename=None, show=True):
         # ------------------------------------------------------------------  #
         # Extract parameter and cost data from the model blackboxes
-        theta0 = []
-        theta1 = []
+        # Data for meshgrid
+        xm, xM = 0, 0 # x range from objective function object
+        ym, yM = 0, 0 # y range from objective function object
+        # Models containing plot data (parameters theta and cost)
         models = OrderedDict()
+        # Index for model dictionary  
         names = [] 
+        # Data used to obtain best model for the objective function
+        true = None
+        estimates = []
+        similarities = [] 
+        # The number of frames = model.epochs
         n_frames = 0
-        xm, xM = 0, 0
-        ym, yM = 0, 0
+        # The objective function
         objective = None
-        differences = []
+        
         for name, estimator in estimators.items():
-            theta = estimator.blackbox_.epoch_log.get('theta')
-            # Thetas converted to individual columns in dataframe and extacted  
-            theta = todf(theta, stub='theta_')
-            theta0.extend(theta['theta_0'][::10])
-            theta1.extend(theta['theta_1'][::10])
-            d = OrderedDict()
-            d['theta_0'] = theta['theta_0'][::10]
-            d['theta_1'] = theta['theta_1'][::10]
-            d['cost'] = estimator.blackbox_.epoch_log.get('train_cost')[::10]
-            d['true'] = estimator.objective.minimum
-            d['est'] = estimator.theta_
-            d['diff'] = np.linalg.norm(estimator.theta_) - \
-                np.linalg.norm(estimator.objective.minimum)
-            differences.append(d['diff'])
-            # Get objective function
-            objective = estimator.objective if objective is None else objective
-            # Get range from objective object
-            x, y = estimator.objective.range
+            model = estimator['model']
+            results = estimator['results']      
+            # Get range from objective object for meshgrid
+            x, y = model.objective.range
             xm, xM = x['min'], x['max']
             ym, yM = y['min'], y['max']
+            # Extract model data for plotting gradient descent models 
+            theta = model.blackbox_.epoch_log.get('theta')
+            theta = todf(theta, stub='theta_')
+            # Clip thetas to plotting range 
+            theta_0 = np.clip(np.array(theta['theta_0']), xm, xM)
+            theta_1 = np.clip(np.array(theta['theta_1']), ym, yM)
+            d = OrderedDict()
+            d['theta_0'] = theta_0[::2]
+            d['theta_1'] = theta_1[::2]
+            d['cost'] = model.blackbox_.epoch_log.get('train_cost')[::2]
+            models[name] = d
+            # Place index for models dictionary in a list for easy access
+            names.append(name)
+            # Update best model data
+            true = model.objective.minimum if true is None else true
+            estimates.append(model.theta_)
+            similarities.append(results['sim'])
+            # Get objective function name for plot header 
+            objective = model.objective if objective is None else objective
             # Designate the number of frames
             n_frames = len(d['theta_0']) if n_frames == 0 else n_frames
 
-            models[name] = d
-            names.append(name)
-
         # ------------------------------------------------------------------  #
         # Find best performing estimator and data
-        best_idx = np.argmin(np.array(differences))
+        best_idx = np.argmax(np.array(similarities))
         best_model = names[best_idx]
-        best_true = str(models[best_model]['true'])
-        best_est = str(np.around(models[best_model]['est'],2))
-        best_diff = str(np.around(models[best_model]['diff'],2))
-        best_msg = "<b>Best Model: " + best_model + "</b><br>" + "<b>True Minimum:</b> " + best_true +\
-            "<b> Estimated Minimum:</b> " + best_est + "<b> Difference:</b> " + best_diff
+        best_true = str(true)
+        best_est = str(np.around(estimates[best_idx],2))
+        best_sim = str(np.around(similarities[best_idx],2))
+        best_msg = "<b>Best Model: " + best_model + "</b><br>" + \
+            "<b>True Minimum:</b> " + best_true +\
+            "<b> Estimated Minimum:</b> " + best_est + \
+                "<b> Cosine Similarity:</b> " + best_sim
 
         # ------------------------------------------------------------------  #
         # Create data for surface plot
-        xm, xM = min(xm, min(theta0)), max(xM, max(theta0))
-        ym, yM = min(ym, min(theta1)), max(yM, max(theta1))
         theta0_min, theta0_max = xm, xM
         theta1_min, theta1_max = ym, yM
         theta0_mesh = np.linspace(theta0_min, theta0_max, 50)
