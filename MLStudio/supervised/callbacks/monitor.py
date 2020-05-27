@@ -71,6 +71,15 @@ class Monitor(Callback):
         self.epsilon = epsilon
         self.patience = patience
 
+    @property
+    def best_results(self):
+        try:
+            results = self._observer.best_results
+        except:
+            msg = "Results aren't available until after training."
+            raise Exception(msg)
+        return results
+
     def _validate(self):        
         validate_metric(self.metric)
         if 'score' in self.metric:
@@ -88,6 +97,10 @@ class Monitor(Callback):
         """
         super(Monitor, self).on_train_begin(logs)
         self._validate()        
+        # Initialize state variables
+        self._stabilized = False
+        self._last_state = False
+        self._critical_points = []
         # Obtain scorer from model if it has one
         scorer = None
         if hasattr(self.model, 'scorer'):
@@ -116,13 +129,18 @@ class Monitor(Callback):
         """
         super(Monitor, self).on_epoch_end(epoch, logs)        
         logs = logs or {}                
-        self.model.stabilized = self._observer.model_is_stable(epoch, logs)
+        if self._observer.model_is_stable(epoch, logs):
+            self._stabilized = True
+            if self._stabilized != self._last_state:
+                self._last_state = self._stabilized
+                self._critical_points.append(logs)
 
 # --------------------------------------------------------------------------- #
 #                             HISTORY CLASS                                   #
 # --------------------------------------------------------------------------- #
 class BlackBox(Callback):
     """Records history and metrics for training by epoch."""
+
     def on_train_begin(self, logs=None):
         """Sets instance variables at the beginning of training.
         
@@ -138,7 +156,7 @@ class BlackBox(Callback):
         self.batch_log = {}
         # If a log has been passed, update the epoch log. This is used
         # to add epoch 0 evaluation data to the log before training
-        if logs:
+        if logs is not None:
             for k,v in logs.items():
                 self.epoch_log.setdefault(k,[]).append(v)            
 

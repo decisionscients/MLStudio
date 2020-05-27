@@ -38,6 +38,15 @@ class EarlyStop(Callback, ABC):
     def __init__(self):
         super(EarlyStop, self).__init__()
 
+    @property
+    def best_results(self):
+        try:
+            results = self._observer.best_results
+        except:
+            msg = "Results aren't available until after training."
+            raise Exception(msg)
+        return results            
+
     @abstractmethod
     def on_train_begin(self, logs=None):
         pass
@@ -80,7 +89,7 @@ class Stability(EarlyStop):
         stop training.    
     """
 
-    def __init__(self, metric='train_cost', epsilon=1e-2, patience=50):
+    def __init__(self, metric='train_cost', epsilon=1e-4, patience=5):
         super(Stability, self).__init__()
         self.name = "Stability"
         self.metric = metric

@@ -216,12 +216,10 @@ def get_log():
                     'train_cost': row['train_cost'],
                     'train_score': row['train_score'],
                     'val_cost': row['val_cost'],
-                    'val_score': row['val_score'],
-                    'theta_norm': row['theta_norm'],
+                    'val_score': row['val_score'],                    
                     'gradient_norm': row['gradient_norm']                    
                     }
-        log.append(epoch_log)
-    log = np.array(log)
+        log.append(epoch_log)    
     return log
 
 

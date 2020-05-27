@@ -163,7 +163,7 @@ def validate_task(task):
         return True           
 # --------------------------------------------------------------------------  #
 def validate_metric(metric):
-    valid_metrics = ['train_cost', 'train_score', 'val_cost' 'val_score',
+    valid_metrics = ['train_cost', 'train_score', 'val_cost', 'val_score',
                      'gradient_norm']
     if not isinstance(metric, str):
         msg = "The metric parameter must be a string including one of {v}.".\

@@ -38,7 +38,7 @@ def test_observer_validation():
         observer = Performance(metric='hair')
         observer.initialize()
     with pytest.raises(TypeError) as v:
-        observer = Performance(scorer='hair')
+        observer = Performance(metric='val_score', scorer='hair')
         observer.initialize()
     with pytest.raises(TypeError) as v:
         observer = Performance(epsilon='hair')                
@@ -55,13 +55,14 @@ def test_observer_validation():
 def test_observer_train_cost(get_log):    
     observer = Performance(epsilon=0.1)
     observer.initialize()
-    log = get_log
+    log = get_log       
+
     critical_points = []
-    for i in range(len(log)):
-        result = observer.model_is_stable(i+1, log[i])
+    for i in range(len(log)):        
+        result = observer.model_is_stable(i, log[i])
         if result:
             critical_points.append(result)
-    assert np.array_equal(np.array(critical_points), np.array([6, 17])), \
+    assert np.array_equal(np.array(critical_points), np.array([4, 15])), \
         "Performance observer returned invalid critical points" 
 
 
