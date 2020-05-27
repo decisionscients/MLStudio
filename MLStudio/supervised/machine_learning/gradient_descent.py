@@ -97,20 +97,24 @@ class GradientDescent(BaseEstimator):
         self._eta = x
 
     @property
+    def final_result(self):
+        return self._final_result
+
+    @property
+    def best_result(self):
+        return self._best_result
+
+    @property
+    def critical_points(self):
+        return self._monitor.critical_points
+
+    @property
     def converged(self):
         return self._converged
 
     @converged.setter
     def converged(self, x):
         self._converged = x       
-
-    @property
-    def feature_names(self):
-        return self._feature_names
-
-    @feature_names.setter
-    def feature_names(self, x):
-        self._feature_names = x     
 
 # --------------------------------------------------------------------------- #
 #                                 VALIDATION                                  #
@@ -138,13 +142,19 @@ class GradientDescent(BaseEstimator):
         """Copies mutable parameters to new members for sklearn compatibility."""
         # Custom objects
         self._optimizer = copy.deepcopy(self.optimizer)
-        self._objective = copy.deepcopy(self.objective)        
-        self._early_stop = copy.deepcopy(self.early_stop) if self.early_stop \
-            else self.early_stop
-        self._schedule = copy.deepcopy(self.schedule) if \
-            self.schedule else self.schedule            
-        self._monitor = copy.deepcopy(self.monitor) if \
-            self.monitor else self.monitor
+        self._objective = copy.deepcopy(self.objective)    
+
+        self._early_stop = copy.deepcopy(self.early_stop) \
+            if isinstance(self.early_stop, EarlyStop)\
+                 else self.early_stop
+        
+        self._schedule = copy.deepcopy(self.schedule) \
+            if isinstance(self.schedule, LearningRateSchedule)\
+                 else self.schedule
+
+        self._monitor = copy.deepcopy(self.monitor) \
+            if isinstance(self.monitor, Monitor)\
+                 else self.monitor
         
     def _compile(self):
         """Initializes all callbacks."""
@@ -202,6 +212,7 @@ class GradientDescent(BaseEstimator):
             log['train_cost'] = self._objective(self._theta)
         log['gradient'] = self._objective.gradient(self._theta)
         log['gradient_norm'] = np.linalg.norm(log['gradient'])
+        self._final_result = log
         return log
 
 # --------------------------------------------------------------------------- #
@@ -213,58 +224,60 @@ class GradientDescent(BaseEstimator):
         log = log or {}
         self._validate_params() 
         # Private variables
-        self._epoch = 0
-        self._batch = 0                
+        self._epoch = 1
+        self._batch = 1                
         self._converged = False        
         self._eta = copy.copy(self.learning_rate)
         self._gradient = None
         self._theta_new = None
         self._cost = None
-        self._feature_names = None        
+        self._final_result = None     
+        self._best_result = None      
         # Dependencies, data, and weights.
         self._compile()              
         self._init_weights()          
         log = self._evaluate_epoch(log)  
         self._cbks.on_train_begin(log) 
 
-    def _get_best_n_final_weights(self):
-        # Save final weights in the theta_ attribute
-        self.theta_ = self._theta
-        # Obtain best weights and set final coefficient attributes
-        if self.get_best_weights:
-            if self.early_stop:
-                self.theta_best_ = self._early_stop.best_results['theta']
-            elif self._monitor:
-                self.theta_best_ = self._monitor.best_results['theta']
-            else:
-                self.theta_best_ = self._theta
-
-            self.intercept_ = self.theta_best_[0]
-            self.coef_ = self.theta_best_[1:]
+    def _get_results(self):
+        # Obtain best results
+        if self.early_stop:
+            self._best_result = self._early_stop.best_results
+        elif self._monitor:
+            self._best_result = self._monitor.best_results
         else:
-            self.intercept_ = self.theta_[0]
-            self.coef_ = self.theta_[1:]        
+            self._best_result = self._final_result
+
+        # Format thetas from final or best results as requested
+        if self.get_best_weights:
+            self.theta_ = self._best_result['theta']
+        else:
+            self.theta_ = self._final_result['theta']
+        
+        # Format final intercept and coefficient attributes
+        self.intercept_ = self.theta_[0]
+        self.coef_ = self.theta_[1:]        
 
     def _end_training(self, log=None):
         """Closes history callout and assign final and best weights."""                    
         log = log or {}
-        self._get_best_n_final_weights()
+        self._get_results()
         self.n_iter_ = self._epoch
         self._cbks.on_train_end()
 
     def _begin_epoch(self, log=None):
         """Runs 'begin_epoch' methods on all callbacks."""            
-        log = log or {}
-        self._epoch += 1            
+        log = log or {}                    
         self._theta = self._theta_new if self._theta_new is not None else self._theta
 
     def _end_epoch(self, log=None):        
         """Performs end-of-epoch evaluation and scoring."""        
-        log = log or {}
+        log = log or {}        
         # Capture current data representing current state of the optimization  
         log = self._evaluate_epoch(log)
         # Call 'on_epoch_end' methods on callbacks.
         self._cbks.on_epoch_end(self._epoch, log)          
+        self._epoch += 1
         
 
 # --------------------------------------------------------------------------- #
@@ -285,7 +298,7 @@ class GradientDescent(BaseEstimator):
         
         self._begin_training()
 
-        while (self._epoch < self.epochs-1 and not self._converged):
+        while (self._epoch <= self.epochs and not self._converged):
 
             self._begin_epoch()
 
@@ -331,6 +344,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self.val_size = val_size        
         self.batch_size = batch_size
         self.scorer = scorer
+          
 # --------------------------------------------------------------------------- #
 #                                 VALIDATION                                  #
 # --------------------------------------------------------------------------- #   
@@ -344,7 +358,8 @@ class GradientDescentEstimator(ABC, GradientDescent):
             validate_scorer(self.scorer)
 # --------------------------------------------------------------------------- #
 #                               PROPERTIES                                    #
-# --------------------------------------------------------------------------- #    
+# --------------------------------------------------------------------------- #   
+
     @property
     def variant(self):
         if self.batch_size is None:
@@ -393,11 +408,20 @@ class GradientDescentEstimator(ABC, GradientDescent):
 
 # --------------------------------------------------------------------------- #
 #                             DATA PREPARATION                                #
-# --------------------------------------------------------------------------- #
-    @abstractmethod
+# --------------------------------------------------------------------------- #    
     def _prepare_training_data(self, X, y):
         """Prepares X and y data for training."""
-        pass
+        data = self._data_processor.fit_transform(X, y)
+        # Set attributes from data.
+        for k, v in data.items():            
+            setattr(self, k, v)
+            # Attempt to extract feature names from the 'X' array  
+            if np.ndim(v) > 1:
+                if v.shape[1] > 1:
+                    try:
+                        self.features_ =  v.dtype.names                     
+                    except:
+                        self.features_ = None        
 
 # --------------------------------------------------------------------------- #
 #                               EVALUATION                                    #
@@ -436,6 +460,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         # Compute the gradient norm        
         log['gradient_norm'] = \
                 np.linalg.norm(log['gradient']) 
+        self._final_result = log
         return log      
 
 # --------------------------------------------------------------------------- #
@@ -447,14 +472,16 @@ class GradientDescentEstimator(ABC, GradientDescent):
         log = log or {}
         self._validate_params() 
         # Private variables
-        self._epoch = 0
-        self._batch = 0                
+        self._epoch = 1
+        self._batch = 1                
         self._converged = False        
         self._eta = copy.copy(self.learning_rate)
         self._gradient = None
         self._theta_new = None
         self._cost = None
-        self._feature_names = None        
+        self._final_result = None
+        self._best_result = None   
+        self._features = None
         # Dependencies, data, and weights.
         self._compile()              
         self._prepare_training_data(log.get("X"),log.get("y"))        
@@ -465,8 +492,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
 
     def _begin_epoch(self, log=None):
         """Increment the epoch, evaluate using current parameters and shuffle the data."""            
-        log = log or {}
-        self._epoch += 1        
+        log = log or {}        
         # Shuffle data      
         rs = None
         if self.random_state:
@@ -477,15 +503,15 @@ class GradientDescentEstimator(ABC, GradientDescent):
 
     def _end_epoch(self, log=None):        
         """Performs end-of-epoch evaluation and scoring."""            
-        log = log or {}
+        log = log or {}        
         # Compute performance statistics for epoch and post to history
         log = self._evaluate_epoch(log)                
         # Call 'on_epoch_end' methods on callbacks.
         self._cbks.on_epoch_end(self._epoch, log)      
+        self._epoch += 1        
 
     def _begin_batch(self, log=None):
         log = log or {}
-        self._batch += 1
         self._theta = self._theta_new if self._theta_new is not None else self._theta
 
     def _end_batch(self, log=None):        
@@ -497,6 +523,8 @@ class GradientDescentEstimator(ABC, GradientDescent):
         log['gradient'] = copy.copy(self._gradient)
         log['gradient_norm'] = np.linalg.norm(log['gradient'])            
         self._cbks.on_batch_end(self._batch, log)
+        self._batch += 1
+
 
               
 
@@ -521,7 +549,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         train_log = {'X': X, 'y': y}
         self._begin_training(train_log)        
 
-        while (self._epoch < self.epochs-1 and not self._converged):            
+        while (self._epoch <= self.epochs and not self._converged):            
 
             self._begin_epoch()
 
@@ -591,9 +619,8 @@ class GradientDescentEstimator(ABC, GradientDescent):
         y_pred = self.predict(X)        
         return self._scorer(y, y_pred)
 
-    def summary(self, features=None):
-        observer = Monitor()
-        observer.report(self, features)
+    def summary(self, features=None):        
+        self.blackbox_.report(features)
 
 # --------------------------------------------------------------------------- #
 #                     GRADIENT DESCENT REGRESSOR                              #
@@ -603,7 +630,8 @@ class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
 
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
                  optimizer=Classic(), objective=MSE(), batch_size=None, 
-                 val_size=0.3, schedule=None, scorer=R2(), early_stop=None, 
+                 val_size=0.3, schedule=None, monitor=Monitor(), 
+                 scorer=R2(), early_stop=None, get_best_weights=True,
                  verbose=False, checkpoint=100, random_state=None, 
                  gradient_check=False):
         
@@ -616,8 +644,10 @@ class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
             batch_size = batch_size,
             val_size = val_size,
             schedule=schedule,
+            monitor=monitor,
             scorer = scorer,
             early_stop = early_stop,
+            get_best_weights=get_best_weights,
             verbose = verbose,
             checkpoint = checkpoint,
             random_state = random_state,
@@ -628,15 +658,8 @@ class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
         """Compiles required objects."""
         super(GradientDescentRegressor, self)._compile()        
         self._task = LinearRegression()        
-
-    def _prepare_training_data(self, X, y):
-        """Creates the X design matrix and saves data as attributes."""
-        processor = RegressionDataProcessor(val_size=self.val_size, 
+        self._data_processor = RegressionDataProcessor(val_size=self.val_size, 
                                             random_state=self.random_state)
-        data = processor.fit_transform(X, y)
-        # Set attributes from data.
-        for k, v in data.items():
-            setattr(self, k, v)
 
     def _init_weights(self):
         """Initializes parameters."""
@@ -656,7 +679,8 @@ class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
 
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
                  optimizer=Classic(), objective=CrossEntropy(), batch_size=None, 
-                 val_size=0.3, schedule=None, scorer=Accuracy(), early_stop=None, 
+                 val_size=0.3, schedule=None, monitor=Monitor(), 
+                 scorer=Accuracy(), early_stop=None, get_best_weights=True,
                  verbose=False, checkpoint=100, random_state=None, 
                  gradient_check=False):
         
@@ -669,8 +693,10 @@ class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
             batch_size = batch_size,
             val_size = val_size,
             schedule=schedule,
+            monitor = monitor,
             scorer = scorer,
             early_stop = early_stop,
+            get_best_weights=get_best_weights,
             verbose = verbose,
             checkpoint = checkpoint,
             random_state = random_state,
@@ -686,16 +712,9 @@ class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
             self._task = LogisticRegression()
         else:
             self._task = MultinomialLogisticRegression()
-
-    def _prepare_training_data(self, X, y):
-        """Creates the X design matrix and saves data as attributes."""
-        processor = ClassificationDataProcessor(val_size=self.val_size, 
+        self._data_processor = ClassificationDataProcessor(val_size=self.val_size, 
                                             random_state=self.random_state)
-        data = processor.fit_transform(X, y)
-        # Set attributes from data.
-        for k, v in data.items():
-            setattr(self, k, v)                
-        
+
     def _init_weights_binary_classification(self):
         """Initializes weights for binary classification."""
         if self.theta_init is not None:

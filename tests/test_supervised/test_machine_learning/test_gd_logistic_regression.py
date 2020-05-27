@@ -36,7 +36,7 @@ from mlstudio.supervised.callbacks.early_stop import Stability
 from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, PowerSchedule
-from mlstudio.supervised.callbacks.learning_rate import BottouSchedule, Performance
+from mlstudio.supervised.callbacks.learning_rate import BottouSchedule, Improvement
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentClassifier
 from mlstudio.supervised.core.scorers import Accuracy
 from mlstudio.supervised.core.objectives import CrossEntropy
@@ -156,7 +156,7 @@ scenarios = [
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), learning_rate=0.001, schedule=ExponentialSchedule(), epochs=1000),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=PowerSchedule(), epochs=1000),    
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=BottouSchedule(), epochs=1000),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=Performance(), epochs=1000)
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=Improvement(), epochs=1000)
 ]        
 @mark.logistic_regression
 @mark.logistic_regression_learning_rates

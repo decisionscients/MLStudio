@@ -128,11 +128,11 @@ def test_validate_task():
 @mark.validation
 def test_validate_learning_rate_schedule():    
     from mlstudio.utils.validation import validate_learning_rate_schedule
-    from mlstudio.supervised.callbacks.learning_rate import Performance    
+    from mlstudio.supervised.callbacks.learning_rate import Improvement    
     with pytest.raises(ValueError) as v:
         validate_learning_rate_schedule('hand')
         assert "value error"  in str(v.value)
-    validate_learning_rate_schedule(Performance())           
+    validate_learning_rate_schedule(Improvement())           
 
 # --------------------------------------------------------------------------  #    
 @mark.utils

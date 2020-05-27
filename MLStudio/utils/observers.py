@@ -84,7 +84,7 @@ class Performance(Observer):
         stop training.    
     """
 
-    def __init__(self, metric='train_cost', scorer=None, epsilon=0.01, patience=5): 
+    def __init__(self, metric='train_cost', scorer=None, epsilon=1e-3, patience=5): 
         super(Performance, self).__init__()       
         self.name = "Performance Observer"
         self.metric = metric        

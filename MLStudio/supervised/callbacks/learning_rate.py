@@ -25,12 +25,14 @@ import numpy as np
 
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.core.scorers import MSE
+from mlstudio.utils.observers import Performance
 from mlstudio.utils.validation import validate_bool, validate_early_stop
 from mlstudio.utils.validation import validate_int
 from mlstudio.utils.validation import validate_learning_rate_schedule
 from mlstudio.utils.validation import validate_objective, validate_optimizer
 from mlstudio.utils.validation import validate_scorer, validate_string
 from mlstudio.utils.validation import validate_zero_to_one, validate_int
+from mlstudio.utils.validation import validate_metric
 # --------------------------------------------------------------------------  #
 class LearningRateSchedule(Callback):
     """Base class for learning rate schedules. 
@@ -109,7 +111,7 @@ class StepDecay(LearningRateSchedule):
 
     def _validate(self):
         """Performs hyperparameter validation """
-        super(StepDecay, self)._validate(decay_factor=self.decay_factor)
+        super(StepDecay, self)._validate()
         validate_int(param=self.decay_steps, param_name='decay_steps', minimum=1)
 
     def _adjust_learning_rate(self, epoch, logs):
@@ -270,8 +272,8 @@ class ExponentialSchedule(LearningRateSchedule):
 
     def _validate(self):
         """Performs hyperparameter """
-        super(ExponentialSchedule, self)._validate(decay_factor=self.decay_factor)
-        validate_int(param=decay_steps, param_name='decay_steps')
+        super(ExponentialSchedule, self)._validate()
+        validate_int(param=self.decay_steps, param_name='decay_steps')
 
     def _adjust_learning_rate(self, epoch, logs):
         self.model.eta = self._eta0 * np.power(self.decay_factor, \
@@ -302,7 +304,7 @@ class PowerSchedule(LearningRateSchedule):
     def _validate(self):
         """Performs hyperparameter """
         validate_zero_to_one(self.power)        
-        validate_int(param=decay_steps, param_name='decay_steps')
+        validate_int(param=self.decay_steps, param_name='decay_steps')
 
     def _adjust_learning_rate(self, epoch, logs):
         self.model.eta = self._eta0 / (1 + epoch/self.decay_steps)**self.power
@@ -331,7 +333,7 @@ class BottouSchedule(LearningRateSchedule):
 # --------------------------------------------------------------------------- #
 #                             STABILITY                                       #
 # --------------------------------------------------------------------------- #
-class Performance(LearningRateSchedule):
+class Improvement(LearningRateSchedule):
     """Decays the learning rate if performance plateaus.
 
     Parameters
@@ -364,21 +366,21 @@ class Performance(LearningRateSchedule):
     """
 
     def __init__(self, decay_factor=0.5, metric='train_cost', min_lr=0,
-                 epsilon=1e-3, patience=5):
-        super(Performance, self).__init__(decay_factor=decay_factor)
-        self.name = "Performance Learning Rate Schedule"        
+                 epsilon=1e-4, patience=5):
+        super(Improvement, self).__init__(decay_factor=decay_factor)
+        self.name = "Improvement Learning Rate Schedule"        
         self.metric = metric        
         self.min_lr = min_lr
         self.epsilon = epsilon
         self.patience = patience        
 
     def _validate(self):
-        super(Performance, self)._validate()        
+        super(Improvement, self)._validate()        
         validate_metric(self.metric)
-        validate_zero_to_one(param=min_lr, param_name='min_lr',
-                             left='open')
+        validate_zero_to_one(param=self.min_lr, param_name='min_lr',
+                             left='closed')
         validate_zero_to_one(param=self.epsilon, param_name='epsilon') 
-        validate_int(param=patience, param_name='patience')      
+        validate_int(param=self.patience, param_name='patience')      
 
     def on_train_begin(self, logs=None):        
         """Sets key variables at beginning of training.
@@ -388,15 +390,15 @@ class Performance(LearningRateSchedule):
         log : dict
             Contains no information
         """
-        super(Performance, self).on_train_begin(logs)
+        super(Improvement, self).on_train_begin(logs)
         self._validate()        
         self._observer = Performance(metric=self.metric, scorer=self.model.scorer, \
             epsilon=self.epsilon, patience=self.patience)    
         self._observer.initialize()        
 
-    def _adjust_learning_rate(self):
+    def _adjust_learning_rate(self, epoch, logs):
         if self.model.eta * self.decay_factor > self.min_lr:
-            self.model.eta = self.mode.eta * self.decay_factor
+            self.model.eta = self.model.eta * self.decay_factor
 
     def on_epoch_end(self, epoch, logs=None):
         """Determines whether convergence has been achieved.
@@ -411,8 +413,8 @@ class Performance(LearningRateSchedule):
             validation cost)  
 
         """
-        super(Performance, self).on_epoch_end(epoch, logs)        
+        super(Improvement, self).on_epoch_end(epoch, logs)        
         logs = logs or {}        
         
         if self._observer.model_is_stable(epoch, logs):            
-            self._adjust_learning_rate()
+            self._adjust_learning_rate(epoch, logs)

@@ -36,11 +36,13 @@ from mlstudio.supervised.callbacks.early_stop import Stability
 from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, PowerSchedule
-from mlstudio.supervised.callbacks.learning_rate import BottouSchedule, Performance
+from mlstudio.supervised.callbacks.learning_rate import BottouSchedule, Improvement
+from mlstudio.supervised.callbacks.monitor import Monitor
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.supervised.core.objectives import MSE
 from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
+from mlstudio.supervised.core.scorers import R2
 from mlstudio.utils.data_manager import GradientScaler
 
 
@@ -60,6 +62,30 @@ scenarios = [
 @parametrize_with_checks(scenarios)
 def test_regression_qnd(estimator, check):
     check(estimator)
+
+# --------------------------------------------------------------------------  #
+#                           TEST REPORTING                                    #
+# --------------------------------------------------------------------------  #
+scenarios_summary = [    
+    GradientDescentRegressor(scorer=None, val_size=0, monitor=Monitor(metric='train_cost')),
+    GradientDescentRegressor(scorer=R2(), val_size=0, monitor=Monitor(metric='train_score')),
+    GradientDescentRegressor(scorer=None, val_size=0.3, monitor=Monitor(metric='val_cost')),
+    GradientDescentRegressor(scorer=R2(), val_size=0.3, monitor=Monitor(metric='val_score')),
+    GradientDescentRegressor(scorer=None, val_size=0, early_stop=Stability(metric='train_cost')),
+    GradientDescentRegressor(scorer=R2(), val_size=0, early_stop=Stability(metric='train_score')),
+    GradientDescentRegressor(scorer=None, val_size=0.3, early_stop=Stability(metric='val_cost')),
+    GradientDescentRegressor(scorer=R2(), val_size=0.3, early_stop=Stability(metric='val_score')),    
+                                      
+]
+
+@mark.regression
+@mark.regression_summary
+def test_regression_summary(get_regression_data, get_regression_data_features):
+    X, y = get_regression_data
+    features = get_regression_data_features        
+    for est in scenarios_summary:                
+        est.fit(X, y)
+        est.summary(features=features)   
 # --------------------------------------------------------------------------  #
 #                        REGULARIZATION TESTING                               #
 # --------------------------------------------------------------------------  #
@@ -152,7 +178,7 @@ scenarios = [
     GradientDescentRegressor(objective=MSE(regularizer=L1()), learning_rate=0.001, schedule=ExponentialSchedule(), epochs=1000),
     GradientDescentRegressor(objective=MSE(regularizer=L2()), learning_rate=0.001, schedule=PowerSchedule(), epochs=1000),    
     GradientDescentRegressor(objective=MSE(regularizer=L2()), learning_rate=0.001, schedule=BottouSchedule(), epochs=1000),
-    GradientDescentRegressor(objective=MSE(regularizer=L2()), learning_rate=0.001, schedule=Performance(), epochs=1000)
+    GradientDescentRegressor(objective=MSE(regularizer=L2()), learning_rate=0.001, schedule=Improvement(), epochs=1000)
 ]        
 @mark.regression
 @mark.regression_learning_rates
