@@ -42,57 +42,68 @@ class SurfaceContour:
     def __init__(self):
         pass
 
-    def animate(self, estimators, directory=None, filename=None):
+    def animate(self, estimators, directory=None, filename=None, show=True):
         # ------------------------------------------------------------------  #
         # Extract parameter and cost data from the model blackboxes
-        theta0 = []
-        theta1 = []
+        # Data for meshgrid
+        xm, xM = 0, 0 # x range from objective function object
+        ym, yM = 0, 0 # y range from objective function object
+        # Models containing plot data (parameters theta and cost)
         models = OrderedDict()
+        # Index for model dictionary  
         names = [] 
-        xm, xM = 0, 0
-        ym, yM = 0, 0
+        # Data used to obtain best model for the objective function
+        true = None
+        estimates = []
+        similarities = [] 
+        # The number of frames = model.epochs
+        n_frames = 0
+        # The objective function
         objective = None
-        differences = []
+        
         for name, estimator in estimators.items():
-            theta = estimator.blackbox_.epoch_log.get('theta')
-            # Thetas converted to individual columns in dataframe and extacted  
-            theta = todf(theta, stub='theta_')
-            theta0.extend(theta['theta_0'][::10])
-            theta1.extend(theta['theta_1'][::10])
-            d = OrderedDict()
-            d['theta_0'] = theta['theta_0'][::10]
-            d['theta_1'] = theta['theta_1'][::10]
-            d['cost'] = estimator.blackbox_.epoch_log.get('train_cost')[::10]
-            d['true'] = estimator.objective.minimum
-            d['est'] = estimator.theta_
-            d['diff'] = np.linalg.norm(estimator.theta_) - \
-                np.linalg.norm(estimator.objective.minimum)
-            differences.append(d['diff'])
-            # Get objective function
-            objective = estimator.objective if objective is None else objective
-            # Get range from objective object
-            x, y = estimator.objective.range
+            model = estimator['model']
+            results = estimator['results']      
+            # Get range from objective object for meshgrid
+            x, y = model.objective.range
             xm, xM = x['min'], x['max']
             ym, yM = y['min'], y['max']
-            # Grab best performing estimator
-
+            # Extract model data for plotting gradient descent models 
+            theta = model.blackbox_.epoch_log.get('theta')
+            theta = todf(theta, stub='theta_')
+            # Clip thetas to plotting range 
+            theta_0 = np.clip(np.array(theta['theta_0']), xm, xM)
+            theta_1 = np.clip(np.array(theta['theta_1']), ym, yM)
+            d = OrderedDict()
+            d['theta_0'] = theta_0[::2]
+            d['theta_1'] = theta_1[::2]
+            d['cost'] = model.blackbox_.epoch_log.get('train_cost')[::2]
             models[name] = d
+            # Place index for models dictionary in a list for easy access
             names.append(name)
-
+            # Update best model data
+            true = model.objective.minimum if true is None else true
+            estimates.append(model.theta_)
+            similarities.append(results['sim'])
+            # Get objective function name for plot header 
+            objective = model.objective if objective is None else objective
+            # Designate the number of frames
+            n_frames = len(d['theta_0']) if n_frames == 0 else n_frames
         # ------------------------------------------------------------------  #
         # Find best performing estimator and data
-        best_idx = np.argmin(np.array(differences))
+        best_idx = np.argmax(np.array(similarities))
         best_model = names[best_idx]
-        best_true = str(models[best_model]['true'])
-        best_est = str(np.around(models[best_model]['est'],4))
-        best_diff = str(np.around(models[best_model]['diff'],4))
-        best_msg = "<b>Best Model: " + best_model + "</b><br>" + "<b>True Minimum:</b> " + best_true +\
-            "<b>Estimated Minimum:</b> " + best_est + "<b>Difference:</b> " + best_diff
+        best_true = str(true)
+        best_est = str(np.around(estimates[best_idx],2))
+        best_sim = str(np.around(similarities[best_idx],2))
+        best_msg = "<b>Best Model: " + best_model + "</b><br>" + \
+            "<b>True Minimum:</b> " + best_true +\
+            "<b> Estimated Minimum:</b> " + best_est + \
+                "<b> Cosine Similarity:</b> " + best_sim
+
 
         # ------------------------------------------------------------------  #
         # Create data for surface plot
-        xm, xM = min(xm, min(theta0)), max(xM, max(theta0))
-        ym, yM = min(ym, min(theta1)), max(yM, max(theta1))
         theta0_min, theta0_max = xm, xM
         theta1_min, theta1_max = ym, yM
         theta0_mesh = np.linspace(theta0_min, theta0_max, 50)
@@ -100,7 +111,7 @@ class SurfaceContour:
         theta0_mesh_grid, theta1_mesh_grid = np.meshgrid(theta0_mesh, theta1_mesh)        
         # Create z axis grid based upon X,y and the grid of thetas
         Js = np.array([objective(THETA) for THETA in zip(np.ravel(theta0_mesh_grid), np.ravel(theta1_mesh_grid))])
-        Js = Js.reshape(theta0_mesh_grid.shape)          
+        Js = Js.reshape(theta0_mesh_grid.shape)         
   
         # ------------------------------------------------------------------  #
         # Add colors to model
@@ -117,27 +128,29 @@ class SurfaceContour:
         # ------------------------------------------------------------------  #
         # Add Surface Plot        
         # Trace 0: Surface plot        
-        n_frames = 100
         fig.add_trace(
             go.Surface(x=theta0_mesh, y=theta1_mesh, z=Js, colorscale="YlGnBu", 
-                       showscale=False, showlegend=False), row=1, col=1)
-
-        # ------------------------------------------------------------------  #
-        # Traces 1-12: Surface Gradient Descent Trajectories
-        for name, model in models.items():
-            fig.add_trace(
-                go.Scatter3d(x=model['theta_0'][:1], y=model['theta_1'][:1], z=model['cost'][:1],
-                            name=name, 
-                            showlegend=True, 
-                            mode='lines', line=dict(color=model['color'], width=5)), row=1, col=1)                        
+                       showscale=False, opacity=0.8,
+                       showlegend=False), row=1, col=1)
 
         # ------------------------------------------------------------------  #
         # Add Contour Plot        
-        # Trace 13: Contour plot
-        n_frames = 100
+        # Trace 1: Contour plot
         fig.add_trace(
             go.Contour(x=theta0_mesh, y=theta1_mesh, z=Js, colorscale="YlGnBu", 
-                       showscale=False, showlegend=False), row=1, col=2)                      
+                       showscale=False, opacity=0.8, showlegend=False), row=1, col=2)                           
+
+        # ------------------------------------------------------------------  #
+        # Traces 2-13: Surface Gradient Descent Trajectories
+        for name, model in models.items():
+            fig.add_trace(
+                go.Scatter3d(x=model['theta_0'][:1], y=model['theta_1'][:1], 
+                             z=model['cost'][:1],
+                             name=name, 
+                             showlegend=True, 
+                             mode='lines', line=dict(color=model['color'], width=5)), 
+                             row=1, col=1)                        
+
 
         # ------------------------------------------------------------------  #
         # Traces 14-25: Contour Gradient Descent Trajectories
@@ -146,17 +159,13 @@ class SurfaceContour:
                 go.Scatter(x=model['theta_0'][:1], y=model['theta_1'][:1], 
                             name=name, 
                             showlegend=True, 
-                            mode='lines', line=dict(color=model['color'], width=5)), 
+                            mode='lines', line=dict(color=model['color'], width=3)), 
                             row=1, col=2)            
 
         # ------------------------------------------------------------------  #
         # Set layout title, font, template, etc...
         fig.update_layout(
             height=600, width=1200,
-            scene=dict(
-                xaxis=dict(nticks=20),
-                zaxis=dict(nticks=4)
-            ),
             #scene_xaxis=dict(range=[theta0_min, theta0_max], autorange=False),
             #scene_yaxis=dict(range=[theta1_min, theta1_max], autorange=False),            
             #scene_zaxis=dict(range=[zm, zM], autorange=False),            
@@ -166,18 +175,19 @@ class SurfaceContour:
             annotations=[
                 dict(
                     x=0.5,
-                    y=1.0,
+                    y=-1,
                     showarrow=False,
                     text=best_msg,
                     xref="paper",
-                    yref="paper"
+                    yref="paper",
+                    font=dict(size=5)
                 )               
             ],      
             template='plotly_white');                       
 
         # ------------------------------------------------------------------  #
         # Create surface plot frames                       
-        surface_frames = [go.Frame(
+        frames = [go.Frame(
             dict(
                 name = f'{k+1}',
                 data = [                    
@@ -216,18 +226,8 @@ class SurfaceContour:
                                  z=models[names[10]]['cost'][:k+1]),   
                     go.Scatter3d(x=models[names[11]]['theta_0'][:k+1], 
                                  y=models[names[11]]['theta_1'][:k+1], 
-                                 z=models[names[11]]['cost'][:k+1]),                                                                                                                                                                                                                                                                                                                                         
+                                 z=models[names[11]]['cost'][:k+1]),  
 
-                ],
-                traces=[1,2,3,4,5,6,7,8,9,10,11,12])
-            ) for k in range(n_frames-1)]
-
-        # ------------------------------------------------------------------  #
-        # Create contour plot frames                       
-        contour_frames = [go.Frame(
-            dict(
-                name = f'{k+1}',
-                data = [                    
                     go.Scatter(x=models[names[0]]['theta_0'][:k+1], 
                                  y=models[names[0]]['theta_1'][:k+1]),
                     go.Scatter(x=models[names[1]]['theta_0'][:k+1], 
@@ -251,14 +251,13 @@ class SurfaceContour:
                     go.Scatter(x=models[names[10]]['theta_0'][:k+1], 
                                  y=models[names[10]]['theta_1'][:k+1]),   
                     go.Scatter(x=models[names[11]]['theta_0'][:k+1], 
-                                 y=models[names[11]]['theta_1'][:k+1]),                                                                                                                                                                                                                                                                                                                                         
+                                 y=models[names[11]]['theta_1'][:k+1]),                                                                                                                                                                                                                                                                                                                                                                        
 
                 ],
-                traces=[14,15,16,17,18,19,20,21,22,23,24,25])
+                traces=[2,3,4,5,6,7,8,9,10,11,12,13,
+                        14,15,16,17,18,19,20,21,22,23,24,25])
             ) for k in range(n_frames-1)]
 
-        # Combine frames
-        frames = surface_frames + contour_frames
         # Update the menus
         updatemenus = [dict(type='buttons',
                             buttons=[dict(label="Play",
@@ -294,6 +293,8 @@ class SurfaceContour:
         if directory and filename:
             filepath = os.path.join(directory, filename)
             fig.write_html(filepath, include_plotlyjs='cdn', include_mathjax='cdn')
-        pio.renderers.default = "browser"
-        fig.show()
+
+        if show:
+            pio.renderers.default = "browser"
+            fig.show()
 

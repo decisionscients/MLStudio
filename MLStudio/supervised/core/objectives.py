@@ -43,7 +43,7 @@ class Objective(ABC, BaseEstimator):
         threshold = 1e-10 and upper threshold = 1.
     """
 
-    def __init__(self, regularizer=None, gradient_scaler=GradientScaler()):
+    def __init__(self, regularizer=None, gradient_scaler=None):
         self.regularizer = regularizer
         self.gradient_scaler = gradient_scaler
         if not regularizer:
@@ -107,6 +107,12 @@ class Objective(ABC, BaseEstimator):
 # --------------------------------------------------------------------------  #
 class Cost(Objective):
     """Base class for all cost classes."""
+
+    def __init__(self, regularizer=None, gradient_scaler=None):
+        self.regularizer = regularizer
+        self.gradient_scaler = gradient_scaler
+        if not regularizer:
+            self.regularizer = Nill()        
     
     @property
     def name(self):
@@ -321,6 +327,12 @@ class CategoricalCrossEntropy(Cost):
 # --------------------------------------------------------------------------  #
 class Benchmark(Objective):
     """Base class for objective functions."""
+
+    def __init__(self, regularizer=None, gradient_scaler=GradientScaler()):
+        self.regularizer = regularizer
+        self.gradient_scaler = gradient_scaler
+        if not regularizer:
+            self.regularizer = Nill()        
 
     @property
     def name(self):
@@ -595,7 +607,7 @@ class Branin02(Benchmark):
             * np.sin(theta[0]) * np.cos(theta[1])
         dfdx = a * (b+c*d*e - f)
         # dfdy
-        a = -(5*theta[0]^2/(2*(np.pi**2)))
+        a = -(5*theta[0]**2/(2*(np.pi**2)))
         b = (10 * theta[0])/np.pi
         c = 2 * theta[1]
         d = (2*theta[1]) / (theta[0]**2+theta[1]**2+1)

@@ -31,7 +31,7 @@ sys.path.append(homedir)
 
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.utils.data_manager import StandardScaler
-from mlstudio.visual.animations.regression import SurfaceLine
+from mlstudio.visual.animations.surface_line import SurfaceLine
 
 
 # --------------------------------------------------------------------------  #

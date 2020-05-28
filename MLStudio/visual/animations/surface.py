@@ -126,8 +126,8 @@ class Surface:
         # Add Surface Plot        
         # Trace 0: Surface plot                
         fig.add_trace(
-            go.Surface(x=theta0_mesh, y=theta1_mesh, z=Js, colorscale="YlGnBu", 
-                       showscale=False, showlegend=False))
+            go.Surface(x=theta0_mesh, y=theta1_mesh, z=Js, colorscale="RdBu", 
+                       opacity=0.7, showscale=False, showlegend=False))
 
         # ------------------------------------------------------------------  #
         # Traces 1-12: Add Gradient Descent Trajectories

@@ -57,7 +57,9 @@ optimizers = [Momentum(), Nesterov(), Adagrad(), Adadelta(), RMSprop(), Adam(),
 
 objectives = [Adjiman(), Branin02(), Ursem01(),
               StyblinskiTank(), ThreeHumpCamel()]
-objectives = [Adjiman()]              
+
+objectives = [Adjiman()]
+
 # --------------------------------------------------------------------------  #
 # Train models
 solutions = OrderedDict()
@@ -69,7 +71,7 @@ for objective in objectives:
         estimators[optimizer.name] = {}
         model = GradientDescent(learning_rate=0.01,
                                 theta_init=objective.start, 
-                                epochs=1000, objective=objective,
+                                epochs=500, objective=objective,
                                 optimizer=optimizer)
         model.fit()
         sim = cosine(objective.minimum, model.theta_)
@@ -105,6 +107,6 @@ save_df(df, figures, df_filename)
 # --------------------------------------------------------------------------  #
 # Render plots
 for title, solution in solutions.items():        
-    v = Surface()
-    v.animate(estimators=solution, directory=figures, filename=title + " Optimization.html", show=False)        
+    v = SurfaceContour()
+    v.animate(estimators=solution, directory=figures, filename=title + " Optimization.html", show=True)        
 
