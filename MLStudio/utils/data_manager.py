@@ -166,17 +166,17 @@ class ClassificationDataProcessor(DataProcessor):
         d['n_classes_'] = len(np.unique(y_train))
         d['X_train_'] = X_train
         d['y_train_orig_'] = y_train
-        d['y_train_'] = one_hot_encode(y_train) if n_classes > 2 else y_train
+        d['y_train_'] = one_hot_encode(y_train) if d['n_classes_'] > 2 else y_train
         if self.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
                         stratify=True, test_size=self.val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_orig_'] = y_train
-            d['y_train_'] = one_hot_encode(y_train) if n_classes > 2 else y_train
+            d['y_train_'] = one_hot_encode(y_train) if d['n_classes_'] > 2 else y_train
             d['X_val_'] = X_val
             d['y_val_orig_'] = y_val
-            d['y_val_'] = one_hot_encode(y_val) if n_classes > 2 else y_val
+            d['y_val_'] = one_hot_encode(y_val) if d['n_classes_'] > 2 else y_val
         return d                               
 
 # --------------------------------------------------------------------------- #
@@ -666,6 +666,7 @@ def data_split(X, y, test_size=0.3, shuffle=False, stratify=False, random_state=
         test_idx = np.concatenate(test_idx).ravel()
         # Slice and dice.
         y_train, y_test = y[train_idx], y[test_idx]
+        X_train, X_test = X[train_idx], X[test_idx]
     
     return X_train, X_test, y_train, y_test
 

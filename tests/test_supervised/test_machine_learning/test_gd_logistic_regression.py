@@ -53,7 +53,7 @@ scenarios = [
                               objective=CrossEntropy(gradient_scaler=GradientScaler())),
     GradientDescentClassifier(
                              objective=CrossEntropy(regularizer=L1_L2())),
-    GradientDescentClassifier(gradient_check=GradientCheck()),
+    GradientDescentClassifier(gradient_check=True),
     GradientDescentClassifier(early_stop=Stability()),                                           
     GradientDescentClassifier(schedule=BottouSchedule()),                                           
 

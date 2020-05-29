@@ -156,7 +156,7 @@ class GradientDescent(BaseEstimator):
             if isinstance(self.monitor, Monitor)\
                  else self.monitor
         
-    def _compile(self):
+    def _compile(self, log=None):
         """Initializes all callbacks."""
         # Copy mutable classes and parameters that will be modified during
         # training. 
@@ -483,7 +483,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self._best_result = None   
         self._features = None
         # Dependencies, data, and weights.
-        self._compile()              
+        self._compile(log)              
         self._prepare_training_data(log.get("X"),log.get("y"))        
         self._init_weights()            
         # Perform an epoch 0 evaluation on initial weights
@@ -654,9 +654,9 @@ class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
             gradient_check = gradient_check   
         )
 
-    def _compile(self):
+    def _compile(self, log=None):
         """Compiles required objects."""
-        super(GradientDescentRegressor, self)._compile()        
+        super(GradientDescentRegressor, self)._compile(log)        
         self._task = LinearRegression()        
         self._data_processor = RegressionDataProcessor(val_size=self.val_size, 
                                             random_state=self.random_state)
@@ -704,9 +704,9 @@ class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
         )
 
 
-    def _compile(self):
+    def _compile(self, log=None):
         """Compiles required objects."""
-        super(GradientDescentClassifier, self)._compile()        
+        super(GradientDescentClassifier, self)._compile(log)        
         y = log.get('y')
         if np.ndim(y) == 2 or len(np.unique(y)==2):
             self._task = LogisticRegression()
