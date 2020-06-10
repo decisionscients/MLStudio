@@ -43,7 +43,21 @@ def test_validate_zero_to_one():
         validate_zero_to_one(1, right='open')
         assert "assertion error"  in str(v.value)    
     validate_zero_to_one(0)
-    validate_zero_to_one(0)
+
+
+# --------------------------------------------------------------------------  #
+@mark.utils
+@mark.validation
+def test_validate_range():
+    from mlstudio.utils.validation import validate_range
+    with pytest.raises(AssertionError) as v:
+        validate_range(param=1, minimum=0, maximum=1, param_name='test_param')
+        assert "assertion error"  in str(v.value)
+    with pytest.raises(AssertionError) as v:
+        validate_range(param=0, minimum=0, maximum=1, param_name='test_param')
+        assert "assertion error"  in str(v.value)        
+    validate_range(param=1, minimum=0, maximum=1, right='closed')
+    validate_range(param=0, minimum=0, maximum=1, left='closed')
 
 # --------------------------------------------------------------------------  #    
 

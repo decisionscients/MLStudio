@@ -187,6 +187,29 @@ def validate_string(param, param_name="", valid_values=None):
         raise ValueError(msg)
     else:
         return True        
+
+# --------------------------------------------------------------------------  #
+def validate_range(param, minimum, maximum, param_name = "", left='open', right='open'):        
+    if not isinstance(param, (int,float)):
+        msg = param_name + " hyperparameter must be numeric."
+        raise TypeError(msg)
+    elif left == 'open' and right == 'open':
+        if param <= minimum or param >= maximum:
+            msg = param_name + " hyperparameter must be in (" + str(minimum) + "," + str(maximum) + ")"      
+            raise ValueError(msg)
+    elif left == 'open' and right != 'open':
+        if param <= minimum or param > maximum:
+            msg = param_name + " hyperparameter must be in (" + str(minimum) + "," + str(maximum) + "]"      
+            raise ValueError(msg)
+    elif left != 'open' and right == 'open':
+        if param < minimum or param >= maximum:
+            msg = param_name + " hyperparameter must be in [" + str(minimum) + "," + str(maximum) + ")"                  
+            raise ValueError(msg)
+    else:
+        if param < minimum or param > maximum:
+            msg = param_name + " hyperparameter must be in [" + str(minimum) + "," + str(maximum) + "]"                  
+            raise ValueError(msg)
+        
 # --------------------------------------------------------------------------  #
 def validate_zero_to_one(param, param_name = "", left='closed', right='closed'):
     """Validates a parameter whose values should be 0 and 1."""

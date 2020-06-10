@@ -54,9 +54,8 @@ scenarios = [
     GradientDescentRegressor(objective=MSE(regularizer=L1_L2())),
     GradientDescentRegressor(gradient_check=True),
     GradientDescentRegressor(early_stop=Stability()),                                           
-    GradientDescentRegressor(schedule=BottouSchedule()),                                           
+    GradientDescentRegressor(schedule=PowerSchedule()),                                           
 ]
-
 @mark.regression
 @mark.regression_qnd
 @parametrize_with_checks(scenarios)

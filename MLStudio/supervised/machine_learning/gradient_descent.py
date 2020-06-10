@@ -42,7 +42,7 @@ from mlstudio.supervised.callbacks.debugging import GradientCheck
 from mlstudio.supervised.callbacks.base import CallbackList
 from mlstudio.supervised.callbacks.early_stop import Stability
 from mlstudio.supervised.callbacks.monitor import BlackBox, Progress, Monitor
-from mlstudio.supervised.callbacks.learning_rate import LearningRateSchedule
+from mlstudio.supervised.callbacks.learning_rate import LearningRateSchedule, Constant
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
 from mlstudio.utils.data_manager import add_bias_term, encode_labels, one_hot_encode
 from mlstudio.utils.data_manager import RegressionDataProcessor, ClassificationDataProcessor
@@ -60,7 +60,7 @@ from mlstudio.utils.validation import validate_scorer, validate_bool
 class GradientDescent(BaseEstimator):
     """Performs pure optimization of a 2d objective function."""
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
-                 optimizer=Classic(), objective=MSE(), schedule=None,                  
+                 optimizer=Classic(), objective=MSE(), schedule=Constant(),                  
                  monitor=Monitor(), early_stop=None, get_best_weights=True,
                  verbose=False, checkpoint=100, random_state=None, 
                  gradient_check=False):
@@ -95,7 +95,7 @@ class GradientDescent(BaseEstimator):
     @eta.setter  
     def eta(self, x):
         self._eta = x
-
+        
     @property
     def final_result(self):
         return self._final_result
@@ -321,7 +321,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
 
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
                  optimizer=Classic(), objective=MSE(), batch_size=None, 
-                 val_size=0.3, schedule=None, monitor=Monitor(),
+                 val_size=0.3, schedule=Constant(), monitor=Monitor(),
                  scorer=R2(), early_stop=None, get_best_weights=True,
                  verbose=False, checkpoint=100, random_state=None, 
                  gradient_check=False):
@@ -525,9 +525,6 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self._cbks.on_batch_end(self._batch, log)
         self._batch += 1
 
-
-              
-
 # --------------------------------------------------------------------------- #
 #                                  FIT                                        #
 # --------------------------------------------------------------------------- #
@@ -562,11 +559,11 @@ class GradientDescentEstimator(ABC, GradientDescent):
 
                 # Compute costs
                 self._cost = self._objective(self._theta, y_batch, y_out)
-                
-                # Compute the parameter updates.
+
+                # Compute gradient and update parameters 
                 self._theta_new, self._gradient = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.copy(self._theta),  X=X_batch, y=y_batch,\
-                        y_out=y_out)
+                        y_out=y_out)                       
 
                 # Update batch log
                 self._end_batch()

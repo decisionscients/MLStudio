@@ -775,4 +775,49 @@ class Ursem01(Benchmark):
         df = self._check_gradient_scale(df)                
         return df        
 
-     
+# --------------------------------------------------------------------------  #
+class Wikipedia(Benchmark):
+    """Wikipedia objective functions."""    
+
+    @property
+    def name(self):
+        return "Wikipedia Objective Function"    
+
+    @property
+    def start(self):
+        return np.array([0,-1])
+        
+    @property
+    def minimum(self):
+        return np.array([-0.5,1])           
+    
+    @property
+    def range(self):
+        """Returns the x and y ranges for plotting."""
+        x = {'min': -1, 'max': 1}
+        y = {'min': -1, 'max': 1}
+        return x, y
+    
+    def __call__(self, theta):
+        """Computes the objective function value"""        
+        return np.sin(1/2*theta[0]**2 - 0.25 * theta[1]**2 + 3) * np.cos(2*theta[0]+1-np.exp(theta[1]))
+
+    def gradient(self, theta):
+        """Computes the gradient of the objective function."""
+        a = (theta[0] * np.cos(2*theta[0]-np.exp(theta[1])+1))
+        b = np.cos((theta[0]**2)/2-(theta[1]**2)/4+3)
+        c = -2*np.sin(2*theta[0])-np.exp(theta[1])+1
+        d = np.sin((theta[0]**2)/2-(theta[1]**2)/4+3)
+        e = -theta[1]/2*np.cos(2*theta[0]-np.exp(theta[1])+1)
+        f = np.cos((theta[0]**2)/2-(theta[1]**2)/4+3)
+        g = np.exp(theta[1])*np.sin(2*theta[0]-np.exp(theta[1])+1)
+        h = np.sin((theta[0]**2)/2-(theta[1]**2)/4+3)
+        dfdx = a * b + c * d
+        dfdy = e * f + g * h
+        # Package into gradient vector
+        df = np.array([dfdx, dfdy])
+        # Check gradient scale 
+        df = self._check_gradient_scale(df)                
+        return df        
+
+          

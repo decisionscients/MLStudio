@@ -34,7 +34,7 @@ sys.path.append(homedir)
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescent
 from mlstudio.visual.animations.surface import Surface
 from mlstudio.visual.animations.surface_contour import SurfaceContour
-from mlstudio.supervised.core.objectives import Adjiman, StyblinskiTank
+from mlstudio.supervised.core.objectives import Adjiman, StyblinskiTank, Wikipedia
 from mlstudio.supervised.core.objectives import ThreeHumpCamel, Ursem01, Branin02
 from mlstudio.supervised.core.optimizers import Classic, Momentum, Nesterov
 from mlstudio.supervised.core.optimizers import Adagrad, Adadelta, RMSprop
@@ -56,9 +56,7 @@ optimizers = [Momentum(), Nesterov(), Adagrad(), Adadelta(), RMSprop(), Adam(),
               QuasiHyperbolicMomentum()]
 
 objectives = [Adjiman(), Branin02(), Ursem01(),
-              StyblinskiTank(), ThreeHumpCamel()]
-
-objectives = [Adjiman()]
+              StyblinskiTank(), ThreeHumpCamel(), Wikipedia()]
 
 # --------------------------------------------------------------------------  #
 # Train models
@@ -83,11 +81,9 @@ for objective in objectives:
         d['Starting Learning Rate'] = model.learning_rate
         d['Final Learning Rate'] = model.eta
         if model.schedule:
-            d['Schedule'] = model.schedule.name 
-            d['Decay Factor'] = model.schedule.decay_factor 
+            d['Schedule'] = model.schedule.name              
         else:
-            d['Schedule'] = None
-            d['Decay Factor'] = None        
+            d['Schedule'] = None            
         d['gradient_min'] = np.min(model.blackbox_.epoch_log.get('gradient_norm'))
         d['gradient_max'] = np.max(model.blackbox_.epoch_log.get('gradient_norm'))        
         d['gradient_mean'] = np.mean(model.blackbox_.epoch_log.get('gradient_norm'))        
@@ -107,6 +103,6 @@ save_df(df, figures, df_filename)
 # --------------------------------------------------------------------------  #
 # Render plots
 for title, solution in solutions.items():        
-    v = SurfaceContour()
+    v = Surface()
     v.animate(estimators=solution, directory=figures, filename=title + " Optimization.html", show=True)        
 
