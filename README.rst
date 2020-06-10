@@ -6,9 +6,6 @@ Machine Learning Algorithms
 .. image:: https://img.shields.io/pypi/v/MLStudio.svg
         :target: https://pypi.python.org/pypi/MLStudio
 
-.. image:: https://img.shields.io/travis/decisionscients/MLStudio.svg
-        :target: https://travis-ci.com/decisionscients/MLStudio
-
 .. image:: https://readthedocs.org/projects/MLStudio/badge/?version=latest
         :target: https://MLStudio.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
@@ -34,8 +31,3 @@ Features
 
 Credits
 -------
-
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage

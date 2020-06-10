@@ -37,7 +37,7 @@ def get_data():
     """Obtains the Ames housing price data for modeling."""
     # ----------------------------------------------------------------------  #
     # Designate file locations
-    datadir = os.path.join(homedir,"mlstudio/data/Ames/")
+    datadir = os.path.join(homedir,"mlstudio/demo/data/Ames/")
     filepath = os.path.join(datadir, "train.csv")
     # ----------------------------------------------------------------------  #
     # Obtain and scale data
