@@ -44,7 +44,7 @@ class SurfaceLine:
     def _cost_mesh(self,X, y, THETA):
         return(np.sum((X.dot(THETA) - y)**2)/(2*len(y)))        
 
-    def animate(self, estimators, directory=None, filename=None):
+    def animate(self, estimators, filepath=None, show=True):
         # ------------------------------------------------------------------  #
         # Extract parameter and cost data from the model blackboxes
         theta0 = []
@@ -210,9 +210,9 @@ class SurfaceLine:
             sliders=sliders
         )
 
-        if directory and filename:
-            filepath = os.path.join(directory, filename)
+        if filepath:
             fig.write_html(filepath, include_plotlyjs='cdn', include_mathjax='cdn')
-        pio.renderers.default = "browser"
-        fig.show()
+        if show:
+            pio.renderers.default = "browser"
+            fig.show()
 

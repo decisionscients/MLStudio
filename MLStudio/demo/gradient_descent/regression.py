@@ -21,7 +21,7 @@
 #%%
 import os
 from pathlib import Path
-import sys
+import sys, getopt
 
 import pandas as pd
 import numpy as np
@@ -33,34 +33,58 @@ from mlstudio.supervised.machine_learning.gradient_descent import GradientDescen
 from mlstudio.utils.data_manager import StandardScaler
 from mlstudio.visual.animations.surface_line import SurfaceLine
 
+def get_data():
+    """Obtains the Ames housing price data for modeling."""
+    # ----------------------------------------------------------------------  #
+    # Designate file locations
+    datadir = os.path.join(homedir,"mlstudio/data/Ames/")
+    filepath = os.path.join(datadir, "train.csv")
+    # ----------------------------------------------------------------------  #
+    # Obtain and scale data
+    cols = ["GrLivArea", "SalePrice"]
+    df = pd.read_csv(filepath, nrows=500, usecols=cols)
+    df_samples = df.head()
+    X = np.array(df['GrLivArea']).reshape(-1,1)
+    y = df['SalePrice']
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
+    return X, y
 
-# --------------------------------------------------------------------------  #
-# Designate file locations
-datadir = os.path.join(homedir,"mlstudio/data/Ames/")
-filepath = os.path.join(datadir, "train.csv")
-figures = os.path.join(demodir, "figures")
-# --------------------------------------------------------------------------  #
-# Obtain and scale data
-cols = ["GrLivArea", "SalePrice"]
-df = pd.read_csv(filepath, nrows=500, usecols=cols)
-df_samples = df.head()
-X = np.array(df['GrLivArea']).reshape(-1,1)
-y = df['SalePrice']
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
-# --------------------------------------------------------------------------  #
-# Train model
-bgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500)
-sgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, batch_size=1)
-mbgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, batch_size=64)
-bgd.fit(X,y)
-sgd.fit(X,y)
-mbgd.fit(X,y)
-#models = [bgd, sgd, mbgd]
-estimators = {'Batch Gradient Descent': bgd, 'Stochastic Gradient Descent': sgd,
-           'Minibatch Gradient Descent': mbgd}
+def train_models(X, y):
+    """Trains batch, stochastic and minibatch gradient descent."""
+    bgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=250)
+    sgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=250, batch_size=1)
+    mbgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=250, batch_size=64)
+    bgd.fit(X,y)
+    sgd.fit(X,y)
+    mbgd.fit(X,y)
+    estimators = {'Batch Gradient Descent': bgd, 'Stochastic Gradient Descent': sgd,
+            'Minibatch Gradient Descent': mbgd}
+    return estimators
 
-# --------------------------------------------------------------------------  #
-v = SurfaceLine()
-v.animate(estimators=estimators, directory=figures, filename="Gradient Descent w Regression Lines1.html")
+def render_plot(estimators, filepath=None, show=True):
+    """Renders surface, scatterplot, and line plots."""    
+    v = SurfaceLine()
+    v.animate(estimators=estimators, filepath=filepath, show=show)
+
+def regression_demo(filepath=None, show=True):
+    """Regression demo main processing function.
+    
+    Parameters
+    ----------
+    filepath:  str
+        A relative or absolute filepath. 
+
+    show: bool (default=True)
+        Indicates whether to render the plot  
+    
+    """
+     
+    X, y = get_data()
+    estimators = train_models(X, y)
+    render_plot(estimators=estimators, filepath=filepath, show=show)
+
+# filepath = os.path.join(demodir, 'figures/regression_demo.html')
+# regression_demo(filepath)
+#%%
 
