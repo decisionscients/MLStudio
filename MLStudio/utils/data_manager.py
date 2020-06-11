@@ -633,6 +633,7 @@ def data_split(X, y, test_size=0.3, shuffle=False, stratify=False, random_state=
         raise ValueError("X and y have incompatible shapes. Expected "
                          "X.shape[0]=y.shape[0] however X.shape[0] = %d "
                          " and y.shape[0] = %d." % (X.shape[0], y.shape[0]))
+
     if not stratify:
         if shuffle:
             X, y = shuffle_data(X, y, random_state)
@@ -667,7 +668,7 @@ def data_split(X, y, test_size=0.3, shuffle=False, stratify=False, random_state=
         # Slice and dice.
         y_train, y_test = y[train_idx], y[test_idx]
         X_train, X_test = X[train_idx], X[test_idx]
-    
+
     return X_train, X_test, y_train, y_test
 
 def batch_iterator(X, y=None, batch_size=None):

@@ -5,7 +5,7 @@ atomicwrites==1.4.0
 attrs==19.3.0
 Babel==2.8.0
 backcall==0.1.0
-bleach @ file:///home/conda/feedstock_root/build_artifacts/bleach_1588608214987/work
+bleach
 brotlipy==0.7.0
 certifi==2020.4.5.2
 cffi==1.14.0
@@ -22,19 +22,19 @@ future==0.18.2
 idna==2.9
 imagesize==1.2.0
 ipykernel==5.2.1
-ipython @ file:///D:/bld/ipython_1590797153445/work
+ipython
 ipython-genutils==0.2.0
 ipywidgets==7.5.1
 isort==4.3.21
 jedi==0.17.0
 Jinja2==2.11.2
-joblib @ file:///home/conda/feedstock_root/build_artifacts/joblib_1589812474002/work
+joblib
 jsonschema==3.2.0
 jupyter==1.0.0
 jupyter-client==6.1.3
 jupyter-console==6.1.0
 jupyter-core==4.6.3
-keyring @ file:///D:/bld/keyring_1588434038872/work
+keyring
 kiwisolver==1.2.0
 lazy-object-proxy==1.4.3
 livereload==2.6.2
@@ -46,8 +46,8 @@ more-itertools==8.3.0
 nbconvert==5.6.1
 nbformat==5.0.6
 notebook==6.0.3
-numpy @ file:///D:/bld/numpy_1591485481352/work
-packaging @ file:///home/conda/feedstock_root/build_artifacts/packaging_1589925210001/work
+numpy
+packaging
 pandas==1.0.3
 pandocfilters==1.4.2
 parso==0.7.0
@@ -55,7 +55,7 @@ pathtools==0.1.2
 patsy==0.5.1
 pickleshare==0.7.5
 pkginfo==1.5.0.1
-plotly @ file:///home/conda/feedstock_root/build_artifacts/plotly_1588944647494/work
+plotly
 pluggy==0.13.1
 port-for==0.3.1
 prometheus-client==0.7.1
@@ -87,11 +87,11 @@ requests==2.23.0
 requests-toolbelt==0.9.1
 retrying==1.3.3
 rstcheck==3.3.1
-scikit-learn @ file:///D:/bld/scikit-learn_1589375672890/work
+scikit-learn
 scipy==1.3.2
 seaborn==0.10.1
 Send2Trash==1.5.0
-six @ file:///home/conda/feedstock_root/build_artifacts/six_1590081179328/work
+six
 snowballstemmer==2.0.0
 Sphinx==3.1.0
 sphinx-autobuild==0.7.1
@@ -105,10 +105,10 @@ statsmodels==0.11.1
 tabulate==0.8.7
 terminado==0.8.3
 testpath==0.4.4
-threadpoolctl @ file:///tmp/tmp79xdzxkt/threadpoolctl-2.1.0-py3-none-any.whl
+threadpoolctl
 toml==0.10.1
 tornado==6.0.4
-tqdm @ file:///home/conda/feedstock_root/build_artifacts/tqdm_1591181521996/work
+tqdm
 traitlets==4.3.3
 twine==3.1.1
 urllib3==1.25.9
