@@ -58,7 +58,7 @@ from mlstudio.utils.file_manager import save_fig, save_csv, save_gif
 # --------------------------------------------------------------------------  #
 #                       ANIMATE OPTIMIZATION                                  #
 # --------------------------------------------------------------------------  #
-def animate_optimization(estimators, filepath=None, show=True):
+def animate_optimization(estimators, max_frames=None, filepath=None, show=True):
     """Renders surface plots and continuous lines to show optimizations.
     
     Parameters
@@ -100,14 +100,18 @@ def animate_optimization(estimators, filepath=None, show=True):
         ym, yM = y['min'], y['max']
         # Extract model data for plotting gradient descent models 
         theta = model.blackbox_.epoch_log.get('theta')
+        # Obtain step number for slicing if max_frames is provided.
+        step = len(theta) / max_frames if max_frames else 0
+        # Extract individual thetas from numpy array into dataframe
         theta = todf(theta, stub='theta_')
         # Clip thetas to plotting range 
-        theta_0 = np.clip(np.array(theta['theta_0']), xm, xM)
-        theta_1 = np.clip(np.array(theta['theta_1']), ym, yM)
+        theta_0 = np.clip(np.array(theta['theta_0'])[::step], xm, xM)
+        theta_1 = np.clip(np.array(theta['theta_1'])[::step], ym, yM)
+        # Store individual thetas in dictionary 
         d = OrderedDict()
-        d['theta_0'] = theta_0[::2]
-        d['theta_1'] = theta_1[::2]
-        d['cost'] = model.blackbox_.epoch_log.get('train_cost')[::2]
+        d['theta_0'] = theta_0[::step]
+        d['theta_1'] = theta_1[::step]
+        d['cost'] = model.blackbox_.epoch_log.get('train_cost')[::step]
         models[name] = d
         # Place index for models dictionary in a list for easy access
         names.append(name)
@@ -281,13 +285,16 @@ def animate_optimization(estimators, filepath=None, show=True):
 # --------------------------------------------------------------------------  #
 #                      ANIMATE OPTIMIZATION REGRESSION                        #
 # --------------------------------------------------------------------------  #
-def animate_optimization_regression(estimators, filepath=None, show=True):
+def animate_optimization_regression(estimators, max_frames=None, filepath=None, show=True):
     """Renders subplots of the optimization and regression line fit.
     
     Parameters
     ----------
     estimators : dict
         Dictionary containing one or more MLStudio estimator objects.
+
+    max_frames : int
+        The maximum number of frames to show
 
     filepath : str (default=None)
         The path to which the animation is to be saved.
@@ -304,14 +311,16 @@ def animate_optimization_regression(estimators, filepath=None, show=True):
     names = [] 
     for name, estimator in estimators.items():
         theta = estimator.blackbox_.epoch_log.get('theta')
+        # Obtain step number for slicing if max_frames is provided.
+        step = len(theta) / max_frames if max_frames else 0
         # Thetas converted to individual columns in dataframe and extacted  
         theta = todf(theta, stub='theta_')
-        theta0.extend(theta['theta_0'])
-        theta1.extend(theta['theta_1'])
+        theta0.extend(theta['theta_0'])[::step]
+        theta1.extend(theta['theta_1'])[::step]
         d = OrderedDict()
         d['theta_0'] = theta['theta_0']
         d['theta_1'] = theta['theta_1']
-        d['cost'] = estimator.blackbox_.epoch_log.get('train_cost')
+        d['cost'] = estimator.blackbox_.epoch_log.get('train_cost')[::step]
         models[name] = d
         names.append(name)
 

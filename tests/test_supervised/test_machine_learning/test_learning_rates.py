@@ -26,7 +26,7 @@ import pytest
 from pytest import mark
 from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
-from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, PowerSchedule
+from mlstudio.supervised.callbacks.learning_rate import ExponentialStepDecay, PowerSchedule
 
 #TODO: Learning rate tests
 #class LearningRateTests:

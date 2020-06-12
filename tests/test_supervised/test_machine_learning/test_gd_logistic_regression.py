@@ -35,7 +35,7 @@ from mlstudio.supervised.callbacks.debugging import GradientCheck
 from mlstudio.supervised.callbacks.early_stop import Stability
 from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
-from mlstudio.supervised.callbacks.learning_rate import ExponentialSchedule, PowerSchedule
+from mlstudio.supervised.callbacks.learning_rate import ExponentialStepDecay, PowerSchedule
 from mlstudio.supervised.callbacks.learning_rate import BottouSchedule, Improvement
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentClassifier
 from mlstudio.supervised.core.scorers import Accuracy
@@ -153,7 +153,7 @@ scenarios = [
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=SqrtTimeDecay(), epochs=1000),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), learning_rate=0.001, schedule=ExponentialDecay(), epochs=1000),
     GradientDescentClassifier(objective=CrossEntropy(), schedule=PolynomialDecay(), learning_rate=0.001, epochs=1000),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), learning_rate=0.001, schedule=ExponentialSchedule(), epochs=1000),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), learning_rate=0.001, schedule=ExponentialStepDecay(), epochs=1000),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=PowerSchedule(), epochs=1000),    
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=BottouSchedule(), epochs=1000),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=Improvement(), epochs=1000)

@@ -43,7 +43,7 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/decisionscients/MLStudio',
-    version='0.1.7',
+    version='0.1.14',
     zip_safe=False,
     package_data={"":['demo/data/Ames/*.csv']}
 )

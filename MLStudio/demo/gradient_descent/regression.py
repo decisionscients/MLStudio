@@ -76,11 +76,12 @@ def append_filepath(filepath=None, appendage=None):
         filepath = os.path.join(os.path.dirname(filepath), base)
     return filepath
 
-def plot_optimization(estimators, filepath=None, show=True):
+def plot_optimization(estimators, max_frames=None, filepath=None, show=True):
     """Renders surface, scatterplot, and line plots."""        
     filepath = append_filepath(filepath, "optimization")
     # Render plot
-    animate_optimization_regression(estimators=estimators, filepath=filepath, show=show)
+    animate_optimization_regression(estimators=estimators, max_frames=max_frames, 
+                                    filepath=filepath, show=show)
 
 def plot_results(estimators, X_train, X_test, y_train, y_test, filepath=None, show=None):
     """Renders training error and validation scores for models vis-a-vis sklearn."""
@@ -113,7 +114,7 @@ def plot_results(estimators, X_train, X_test, y_train, y_test, filepath=None, sh
     # Render plot
     plot_cost_scores(data=plot_data, filepath=filepath, show=show)
 
-def regression_demo(filepath=None, show=True):
+def regression_demo(max_frames=None, filepath=None, show=True):
     """Regression demo main processing function.
     
     Parameters
@@ -135,5 +136,6 @@ def regression_demo(filepath=None, show=True):
 
 filepath = os.path.join(demodir, 'figures/regression_demo.html')
 regression_demo(filepath)
+regression_demo(max_frames=100, filepath=filepath)
 #%%
 
