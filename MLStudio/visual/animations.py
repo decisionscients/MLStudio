@@ -101,12 +101,12 @@ def animate_optimization(estimators, max_frames=None, filepath=None, show=True):
         # Extract model data for plotting gradient descent models 
         theta = model.blackbox_.epoch_log.get('theta')
         # Obtain step number for slicing if max_frames is provided.
-        step = len(theta) / max_frames if max_frames else 0
+        step = math.floor(len(theta) / max_frames) if max_frames else None
         # Extract individual thetas from numpy array into dataframe
         theta = todf(theta, stub='theta_')
         # Clip thetas to plotting range 
-        theta_0 = np.clip(np.array(theta['theta_0'])[::step], xm, xM)
-        theta_1 = np.clip(np.array(theta['theta_1'])[::step], ym, yM)
+        theta_0 = np.clip(np.array(theta['theta_0']), xm, xM)
+        theta_1 = np.clip(np.array(theta['theta_1']), ym, yM)
         # Store individual thetas in dictionary 
         d = OrderedDict()
         d['theta_0'] = theta_0[::step]
@@ -312,14 +312,14 @@ def animate_optimization_regression(estimators, max_frames=None, filepath=None, 
     for name, estimator in estimators.items():
         theta = estimator.blackbox_.epoch_log.get('theta')
         # Obtain step number for slicing if max_frames is provided.
-        step = len(theta) / max_frames if max_frames else 0
+        step = math.floor(len(theta) / max_frames) if max_frames else None
         # Thetas converted to individual columns in dataframe and extacted  
         theta = todf(theta, stub='theta_')
-        theta0.extend(theta['theta_0'])[::step]
-        theta1.extend(theta['theta_1'])[::step]
+        theta0.extend(theta['theta_0'][::step].values.flatten())
+        theta1.extend(theta['theta_1'][::step].values.flatten())
         d = OrderedDict()
-        d['theta_0'] = theta['theta_0']
-        d['theta_1'] = theta['theta_1']
+        d['theta_0'] = theta['theta_0'][::step].values.flatten()
+        d['theta_1'] = theta['theta_1'][::step].values.flatten()
         d['cost'] = estimator.blackbox_.epoch_log.get('train_cost')[::step]
         models[name] = d
         names.append(name)
@@ -351,6 +351,7 @@ def animate_optimization_regression(estimators, max_frames=None, filepath=None, 
     # ------------------------------------------------------------------  #
     # Create regression line data
     n_frames = len(models[names[0]]['theta_0'])
+
     def f(x, theta0, theta1):
         return theta0 + x * theta1
             

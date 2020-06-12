@@ -81,10 +81,5 @@ dist: clean ## builds source and wheel package
 deploy: dist ## package and upload a release
 	twine upload dist/*
 
-dependencies:
-	while read requirement; do \
-		conda install --yes $$requirement || pip install $$requirement; \
-			done < requirements.txt 
-
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install

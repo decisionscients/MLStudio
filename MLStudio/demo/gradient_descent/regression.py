@@ -129,13 +129,14 @@ def regression_demo(max_frames=None, filepath=None, show=True):
      
     X_train, X_test, y_train, y_test = get_data()
     estimators = train_models(X_train, y_train)
-    plot_optimization(estimators=estimators, filepath=filepath, show=show)
+    plot_optimization(estimators=estimators, max_frames=max_frames, 
+                      filepath=filepath, show=show)
     plot_results(estimators=estimators, X_train=X_train, X_test=X_test, 
                  y_train=y_train, y_test=y_test, filepath=filepath, 
                  show=show)
 
 filepath = os.path.join(demodir, 'figures/regression_demo.html')
-regression_demo(filepath)
+regression_demo(filepath=filepath)
 regression_demo(max_frames=100, filepath=filepath)
 #%%
 
