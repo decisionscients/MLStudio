@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 
 from scipy.sparse import issparse
-from mlstudio.supervised.callbacks.base import Callback
+from mlstudio.supervised.observers.base import Observer
 from mlstudio.supervised.core.objectives import Cost
 from mlstudio.supervised.core.regularizers import Nill
 from mlstudio.utils.data_manager import valid_array
@@ -32,7 +32,7 @@ from mlstudio.utils.data_manager import valid_array
 # --------------------------------------------------------------------------- #
 #                              GRADIENT CHECK                                 #
 # --------------------------------------------------------------------------- #
-class GradientCheck(Callback):
+class GradientCheck(Observer):
     """Performs gradient checking."""
 
     def __init__(self, iterations=50, epsilon=1e-4, verbose=False):

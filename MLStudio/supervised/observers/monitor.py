@@ -20,7 +20,7 @@
 # Copyright (c) 2019 Decision Scients                                         #
 # =========================================================================== #
 
-"""Module containing callbacks used to monitor and report training performance."""
+"""Module containing observers used to monitor and report training performance."""
 from collections import OrderedDict 
 import datetime
 import itertools
@@ -29,124 +29,18 @@ import pandas as pd
 from tabulate import tabulate
 import types
 
-from mlstudio.supervised.callbacks.base import Callback
+from mlstudio.supervised.observers.base import Observer
 from mlstudio.utils.format import proper
-from mlstudio.supervised.core.observers import Performance
+from mlstudio.supervised.observers.performance import Performance
 from mlstudio.utils.print import Printer
 from mlstudio.utils.validation import validate_int, validate_zero_to_one
 from mlstudio.utils.validation import validate_metric, validate_scorer
 
-# --------------------------------------------------------------------------- #
-#                             MONITOR                                         #
-# --------------------------------------------------------------------------- #
-class Monitor(Callback):
-    """Monitors progress and signals the model when performance has stabilized. 
-    
-    This class delegates performance evaluation to an observer object. If
-    performance has improved according to the patients and epsilon parameters,
-    the observer returns False. If performance has not improved, the observer
-    returns the epoch at the point of stabilization. 
-
-    Parameters
-    ----------
-    metric : str, optional (default='train_score')
-        Specifies which statistic to metric for evaluation purposes.
-
-        'train_cost': Training set costs
-        'train_score': Training set scores based upon the model's metric parameter
-        'val_cost': Validation set costs
-        'val_score': Validation set scores based upon the model's metric parameter
-        'gradient_norm': The norm of the gradient of the objective function w.r.t. theta
-
-    epsilon : float, optional (default=0.001)
-        The factor by which performance is considered to have improved. For 
-        instance, a value of 0.01 means that performance must have improved
-        by a factor of 1% to be considered an improvement.
-
-    patience : int, optional (default=5)
-        The number of consecutive epochs of non-improvement that would 
-        stop training.    
-    """
-
-    def __init__(self, metric='train_cost', epsilon=1e-4, patience=50):
-        super(Monitor, self).__init__()
-        self.name = "Monitor"
-        self.metric = metric
-        self.epsilon = epsilon
-        self.patience = patience
-    
-    @property
-    def critical_points(self):
-        return self._critical_points
-
-    @property
-    def best_results(self):
-        try:
-            results = self._observer.best_results
-        except:
-            msg = "Results aren't available until after training."
-            raise Exception(msg)
-        return results
-
-    def _validate(self):        
-        validate_metric(self.metric)
-        if 'score' in self.metric:
-            validate_scorer(self.model.scorer)
-        validate_zero_to_one(param=self.epsilon, param_name='epsilon')       
-        validate_int(param=self.patience, param_name='patience')
-
-    def on_train_begin(self, logs=None):        
-        """Sets key variables at beginning of training.
-        
-        Parameters
-        ----------
-        log : dict
-            Contains no information
-        """
-        super(Monitor, self).on_train_begin(logs)
-        self._validate()        
-        # Initialize state variables
-        self._stabilized = False
-        self._last_state = False
-        self._critical_points = []
-        # Obtain scorer from model if it has one
-        scorer = None
-        if hasattr(self.model, 'scorer'):
-            scorer = self.model.scorer
-        # Create and initialize the observer object.
-        self._observer = Performance(metric=self.metric, scorer=scorer, \
-            epsilon=self.epsilon, patience=self.patience)    
-        self._observer.initialize()        
-
-    def on_epoch_begin(self, epoch, logs=None):
-        """Determines whether convergence has been achieved.
-
-        Parameters
-        ----------
-        epoch : int
-            The current epoch number
-
-        logs : dict
-            Dictionary containing training cost, (and if metric=score, 
-            validation cost)  
-
-        Returns
-        -------
-        Bool if True convergence has been achieved. 
-
-        """
-        super(Monitor, self).on_epoch_begin(epoch, logs)        
-        logs = logs or {}                
-        if self._observer.model_is_stable(epoch, logs):
-            self._stabilized = True
-            if self._stabilized != self._last_state:
-                self._last_state = self._stabilized
-                self._critical_points.append(logs)
 
 # --------------------------------------------------------------------------- #
 #                             BLACKBOX CLASS                                  #
 # --------------------------------------------------------------------------- #
-class BlackBox(Callback):
+class BlackBox(Observer):
     """Records history and metrics for training by epoch."""
 
     def on_train_begin(self, logs=None):
@@ -313,7 +207,7 @@ class BlackBox(Callback):
 # --------------------------------------------------------------------------- #
 #                            PROGRESS CLASS                                   #
 # --------------------------------------------------------------------------- #              
-class Progress(Callback):
+class Progress(Observer):
     """Class that reports progress at designated points during training."""
     
     def on_epoch_end(self, epoch, logs=None):

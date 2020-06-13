@@ -37,22 +37,22 @@ from mlstudio.supervised.core.objectives import CategoricalCrossEntropy
 from mlstudio.supervised.core.objectives import Adjiman
 from mlstudio.supervised.core.optimizers import Classic
 from mlstudio.supervised.core.scorers import R2, Accuracy
-from mlstudio.supervised.callbacks.early_stop import EarlyStop
-from mlstudio.supervised.callbacks.debugging import GradientCheck
-from mlstudio.supervised.callbacks.base import CallbackList
-from mlstudio.supervised.callbacks.early_stop import Stability
-from mlstudio.supervised.callbacks.monitor import BlackBox, Progress, Monitor
-from mlstudio.supervised.callbacks.learning_rate import LearningRateSchedule
+from mlstudio.supervised.observers.performance import Performance
+from mlstudio.supervised.observers.debugging import GradientCheck
+from mlstudio.supervised.observers.base import ObserverList
+from mlstudio.supervised.observers.performance import Performance
+from mlstudio.supervised.observers.monitor import BlackBox, Progress, Performance
+from mlstudio.supervised.observers.learning_rate import LearningRateSchedule
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
 from mlstudio.utils.data_manager import add_bias_term, encode_labels, one_hot_encode
 from mlstudio.utils.data_manager import RegressionDataProcessor, ClassificationDataProcessor
 from mlstudio.utils.validation import check_X, check_X_y, check_is_fitted
 from mlstudio.utils.validation import validate_zero_to_one, validate_metric
 from mlstudio.utils.validation import validate_objective, validate_optimizer
-from mlstudio.utils.validation import validate_scorer, validate_early_stop
+from mlstudio.utils.validation import validate_scorer, validate_performance
 from mlstudio.utils.validation import validate_learning_rate_schedule
 from mlstudio.utils.validation import validate_int, validate_string
-from mlstudio.utils.validation import validate_early_stop, validate_metric
+from mlstudio.utils.validation import validate_performance, validate_metric
 from mlstudio.utils.validation import validate_scorer, validate_bool
 from mlstudio.utils.validation import validate_range, validate_monitor
 from mlstudio.utils.validation import validate_array_like, validate_gradient_check
@@ -62,16 +62,16 @@ from mlstudio.utils.validation import validate_array_like, validate_gradient_che
 class GradientDescent(BaseEstimator):
     """Performs pure optimization of a 2d objective function."""
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
-                 optimizer=Classic(), objective=MSE(), early_stop=None, 
+                 optimizer=Classic(), objective=MSE(), performance=None, 
                  get_best_weights=True, verbose=False, checkpoint=100, 
-                 monitor=Monitor(), random_state=None, gradient_check=False):
+                 monitor=Performance(), random_state=None, gradient_check=False):
 
         self.learning_rate = learning_rate
         self.epochs = epochs
         self.theta_init = theta_init
         self.optimizer = optimizer
         self.objective  = objective        
-        self.early_stop = early_stop
+        self.performance = performance
         self.get_best_weights = get_best_weights
         self.verbose = verbose
         self.checkpoint = checkpoint
@@ -96,18 +96,6 @@ class GradientDescent(BaseEstimator):
     def eta(self, x):
         self._eta = x
         
-    @property
-    def final_result(self):
-        return self._final_result
-
-    @property
-    def best_result(self):
-        return self._best_result
-
-    @property
-    def critical_points(self):
-        return self._monitor.critical_points
-
     @property
     def converged(self):
         return self._converged
@@ -138,15 +126,15 @@ class GradientDescent(BaseEstimator):
         # -------------------------- Objective -------------------------------#
         validate_objective(self.objective)
         # ------------------------- Early Stop -------------------------------#
-        if self.early_stop:
-            validate_early_stop(self.early_stop)
+        if self.performance:
+            validate_performance(self.performance)
         # ---------------------- get_best_weights ----------------------------#
         validate_bool(param=self.get_best_weights, param_name='get_best_weights')
         # ------------------------- Verbose ----------------------------------#
         validate_bool(param=self.verbose, param_name='verbose')
         # ------------------------ Checkpoint --------------------------------#
         validate_int(param=self.checkpoint, param_name='checkpoint')
-        # -------------------------- Monitor ---------------------------------#
+        # -------------------------- Performance ---------------------------------#
         validate_monitor(self.monitor)
         # ------------------------- Random State -----------------------------#
         if self.random_state:
@@ -168,13 +156,13 @@ class GradientDescent(BaseEstimator):
         # ------------------------------------------------------------------- #
         #                   Copy Optional Mutable Objects                     #
         # ------------------------------------------------------------------- #
-        # Monitor and reports data regarding optimization stability
+        # Performance and reports data regarding optimization stability
         self._monitor = copy.deepcopy(self.monitor) if\
-            isinstance(self.monitor, Monitor) else\
+            isinstance(self.monitor, Performance) else\
                 self.monitor              
         
     def _compile(self, log=None):
-        """Initializes all callbacks."""        
+        """Initializes all observers."""        
         # ------------------------------------------------------------------- #
         #     Copy Mutable Classes that will be Modified During Training      #
         # ------------------------------------------------------------------- #
@@ -182,25 +170,25 @@ class GradientDescent(BaseEstimator):
         self._copy_mutable_parameters()  
 
         # ------------------------------------------------------------------- #
-        #                      Initialize Callback List                       #
+        #                      Initialize Observer List                       #
         # ------------------------------------------------------------------- #
-        self._cbks = CallbackList()              
+        self._cbks = ObserverList()              
 
         # ------------------------------------------------------------------- #
-        #                Create Implicit Callback Dependencies                #
+        #                Create Implicit Observer Dependencies                #
         # ------------------------------------------------------------------- #        
         self.blackbox_ = BlackBox()                
 
         # ------------------------------------------------------------------- #
-        #                Add callbacks to callbacklist.                       #
+        #                Add observers to observerlist.                       #
         # ------------------------------------------------------------------- #
         # Learning rate schedules anneal the learning rate via the eta attribute
         if isinstance(self.learning_rate, LearningRateSchedule):
             self._cbks.append(copy.deepcopy(self.learning_rate))                
         
-        # Early stop callback signals convergence via the converged attribute            
-        if isinstance(self.early_stop, EarlyStop):            
-            self._cbks.append(copy.deepcopy(self.early_stop))             
+        # Early stop observer signals convergence via the converged attribute            
+        if isinstance(self.performance, Performance):            
+            self._cbks.append(copy.deepcopy(self.performance))             
         
         # Checks gradients every n iterations and reports errors 
         if self.gradient_check:
@@ -213,17 +201,17 @@ class GradientDescent(BaseEstimator):
         if self.verbose:
             self._cbks.append(Progress())      
         
-        # Monitors performance and sends data when optimization has stabilized  
+        # Performances performance and sends data when optimization has stabilized  
         if self._monitor:
-            if isinstance(self._monitor, Monitor):                
+            if isinstance(self._monitor, Performance):                
                 self._cbks.append(self._monitor)
             else:
-                self._cbks.append(Monitor())      
+                self._cbks.append(Performance())      
 
         # Log of optimization data e.g. training error, learning rate, history
         self._cbks.append(self.blackbox_)  
         # ------------------------------------------------------------------- #
-        #                      Initialize All Callbacks                       #
+        #                      Initialize All Observers                       #
         # ------------------------------------------------------------------- #
         self._cbks.set_params(self.get_params())
         self._cbks.set_model(self)        
@@ -275,14 +263,13 @@ class GradientDescent(BaseEstimator):
         self._eta = self.learning_rate if isinstance(self.learning_rate, float)\
             else self.learning_rate.initial_learning_rate
         self._gradient = None
-        self._theta_update = None
         self._cost = None
         self._final_result = None     
         self._best_result = None      
         # Dependencies, data, and weights.
         self._compile()              
         self._init_weights()     
-        # Perform begin training routines on callbacks. 
+        # Perform begin training routines on observers. 
         self._cbks.on_train_begin(log) 
 
     def _end_training(self, log=None):
@@ -297,22 +284,22 @@ class GradientDescent(BaseEstimator):
         log = log or {}     
         # Perform epoch evaluation 
         log = self._evaluate_epoch(log)
-        # Perform begin epoch methods on callbacks e.g. blackbox
+        # Perform begin epoch methods on observers e.g. blackbox
         self._cbks.on_epoch_begin(self._epoch, log)          
-        # Bump epochs after callbacks to that we are zero indexed.
+        # Bump epochs after observers to that we are zero indexed.
         self._epoch += 1   
 
 
     def _end_epoch(self, log=None):        
         """Performs end-of-epoch evaluation and scoring."""        
         log = log or {}        
-        # Perform end epoch methods on callbacks e.g. learning_rate schedules
+        # Perform end epoch methods on observers e.g. learning_rate schedules
         self._cbks.on_epoch_end(self._epoch, log)                  
         
     def _get_results(self):
         # Obtain best results
-        if self.early_stop:
-            self._best_result = self._early_stop.best_results
+        if self.performance:
+            self._best_result = self._performance.best_results
         elif self._monitor:
             self._best_result = self._monitor.best_results
         else:
@@ -368,8 +355,8 @@ class GradientDescentEstimator(ABC, GradientDescent):
 
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
                  optimizer=Classic(), objective=MSE(), batch_size=None, 
-                 val_size=0.3, monitor=Monitor(), scorer=R2(), 
-                 early_stop=None, get_best_weights=True,
+                 val_size=0.3, monitor=Performance(), scorer=R2(), 
+                 performance=None, get_best_weights=True,
                  verbose=False, checkpoint=100, random_state=None, 
                  gradient_check=False):
                  
@@ -380,7 +367,7 @@ class GradientDescentEstimator(ABC, GradientDescent):
             optimizer = optimizer,
             objective = objective,                                          
             monitor=monitor,
-            early_stop = early_stop,
+            performance = performance,
             get_best_weights = get_best_weights,
             verbose = verbose,
             checkpoint = checkpoint,
@@ -525,7 +512,6 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self._eta = self.learning_rate if isinstance(self.learning_rate, float)\
             else self.learning_rate.initial_learning_rate
         self._gradient = None
-        self._theta_update = None
         self._cost = None
         self._final_result = None
         self._best_result = None   
@@ -547,16 +533,16 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self.X_train_, self.y_train_ = shuffle_data(self.X_train_, self.y_train_, random_state=rs) 
         # Perform epoch evaluation 
         log = self._evaluate_epoch(log)        
-        # Perform begin epoch methods on callbacks e.g. blackbox
+        # Perform begin epoch methods on observers e.g. blackbox
         self._cbks.on_epoch_begin(self._epoch, logs=log)               
-        # Bump epochs after callbacks so that we are zero indexed.
+        # Bump epochs after observers so that we are zero indexed.
         self._epoch += 1
 
 
     def _end_epoch(self, log=None):        
         """Performs end-of-epoch evaluation and scoring."""            
         log = log or {}        
-        # Perform end epoch methods on callbacks e.g. learning_rate schedules
+        # Perform end epoch methods on observers e.g. learning_rate schedules
         self._cbks.on_epoch_end(self._epoch, log)         
 
     def _begin_batch(self, log=None):
@@ -677,8 +663,8 @@ class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
 
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
                  optimizer=Classic(), objective=MSE(), batch_size=None, 
-                 val_size=0.3, monitor=Monitor(), 
-                 scorer=R2(), early_stop=None, get_best_weights=True,
+                 val_size=0.3, monitor=Performance(), 
+                 scorer=R2(), performance=None, get_best_weights=True,
                  verbose=False, checkpoint=100, random_state=None, 
                  gradient_check=False):
         
@@ -692,7 +678,7 @@ class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
             val_size = val_size,            
             monitor=monitor,
             scorer = scorer,
-            early_stop = early_stop,
+            performance = performance,
             get_best_weights=get_best_weights,
             verbose = verbose,
             checkpoint = checkpoint,
@@ -725,8 +711,8 @@ class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
 
     def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
                  optimizer=Classic(), objective=CrossEntropy(), batch_size=None, 
-                 val_size=0.3, monitor=Monitor(), 
-                 scorer=Accuracy(), early_stop=None, get_best_weights=True,
+                 val_size=0.3, monitor=Performance(), 
+                 scorer=Accuracy(), performance=None, get_best_weights=True,
                  verbose=False, checkpoint=100, random_state=None, 
                  gradient_check=False):
         
@@ -740,7 +726,7 @@ class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
             val_size = val_size,
             monitor = monitor,
             scorer = scorer,
-            early_stop = early_stop,
+            performance = performance,
             get_best_weights=get_best_weights,
             verbose = verbose,
             checkpoint = checkpoint,

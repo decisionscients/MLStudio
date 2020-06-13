@@ -34,13 +34,13 @@ from pytest import mark
 import numpy as np
 
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
-from mlstudio.supervised.callbacks.learning_rate import StepDecay, TimeDecay
-from mlstudio.supervised.callbacks.learning_rate import SqrtTimeDecay
-from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
-from mlstudio.supervised.callbacks.learning_rate import ExponentialStepDecay, PowerSchedule
-from mlstudio.supervised.callbacks.learning_rate import BottouSchedule, Improvement
+from mlstudio.supervised.observers.learning_rate import StepDecay, TimeDecay
+from mlstudio.supervised.observers.learning_rate import SqrtTimeDecay
+from mlstudio.supervised.observers.learning_rate import ExponentialDecay, PolynomialDecay
+from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay, PowerSchedule
+from mlstudio.supervised.observers.learning_rate import BottouSchedule, Improvement
 
-@mark.callback
+@mark.observer
 @mark.lrs
 @mark.step_decay
 class StepDecayTests:

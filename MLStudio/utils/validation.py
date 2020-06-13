@@ -73,7 +73,7 @@ def validate_array_like(param, param_name=""):
 
 # --------------------------------------------------------------------------  #
 def validate_gradient_check(param, param_name="gradient_check"):     
-    from mlstudio.supervised.callbacks.debugging import GradientCheck  
+    from mlstudio.supervised.observers.debugging import GradientCheck  
     if not isinstance(param, (bool, GradientCheck)):
         msg = "The gradient_check parameter must be boolean or a\
             valid GradientCheck object."        
@@ -82,7 +82,7 @@ def validate_gradient_check(param, param_name="gradient_check"):
         return True     
 # --------------------------------------------------------------------------  #
 def validate_learning_rate_schedule(schedule):  
-    from mlstudio.supervised.callbacks.learning_rate import LearningRateSchedule  
+    from mlstudio.supervised.observers.learning_rate import LearningRateSchedule  
     valid_learning_rate_schedules = [cls.__name__ for cls in LearningRateSchedule.__subclasses__()]
     if not isinstance(schedule, LearningRateSchedule):
         msg = "{s} is an invalid LearningRateSchedule object. \
@@ -92,12 +92,10 @@ def validate_learning_rate_schedule(schedule):
     else:
         return True         
 # --------------------------------------------------------------------------  #
-def validate_early_stop(stop):    
-    from mlstudio.supervised.callbacks.early_stop import EarlyStop
-    valid_early_stops = [cls.__name__ for cls in EarlyStop.__subclasses__()]
-    if not isinstance(stop, EarlyStop):
-        msg = "{s} is an invalid EarlyStop object. The valid EarlyStop classes include : \
-            {v}".format(s=stop, v=str(valid_early_stops))
+def validate_performance(performance):    
+    from mlstudio.supervised.observers.performance import Performance    
+    if not isinstance(performance, Performance):
+        msg = "A valid Performance Observer object is required."
         raise TypeError(msg)
     else:
         return True        
@@ -123,9 +121,9 @@ def validate_activation(activation):
         return True
 # --------------------------------------------------------------------------  #
 def validate_monitor(monitor):    
-    from mlstudio.supervised.callbacks.monitor import Monitor        
-    if not isinstance(monitor, Monitor):
-        msg = "The monitor parameter must be a valid Monitor object."
+    from mlstudio.supervised.observers.monitor import Performance        
+    if not isinstance(monitor, Performance):
+        msg = "The monitor parameter must be a valid Performance object."
         raise TypeError(msg)
     else:
         return True 

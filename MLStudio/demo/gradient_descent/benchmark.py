@@ -42,7 +42,7 @@ from mlstudio.supervised.core.optimizers import Adam, AdaMax, AdamW
 from mlstudio.supervised.core.optimizers import Nadam, AMSGrad, QHAdam
 from mlstudio.supervised.core.optimizers import QuasiHyperbolicMomentum
 from mlstudio.supervised.core.optimizers import AggMo
-from mlstudio.supervised.callbacks.learning_rate import ExponentialStepDecay, TimeDecay
+from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay, TimeDecay
 from mlstudio.utils.data_analyzer import cosine
 from mlstudio.utils.file_manager import save_df
 

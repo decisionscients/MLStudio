@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
 
 from mlstudio.supervised.core.optimizers import Adagrad
 from mlstudio.supervised.core.objectives import StyblinskiTank
-from mlstudio.supervised.callbacks.learning_rate import TimeDecay
+from mlstudio.supervised.observers.learning_rate import TimeDecay
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescent
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentClassifier

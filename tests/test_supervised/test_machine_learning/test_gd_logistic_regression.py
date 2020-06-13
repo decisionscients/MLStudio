@@ -30,16 +30,16 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 from sklearn.utils.estimator_checks import check_estimator
 
 from mlstudio.supervised.core.tasks import LogisticRegression
-from mlstudio.supervised.callbacks.base import Callback
-from mlstudio.supervised.callbacks.debugging import GradientCheck
-from mlstudio.supervised.callbacks.early_stop import Stability
-from mlstudio.supervised.callbacks.learning_rate import StepDecay
-from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
-from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
-from mlstudio.supervised.callbacks.learning_rate import ExponentialStepDecay
-from mlstudio.supervised.callbacks.learning_rate import PolynomialStepDecay
-from mlstudio.supervised.callbacks.learning_rate import PowerSchedule
-from mlstudio.supervised.callbacks.learning_rate import BottouSchedule, Improvement
+from mlstudio.supervised.observers.base import Observer
+from mlstudio.supervised.observers.debugging import GradientCheck
+from mlstudio.supervised.observers.performance import Performance
+from mlstudio.supervised.observers.learning_rate import StepDecay
+from mlstudio.supervised.observers.learning_rate import TimeDecay, SqrtTimeDecay
+from mlstudio.supervised.observers.learning_rate import ExponentialDecay, PolynomialDecay
+from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay
+from mlstudio.supervised.observers.learning_rate import PolynomialStepDecay
+from mlstudio.supervised.observers.learning_rate import PowerSchedule
+from mlstudio.supervised.observers.learning_rate import BottouSchedule, Improvement
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentClassifier
 from mlstudio.supervised.core.scorers import Accuracy
 from mlstudio.supervised.core.objectives import CrossEntropy
@@ -57,7 +57,7 @@ scenarios = [
     GradientDescentClassifier(
                              objective=CrossEntropy(regularizer=L1_L2())),
     GradientDescentClassifier(gradient_check=True),
-    GradientDescentClassifier(early_stop=Stability()),                                           
+    GradientDescentClassifier(performance=Performance()),                                           
     GradientDescentClassifier(learning_rate=BottouSchedule()),                                           
 
 ]
@@ -113,36 +113,36 @@ def test_logistic_regression_gradients(estimator, check):
 # --------------------------------------------------------------------------  #
 #                              TEST EARLYSTOP                                 #
 # --------------------------------------------------------------------------  #
-scenarios_early_stop = [
-    GradientDescentClassifier(objective=CrossEntropy(), early_stop=Stability()),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), early_stop=Stability(metric='val_cost')),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2(alpha=0.0001)), early_stop=Stability(metric='train_score')),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), early_stop=Stability(metric='train_cost')),
-    GradientDescentClassifier(objective=CrossEntropy(), early_stop=Stability(metric='gradient')),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), early_stop=Stability(metric='theta')),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), early_stop=Stability(metric='gradient')),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), early_stop=Stability(metric='theta'))
+scenarios_performance = [
+    GradientDescentClassifier(objective=CrossEntropy(), performance=Performance()),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), performance=Performance(metric='val_cost')),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2(alpha=0.0001)), performance=Performance(metric='train_score')),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), performance=Performance(metric='train_cost')),
+    GradientDescentClassifier(objective=CrossEntropy(), performance=Performance(metric='gradient')),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), performance=Performance(metric='theta')),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), performance=Performance(metric='gradient')),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), performance=Performance(metric='theta'))
 ]   
 
 
 @mark.logistic_regression
-@mark.logistic_regression_early_stop
-def test_logistic_regression_early_stop(get_logistic_regression_data_split, get_logistic_regression_data_features):
+@mark.logistic_regression_performance
+def test_logistic_regression_performance(get_logistic_regression_data_split, get_logistic_regression_data_features):
     X_train, X_test, y_train, y_test = get_logistic_regression_data_split
-    for est in scenarios_early_stop:
+    for est in scenarios_performance:
         est.fit(X_train, y_train)    
         est.summary(features=get_logistic_regression_data_features)
         score = est.score(X_test, y_test)        
         msg = "Early stop didn't work for linear logistic_regression with " + est.objective.regularizer.name + \
-            " regularizer, and " + est.early_stop.__class__.__name__ + \
-                " early stopping, monitoring " + est.early_stop.metric +\
-                    " with epsilon = " + str(est.early_stop.epsilon) 
+            " regularizer, and " + est.performance.__class__.__name__ + \
+                " early stopping, monitoring " + est.performance.metric +\
+                    " with epsilon = " + str(est.performance.epsilon) 
         if est.blackbox_.total_epochs == est.epochs:
             warnings.warn(msg)
         msg = "Early stop for linear logistic_regression with " + est.objective.regularizer.name + \
-            " regularizer, and " + est.early_stop.__class__.__name__ + \
-                " early stopping, monitoring " + est.early_stop.metric +\
-                    " with epsilon = " + str(est.early_stop.epsilon) +\
+            " regularizer, and " + est.performance.__class__.__name__ + \
+                " early stopping, monitoring " + est.performance.metric +\
+                    " with epsilon = " + str(est.performance.epsilon) +\
                         " received a poor score of " + str(score)
         if score < 0.5:
             warnings.warn(msg)
@@ -188,10 +188,10 @@ def test_logistic_regression_learning_rates_II(get_logistic_regression_data_spli
 #                              TEST SGD                                       #
 # --------------------------------------------------------------------------  #
 scenarios_sgd = [
-    GradientDescentClassifier(objective=CrossEntropy(), early_stop=Stability(), batch_size=1),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), early_stop=Stability(metric='val_score'), batch_size=1),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), early_stop=Stability(metric='train_score'), batch_size=1),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), early_stop=Stability(metric='gradient'), batch_size=1),
+    GradientDescentClassifier(objective=CrossEntropy(), performance=Performance(), batch_size=1),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), performance=Performance(metric='val_score'), batch_size=1),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), performance=Performance(metric='train_score'), batch_size=1),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), performance=Performance(metric='gradient'), batch_size=1),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()),learning_rate=BottouSchedule(), batch_size=1)    
 ]   
 
@@ -212,10 +212,10 @@ def test_logistic_regression_sgd(get_logistic_regression_data_split, get_logisti
 # --------------------------------------------------------------------------  #
 scenarios_MBGD = [
     GradientDescentClassifier(objective=CrossEntropy(), batch_size=64, epochs=2000),
-    GradientDescentClassifier(objective=CrossEntropy(),early_stop=Stability(epsilon=0.0001, patience=100), batch_size=64, epochs=2000),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), early_stop=Stability(metric='val_score'), batch_size=64),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), early_stop=Stability(metric='train_score'), batch_size=64),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()),learning_rate=BottouSchedule(), early_stop=Stability(metric='val_cost'), batch_size=64, epochs=2000),
+    GradientDescentClassifier(objective=CrossEntropy(),performance=Performance(epsilon=0.0001, patience=100), batch_size=64, epochs=2000),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), performance=Performance(metric='val_score'), batch_size=64),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), performance=Performance(metric='train_score'), batch_size=64),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()),learning_rate=BottouSchedule(), performance=Performance(metric='val_cost'), batch_size=64, epochs=2000),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()),learning_rate=BottouSchedule(), batch_size=64)    
 ]   
 

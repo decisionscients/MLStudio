@@ -142,7 +142,7 @@ def test_validate_task():
 @mark.validation
 def test_validate_learning_rate_schedule():    
     from mlstudio.utils.validation import validate_learning_rate_schedule
-    from mlstudio.supervised.callbacks.learning_rate import Improvement    
+    from mlstudio.supervised.observers.learning_rate import Improvement    
     with pytest.raises(ValueError) as v:
         validate_learning_rate_schedule('hand')
         assert "value error"  in str(v.value)
@@ -151,10 +151,10 @@ def test_validate_learning_rate_schedule():
 # --------------------------------------------------------------------------  #    
 @mark.utils
 @mark.validation
-def test_validate_early_stop():    
-    from mlstudio.utils.validation import validate_early_stop
-    from mlstudio.supervised.callbacks.early_stop import Stability
+def test_validate_performance():    
+    from mlstudio.utils.validation import validate_performance
+    from mlstudio.supervised.observers.performance import Performance
     with pytest.raises(ValueError) as v:
-        validate_early_stop('hand')
+        validate_performance('hand')
         assert "value error"  in str(v.value)
-    validate_early_stop(Stability())           
+    validate_performance(Performance())           

@@ -24,8 +24,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.base import BaseEstimator  
 
-from mlstudio.supervised.callbacks.base import Callback, CallbackList
-from mlstudio.supervised.callbacks.learning_rate import LearningRateSchedule
+from mlstudio.supervised.observers.base import Observer, ObserverList
+from mlstudio.supervised.observers.learning_rate import LearningRateSchedule
 # --------------------------------------------------------------------------  #
 class Optimizer(ABC, BaseEstimator):
     """Base class for all optimizers."""

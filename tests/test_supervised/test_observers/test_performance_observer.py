@@ -35,7 +35,8 @@ import pytest
 from pytest import mark
 from tabulate import tabulate
 
-from mlstudio.supervised.core.observers import Performance
+from mlstudio.supervised.observers.performance import Performance
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 
 # --------------------------------------------------------------------------  #
 #                          TEST OBSERVER                                      #
@@ -47,31 +48,31 @@ class PerformanceTests:
         # Validate metric  
         with pytest.raises(ValueError) as v:
             observer = Performance(metric='hair')
-            observer.initialize()
+            observer.on_train_begin()
         with pytest.raises(TypeError) as v:
             observer = Performance(metric=1)
-            observer.initialize()
+            observer.on_train_begin()
         # Validate scorer        
         with pytest.raises(TypeError) as v:
             observer = Performance(metric='val_score', scorer='hair')
-            observer.initialize()
+            observer.on_train_begin()
         # Validate epsilon
         with pytest.raises(TypeError) as v:
             observer = Performance(epsilon='hair')                
-            observer.initialize()        
+            observer.on_train_begin()        
         with pytest.raises(ValueError) as v:
             observer = Performance(epsilon=1.1)                
-            observer.initialize()
+            observer.on_train_begin()
         with pytest.raises(ValueError) as v:
             observer = Performance(epsilon=-0.1)                
-            observer.initialize()        
+            observer.on_train_begin()        
         # Validate patience
         with pytest.raises(TypeError) as v:
             observer = Performance(patience='hair')        
-            observer.initialize()
+            observer.on_train_begin()
         with pytest.raises(ValueError) as v:
             observer = Performance(patience=0)        
-            observer.initialize()        
+            observer.on_train_begin()        
 
     def _get_expected_results(self, filepath):    
         return pd.read_excel(filepath, sheet_name='results', header=0, 
@@ -91,38 +92,39 @@ class PerformanceTests:
         # Create dict of logs dicts
         logs = exp_results.to_dict('index')
 
-        
-        # Obtain and initialize observer
-        observer = Performance(metric='train_cost', scorer=None, epsilon=0.025, 
-                            patience=5)
-        observer.initialize()
-        
-        # Iterate through logs and captured results
-        improvement = []
-        stability = []
-        best_epochs = []
-        for epoch, log in logs.items():
-            significant_improvement, stable, best_epoch = observer.model_is_stable(epoch, log)
-            improvement.append(significant_improvement)
-            stability.append(stable)
-            best_epochs.append(best_epoch)
+        # Create an estimator
+        est = GradientDescentRegressor()
+        # Obtain and on_train_begin observer
+        observer = Performance(mode='passive', metric='train_cost', 
+                               scorer=None, epsilon=0.025, patience=5)
+        observer.on_train_begin()
 
+        # Register with the observer
+        observer.set_model(est)
+        
+        # Iterate through logs
+        for epoch, log in logs.items():
+            observer.on_epoch_begin(epoch, log)
+
+        # End training
+        observer.on_train_end()
+            
         # Gather expected results in numpy format
         exp_improvement = exp_results['sig'].to_numpy()
         exp_stability = exp_results['stable'].to_numpy()
         exp_best_epochs = exp_results['best'].to_numpy()
 
-        # Gether actual results in numpy format
-        act_improvement = np.array(improvement).flatten()
-        act_stability = np.array(stability).flatten()
-        act_best_epochs = np.array(best_epochs).flatten()
+        # Gather actual results and convert to numpy format
+        print(observer)
+        df = observer.get_performance_data()
+        act_improvement = df['Improvement'].to_numpy()
+        act_stability = df['Stability'].to_numpy()
+        act_best_epochs = df['Best Epochs'].to_numpy()
 
         # Compare expected and actual results
         assert np.array_equal(exp_improvement, act_improvement), "Improvement errors: \nExp {e} \nAct {a}".format(\
             e=str(exp_improvement), a=str(act_improvement))
-        assert np.array_equal(exp_stability, act_stability), "Stability errors"
+        assert np.array_equal(exp_stability, act_stability), "Performance errors"
         assert np.array_equal(exp_best_epochs, act_best_epochs), "Best epochs errors"
 
-        # Print results
-        df = observer.get_log()
         print(tabulate(df, headers="keys"))

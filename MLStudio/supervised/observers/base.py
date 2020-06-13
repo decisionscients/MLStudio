@@ -3,7 +3,7 @@
 # ============================================================================ #
 # Project : MLStudio                                                           #
 # Version : 0.1.0                                                              #
-# File    : callbacks.py                                                       #
+# File    : observers.py                                                       #
 # Python  : 3.8.2                                                              #
 # ---------------------------------------------------------------------------- #
 # Author  : John James                                                         #
@@ -20,7 +20,7 @@
 # ============================================================================ #
 """Module containing functionality called during the training process.
 
-Note: The CallbackList and Callback abstract base classes were inspired by
+Note: The ObserverList and Observer abstract base classes were inspired by
 the Keras implementation.  
 """
 from abc import ABC, abstractmethod, ABCMeta
@@ -32,33 +32,33 @@ import types
 # --------------------------------------------------------------------------- #
 #                             CALLBACK LIST                                   #
 # --------------------------------------------------------------------------- #
-class CallbackList:
-    """Container of callbacks."""
+class ObserverList:
+    """Container of observers."""
 
-    def __init__(self, callbacks=None):
-        """CallbackList constructor
+    def __init__(self, observers=None):
+        """ObserverList constructor
         
         Parameters
         ----------
-        callbacks : list
-            List of 'Callback' instances.        
+        observers : list
+            List of 'Observer' instances.        
         """
-        callbacks = callbacks or []
-        self.callbacks = [c for c in callbacks]        
+        observers = observers or []
+        self.observers = [c for c in observers]        
         self.params = {}
         self.model = None
 
-    def append(self, callback):
-        """Appends callback to list of callbacks.
+    def append(self, observer):
+        """Appends observer to list of observers.
         
         Parameters
         ----------
-        callback : Callback instance            
+        observer : Observer instance            
         """
-        self.callbacks.append(callback)
+        self.observers.append(observer)
 
     def set_params(self, params):
-        """Sets the parameters variable, and in list of callbacks.
+        """Sets the parameters variable, and in list of observers.
         
         Parameters
         ----------
@@ -66,11 +66,11 @@ class CallbackList:
             Dictionary containing model parameters
         """
         self.params = params
-        for callback in self.callbacks:
-            callback.set_params(params)
+        for observer in self.observers:
+            observer.set_params(params)
 
     def set_model(self, model):
-        """Sets the model variable, and in the list of callbacks.
+        """Sets the model variable, and in the list of observers.
         
         Parameters
         ----------
@@ -78,11 +78,11 @@ class CallbackList:
         
         """
         self.model = model
-        for callback in self.callbacks:
-            callback.set_model(model)
+        for observer in self.observers:
+            observer.set_model(model)
 
     def on_batch_begin(self, batch, logs=None):
-        """Calls the `on_batch_begin` methods of its callbacks.
+        """Calls the `on_batch_begin` methods of its observers.
 
         Parameters
         ----------
@@ -94,11 +94,11 @@ class CallbackList:
             change in the future.
         """
         logs = logs or {}
-        for callback in self.callbacks:
-            callback.on_batch_begin(batch, logs)
+        for observer in self.observers:
+            observer.on_batch_begin(batch, logs)
 
     def on_batch_end(self, batch, logs=None):
-        """Calls the `on_batch_end` methods of its callbacks.
+        """Calls the `on_batch_end` methods of its observers.
         
         Parameters
         ----------
@@ -109,11 +109,11 @@ class CallbackList:
             Dictionary containing the data, cost, batch size and current weights
         """
         logs = logs or {}
-        for callback in self.callbacks:
-            callback.on_batch_end(batch, logs)
+        for observer in self.observers:
+            observer.on_batch_end(batch, logs)
 
     def on_epoch_begin(self, epoch, logs=None):
-        """Calls the `on_epoch_begin` methods of its callbacks.
+        """Calls the `on_epoch_begin` methods of its observers.
 
         Parameters
         ----------        
@@ -125,11 +125,11 @@ class CallbackList:
             but that may change in the future.
         """
         logs = logs or {}
-        for callback in self.callbacks:
-            callback.on_epoch_begin(epoch, logs)
+        for observer in self.observers:
+            observer.on_epoch_begin(epoch, logs)
 
     def on_epoch_end(self, epoch, logs=None):
-        """Calls the `on_epoch_end` methods of its callbacks.
+        """Calls the `on_epoch_end` methods of its observers.
         This function should only be called during train mode.
 
         Parameters
@@ -142,11 +142,11 @@ class CallbackList:
             validation epoch if validation is performed.
         """
         logs = logs or {}
-        for callback in self.callbacks:
-            callback.on_epoch_end(epoch, logs)
+        for observer in self.observers:
+            observer.on_epoch_end(epoch, logs)
 
     def on_train_begin(self, logs=None):
-        """Calls the `on_train_begin` methods of its callbacks.
+        """Calls the `on_train_begin` methods of its observers.
 
         Parameters
         ----------
@@ -154,11 +154,11 @@ class CallbackList:
             Currently no data is passed to this argument for this method
                 but that may change in the future.
         """
-        for callback in self.callbacks:
-            callback.on_train_begin(logs)
+        for observer in self.observers:
+            observer.on_train_begin(logs)
 
     def on_train_end(self, logs=None):
-        """Calls the `on_train_end` methods of its callbacks.
+        """Calls the `on_train_end` methods of its observers.
 
         Parameters
         ----------
@@ -166,19 +166,19 @@ class CallbackList:
             Currently no data is passed to this argument for this method
                 but that may change in the future.
         """
-        for callback in self.callbacks:
-            callback.on_train_end(logs)
+        for observer in self.observers:
+            observer.on_train_end(logs)
 
     def __iter__(self):
-        return iter(self.callbacks)
+        return iter(self.observers)
 
 # --------------------------------------------------------------------------- #
 #                             CALLBACK CLASS                                  #
 # --------------------------------------------------------------------------- #
-class Callback(ABC, BaseEstimator):
-    """Abstract base class used to build new callbacks."""
+class Observer(ABC, BaseEstimator):
+    """Abstract base class used to build new observers."""
     def __init__(self):
-        """Callback class constructor."""
+        """Observer class constructor."""
         self.params = None
         self.model = None
 
@@ -193,7 +193,7 @@ class Callback(ABC, BaseEstimator):
         self.params = params
 
     def set_model(self, model):
-        """Stores model in Callback object.
+        """Stores model in Observer object.
 
         Parameters
         ----------

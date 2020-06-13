@@ -23,10 +23,10 @@ from abc import abstractmethod
 import math
 import numpy as np
 
-from mlstudio.supervised.callbacks.base import Callback
+from mlstudio.supervised.observers.base import Observer
 from mlstudio.supervised.core.scorers import MSE
-from mlstudio.supervised.core.observers import Performance
-from mlstudio.utils.validation import validate_bool, validate_early_stop
+from mlstudio.supervised.observers.performance import Performance
+from mlstudio.utils.validation import validate_bool, validate_performance
 from mlstudio.utils.validation import validate_int
 from mlstudio.utils.validation import validate_learning_rate_schedule
 from mlstudio.utils.validation import validate_objective, validate_optimizer
@@ -34,7 +34,7 @@ from mlstudio.utils.validation import validate_scorer, validate_string
 from mlstudio.utils.validation import validate_zero_to_one, validate_int
 from mlstudio.utils.validation import validate_metric
 # --------------------------------------------------------------------------  #
-class LearningRateSchedule(Callback):
+class LearningRateSchedule(Observer):
     """Base class for learning rate schedules. 
     
     Parameters
@@ -556,6 +556,6 @@ class Improvement(LearningRateSchedule):
         super(Improvement, self).on_epoch_begin(epoch, logs)        
         logs = logs or {}        
         
-        if self._observer.model_is_stable(epoch, logs):                        
+        if self._observer.evaluate_performance(epoch, logs):                        
             self.model.eta = max(self.min_learning_rate,\
                 self._compute_learning_rate(epoch=epoch, logs=logs))            
