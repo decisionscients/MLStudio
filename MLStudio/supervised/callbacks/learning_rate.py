@@ -25,7 +25,7 @@ import numpy as np
 
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.core.scorers import MSE
-from mlstudio.utils.observers import Performance
+from mlstudio.supervised.core.observers import Performance
 from mlstudio.utils.validation import validate_bool, validate_early_stop
 from mlstudio.utils.validation import validate_int
 from mlstudio.utils.validation import validate_learning_rate_schedule
@@ -80,7 +80,7 @@ class LearningRateSchedule(Callback):
         self._validate()
 
     def on_epoch_begin(self, epoch, logs=None):
-        super(LearningRateSchedule, self).on_epoch_end(epoch=epoch, logs=logs)        
+        super(LearningRateSchedule, self).on_epoch_begin(epoch=epoch, logs=logs)        
         self.model.eta = max(self.min_learning_rate,\
             self._compute_learning_rate(epoch=epoch, logs=logs))
     
@@ -553,7 +553,7 @@ class Improvement(LearningRateSchedule):
             Dictionary containing training cost, (and if metric=score, 
             validation cost)  
         """
-        super(Improvement, self).on_epoch_end(epoch, logs)        
+        super(Improvement, self).on_epoch_begin(epoch, logs)        
         logs = logs or {}        
         
         if self._observer.model_is_stable(epoch, logs):                        

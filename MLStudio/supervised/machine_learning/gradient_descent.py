@@ -284,10 +284,31 @@ class GradientDescent(BaseEstimator):
         self._init_weights()     
         # Perform begin training routines on callbacks. 
         self._cbks.on_train_begin(log) 
-        # Perform an end of epoch evaluation to record epoch 0 results
-        self._end_epoch()
+
+    def _end_training(self, log=None):
+        """Closes history callout and assign final and best weights."""                    
+        log = log or {}
+        self._get_results()
+        self.n_iter_ = self._epoch + 1
+        self._cbks.on_train_end()
+
+    def _begin_epoch(self, log=None):
+        """Logic performed at the beginning of each epoch."""            
+        log = log or {}     
+        # Perform epoch evaluation 
+        log = self._evaluate_epoch(log)
+        # Perform begin epoch methods on callbacks e.g. blackbox
+        self._cbks.on_epoch_begin(self._epoch, log)          
+        # Bump epochs after callbacks to that we are zero indexed.
+        self._epoch += 1   
 
 
+    def _end_epoch(self, log=None):        
+        """Performs end-of-epoch evaluation and scoring."""        
+        log = log or {}        
+        # Perform end epoch methods on callbacks e.g. learning_rate schedules
+        self._cbks.on_epoch_end(self._epoch, log)                  
+        
     def _get_results(self):
         # Obtain best results
         if self.early_stop:
@@ -305,33 +326,7 @@ class GradientDescent(BaseEstimator):
         
         # Format final intercept and coefficient attributes
         self.intercept_ = self.theta_[0]
-        self.coef_ = self.theta_[1:]        
-
-    def _end_training(self, log=None):
-        """Closes history callout and assign final and best weights."""                    
-        log = log or {}
-        self._get_results()
-        self.n_iter_ = self._epoch
-        self._cbks.on_train_end()
-
-    def _begin_epoch(self, log=None):
-        """Logic performed at the beginning of each epoch."""            
-        log = log or {}     
-        # If we've updated theta, assign value to current theta variable
-        self._theta = self._theta_update if self._theta_update is not None else self._theta
-        # Perform begin epoch methods on all callbacks
-        self._cbks.on_epoch_begin(self._epoch, log)     
-
-    def _end_epoch(self, log=None):        
-        """Performs end-of-epoch evaluation and scoring."""        
-        log = log or {}        
-        # Capture current data representing current state of the optimization  
-        log = self._evaluate_epoch(log)
-        # Call 'on_epoch_end' methods on callbacks.
-        self._cbks.on_epoch_end(self._epoch, log)          
-        self._epoch += 1
-        
-
+        self.coef_ = self.theta_[1:]   
 # --------------------------------------------------------------------------- #
 #                                 FIT                                         #
 # --------------------------------------------------------------------------- #
@@ -541,8 +536,6 @@ class GradientDescentEstimator(ABC, GradientDescent):
         self._init_weights()            
         # Update training log
         self._cbks.on_train_begin(log)  
-        # Perform an end of epoch evaluation to record epoch 0 results
-        self._end_epoch(log)
 
     def _begin_epoch(self, log=None):
         """Increment the epoch, evaluate using current parameters and shuffle the data."""            
@@ -552,25 +545,26 @@ class GradientDescentEstimator(ABC, GradientDescent):
         if self.random_state:
             rs = self.random_state + self._epoch
         self.X_train_, self.y_train_ = shuffle_data(self.X_train_, self.y_train_, random_state=rs) 
-        # Call 'on_epoch_begin' methods on callbacks.
-        self._cbks.on_epoch_begin(self._epoch)               
+        # Perform epoch evaluation 
+        log = self._evaluate_epoch(log)        
+        # Perform begin epoch methods on callbacks e.g. blackbox
+        self._cbks.on_epoch_begin(self._epoch, logs=log)               
+        # Bump epochs after callbacks so that we are zero indexed.
+        self._epoch += 1
+
 
     def _end_epoch(self, log=None):        
         """Performs end-of-epoch evaluation and scoring."""            
         log = log or {}        
-        # Compute performance statistics for epoch and post to history
-        log = self._evaluate_epoch(log)           
-        # Call 'on_epoch_end' methods on callbacks.
-        print("\nEnding epoch # {e}\n".format(e=str(self._epoch)))
-        self._cbks.on_epoch_end(self._epoch, log) 
-        self._epoch += 1           
+        # Perform end epoch methods on callbacks e.g. learning_rate schedules
+        self._cbks.on_epoch_end(self._epoch, log)         
 
     def _begin_batch(self, log=None):
         log = log or {}
-        self._theta = self._theta_update if self._theta_update is not None else self._theta
+        self._cbks.on_batch_begin(self._batch, log)
 
     def _end_batch(self, log=None):        
-        log = log or {}        
+        log = log or {} 
         self._cbks.on_batch_end(self._batch, log)
         self._batch += 1
 
@@ -610,13 +604,19 @@ class GradientDescentEstimator(ABC, GradientDescent):
                 # Compute costs
                 self._cost = self._objective(self._theta, y_batch, y_out)
 
+                # Format batch log
+                log = {'batch': self._batch,'theta': self._theta, 
+                       'train_cost': self._cost}
+
                 # Compute gradient and update parameters 
-                self._theta_update, self._gradient = self._optimizer(gradient=self._objective.gradient, \
+                self._theta, self._gradient = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.copy(self._theta),  X=X_batch, y=y_batch,\
                         y_out=y_out)                       
 
                 # Update batch log
-                self._end_batch()
+                log['gradient'] = self._gradient
+                log['gradient_norm'] = np.linalg.norm(self._gradient) 
+                self._end_batch(log=log)
 
             # Wrap up epoch
             self._end_epoch()

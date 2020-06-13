@@ -24,10 +24,10 @@ from collections import OrderedDict
 import copy
 import datetime
 import numpy as np
+import pandas as pd
 import types
 
 from sklearn.base import BaseEstimator
-from tabulate import tabulate
 
 from mlstudio.supervised.core.scorers import R2
 from mlstudio.utils.print import Printer
@@ -100,8 +100,10 @@ class Performance(Observer):
         validate_metric(self.metric)
         if 'score' in self.metric:
             validate_scorer(self.scorer)
-        validate_zero_to_one(param=self.epsilon, param_name='epsilon')       
-        validate_int(param=self.patience, param_name='patience')
+        validate_zero_to_one(param=self.epsilon, param_name='epsilon',
+                             left='closed', right='closed')       
+        validate_int(param=self.patience, param_name='patience',
+                     minimum=0, left='open', right='open')
 
     def initialize(self, logs=None):                
         """Sets key variables at beginning of training.        
@@ -114,12 +116,21 @@ class Performance(Observer):
         logs = logs or {}        
         self._validate()
         # Private variables
-        self._baseline = None
-        self._reset_baseline = False
+        self._baseline = None        
         self._iter_no_improvement = 0
         self._better = None   
         self._stabilized = False   
-                       
+        self._significant_improvement = False
+
+        # log data
+        self._epoch_log = []
+        self._performance_log = []
+        self._baseline_log = []
+        self._relative_change_log = []
+        self._improvement_log = []
+        self._iter_no_improvement_log = []
+        self._stability_log = []
+        self._best_epochs_log = []                       
         
         # If 'score' is the metric and the scorer object exists, 
         # obtain the 'better' function from the scorer.        
@@ -130,42 +141,55 @@ class Performance(Observer):
         else:
             self._better = np.less
 
-    def _print_results(self, current):
-        """Prints current, best and relative change."""
-        relative_change = abs(current-self._baseline) / abs(self._baseline)
-        print("Iteration #: {i}  Best : {b}     Current : {c}   Relative change : {r}   Stabilized : {s}".format(\
-                i=str(self._iter_no_improvement),
-                b=str(self._baseline), 
-                c=str(current),
-                r=str(relative_change),
-                s=self._stabilized))            
+    def _update_log(self, current, logs):
+        """Creates log dictionary of lists of performance results."""
+        self._epoch_log.append(logs.get('epoch'))
+        self._performance_log.append(logs.get(self.metric))
+        self._baseline_log.append(self._baseline)
+        self._relative_change_log.append(self._relative_change)
+        self._improvement_log.append(self._significant_improvement)
+        self._iter_no_improvement_log.append(self._iter_no_improvement)
+        self._stability_log.append(self._stabilized)
+        self._best_epochs_log.append(self._best_epoch)
+
+    def get_log(self):
+        """Returns log in pandas dataframe format."""
+        d = {'Epoch': self._epoch_log, 'Performance': self._performance_log,
+             'Baseline': self._baseline_log, 'Relative Change': self._relative_change_log,
+             'Improvement': self._improvement_log,
+             'Iter No Improvement': self._iter_no_improvement_log,
+             'Stability': self._stability_log,
+             'Best Epochs': self._best_epochs_log        
+        }
+        df = pd.DataFrame(data = d)
+        return df
+
 
     def _metric_improved(self, current):
         """Returns true if the direction and magnitude of change indicates improvement"""
         # Determine if change is in the right direction.
         if self._better(current, self._baseline):
-            self._reset_baseline = True
             return True
         else:
-            self._reset_baseline = False
             return False
 
-    def _metric_improved_significantly(self, current):
-        relative_change = abs(current-self._baseline) / abs(self._baseline)
-        return relative_change > self.epsilon
+    def _significant_relative_change(self, current):        
+        self._relative_change = abs(current-self._baseline) / abs(self._baseline)
+        return self._relative_change > self.epsilon                
 
     def _process_improvement(self, current, logs):
         """Sets values of parameters and attributes if improved."""
         self._iter_no_improvement = 0            
         self._stabilized = False
-        self._best_results = logs
-
+        self._baseline = current 
+        self._best_epoch = logs.get('epoch')        
 
     def _process_no_improvement(self):
         """Sets values of parameters and attributes if no improved."""    
         self._iter_no_improvement += 1  
         if self._iter_no_improvement == self.patience:
-            self._stabilized = True       
+            self._iter_no_improvement = 0
+            self._stabilized = True               
 
     def _get_current_value(self, logs):
         """Obtain the designated metric from the logs."""
@@ -174,6 +198,12 @@ class Performance(Observer):
             msg = "{m} was not found in the log.".format(m=self.metric)
             raise KeyError(msg)     
         return current
+
+    def _initialize_iteration(self):
+        """Resets state for each iteration."""
+        self._significant_improvement = False
+        self._relative_change = 0
+        self._stabilized = False
 
     def model_is_stable(self, epoch, logs=None):
         """Determines whether performance is improving or stabilized.
@@ -196,24 +226,27 @@ class Performance(Observer):
         # Obtain current performance
         current = self._get_current_value(logs)
 
+        # Initialize iteration
+        self._initialize_iteration()
+
         # Handle first iteration as an improvement by default
         if self._baseline is None:
-            self._baseline = current
+            self._significant_improvement = True
             self._process_improvement(current, logs)    
-            return False    
 
-        # Otherwise, evaluate the direction and magnitude of the change
-        if self._metric_improved(current) and self._metric_improved_significantly(current):
-            self._process_improvement(current, logs)
+        # Otherwise, evaluate the direction and magnitude of the change        
         else:
-            self._process_no_improvement()
+            self._significant_improvement = self._metric_improved(current) and \
+                self._significant_relative_change(current)
 
-        self._baseline = current if self._reset_baseline else self._baseline
+            if self._significant_improvement:
+                self._process_improvement(current, logs)
+            else:
+                self._process_no_improvement()
 
-        if self._stabilized:
-            self._stabilized = False
-            return epoch - self._iter_no_improvement
-        else:
-            return False
+        # Log results
+        self._update_log(current, logs)
+
+        return self._significant_improvement, self._stabilized, self._best_epoch
 
 

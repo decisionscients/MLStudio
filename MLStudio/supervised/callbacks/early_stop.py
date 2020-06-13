@@ -26,7 +26,7 @@ import numpy as np
 
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.core.scorers import MSE
-from mlstudio.utils.observers import Performance
+from mlstudio.supervised.core.observers import Performance
 from mlstudio.utils.validation import validate_metric, validate_zero_to_one
 # --------------------------------------------------------------------------- #
 #                          EARLY STOP BASE CLASS                              #

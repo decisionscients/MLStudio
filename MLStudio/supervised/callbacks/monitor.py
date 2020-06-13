@@ -31,7 +31,7 @@ import types
 
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.utils.format import proper
-from mlstudio.utils.observers import Performance
+from mlstudio.supervised.core.observers import Performance
 from mlstudio.utils.print import Printer
 from mlstudio.utils.validation import validate_int, validate_zero_to_one
 from mlstudio.utils.validation import validate_metric, validate_scorer
@@ -118,7 +118,7 @@ class Monitor(Callback):
             epsilon=self.epsilon, patience=self.patience)    
         self._observer.initialize()        
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch, logs=None):
         """Determines whether convergence has been achieved.
 
         Parameters
@@ -135,7 +135,7 @@ class Monitor(Callback):
         Bool if True convergence has been achieved. 
 
         """
-        super(Monitor, self).on_epoch_end(epoch, logs)        
+        super(Monitor, self).on_epoch_begin(epoch, logs)        
         logs = logs or {}                
         if self._observer.model_is_stable(epoch, logs):
             self._stabilized = True
@@ -192,7 +192,7 @@ class BlackBox(Callback):
         for k,v in logs.items():
             self.batch_log.setdefault(k,[]).append(v)        
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch, logs=None):
         """Updates data and statistics relevant to the training epoch.
 
         Parameters
@@ -208,9 +208,6 @@ class BlackBox(Callback):
         logs = logs or {}
         self.total_epochs += 1
         for k,v in logs.items():
-            if k == "learning_rate" or k == "epoch":
-                print("Updating blackbox")
-                print("k is {k} | v is {v}".format(k=str(k), v=str(v)))
             self.epoch_log.setdefault(k,[]).append(v)
 
     def _report_hyperparameters(self):
