@@ -62,14 +62,24 @@ def validate_bool(param, param_name=""):
         raise TypeError(msg)
     else:
         return True             
+     
 # --------------------------------------------------------------------------  #
-def validate_int(param, param_name="", minimum=0, maximum=np.inf, left="closed",
-                 right='closed'):        
-    if not isinstance(param, int):
-        msg = "{s} must be an integer.".format(s=param_name)
+def validate_array_like(param, param_name=""):        
+    if not isinstance(param, (np.ndarray, list, tuple, pd.Series)):
+        msg = "{s} must be an array-like object.".format(s=param_name)
         raise TypeError(msg)
     else:
-        return True           
+        return True             
+
+# --------------------------------------------------------------------------  #
+def validate_gradient_check(param, param_name="gradient_check"):     
+    from mlstudio.supervised.callbacks.debugging import GradientCheck  
+    if not isinstance(param, (bool, GradientCheck)):
+        msg = "The gradient_check parameter must be boolean or a\
+            valid GradientCheck object."        
+        raise TypeError(msg)
+    else:
+        return True     
 # --------------------------------------------------------------------------  #
 def validate_learning_rate_schedule(schedule):  
     from mlstudio.supervised.callbacks.learning_rate import LearningRateSchedule  
@@ -111,7 +121,14 @@ def validate_activation(activation):
         raise TypeError(msg)
     else:
         return True
-
+# --------------------------------------------------------------------------  #
+def validate_monitor(monitor):    
+    from mlstudio.supervised.callbacks.monitor import Monitor        
+    if not isinstance(monitor, Monitor):
+        msg = "The monitor parameter must be a valid Monitor object."
+        raise TypeError(msg)
+    else:
+        return True 
 # --------------------------------------------------------------------------  #
 def validate_objective(objective):    
     from mlstudio.supervised.core.objectives import Objective
@@ -189,7 +206,7 @@ def validate_string(param, param_name="", valid_values=None):
         return True        
 
 # --------------------------------------------------------------------------  #
-def validate_range(param, minimum, maximum, param_name = "", left='open', right='open'):        
+def validate_range(param, param_name, minimum=0, maximum=np.Inf, left='open', right='open'):        
     if not isinstance(param, (int,float)):
         msg = param_name + " hyperparameter must be numeric."
         raise TypeError(msg)
@@ -209,29 +226,24 @@ def validate_range(param, minimum, maximum, param_name = "", left='open', right=
         if param < minimum or param > maximum:
             msg = param_name + " hyperparameter must be in [" + str(minimum) + "," + str(maximum) + "]"                  
             raise ValueError(msg)
-        
 # --------------------------------------------------------------------------  #
-def validate_zero_to_one(param, param_name = "", left='closed', right='closed'):
-    """Validates a parameter whose values should be 0 and 1."""
+def validate_int(param, param_name="", minimum=0, maximum=np.inf, left="open",
+                 right='open'):        
+    if not isinstance(param, int):
+        msg = "{s} must be an integer.".format(s=param_name)
+        raise TypeError(msg)     
+    else:
+        validate_range(param=param, param_name=param_name, minimum=minimum, 
+                       maximum=maximum, left=left, right=right)             
+# --------------------------------------------------------------------------  #
+def validate_zero_to_one(param, param_name = "", left='open', right='open'):
+    """Validates a parameter whose values should be between 0 and 1."""
     if not isinstance(param, (int,float)):
         msg = param_name + " hyperparameter must be numeric."
         raise TypeError(msg)
-    elif left == 'open' and right == 'open':
-        if param <= 0 or param >= 1:
-            msg = param_name + " hyperparameter must be in (0,1)."      
-            raise ValueError(msg)
-    elif left == 'open' and right != 'open':
-        if param <= 0 or param > 1:
-            msg = param_name + " hyperparameter must be in (0,1]."      
-            raise ValueError(msg)
-    elif left != 'open' and right == 'open':
-        if param < 0 or param >= 1:
-            msg = param_name + " hyperparameter must be in [0,1)"      
-            raise ValueError(msg)
     else:
-        if param < 0 or param > 1:
-            msg = param_name + " hyperparameter must be in [0,1]."      
-            raise ValueError(msg)
+        validate_range(param=param, param_name=param_name, minimum=0, maximum=1,
+                       left=left, right=right)
 # --------------------------------------------------------------------------  #
 def search_all_subclasses(cls):
     return set(cls.__subclasses__()).union(

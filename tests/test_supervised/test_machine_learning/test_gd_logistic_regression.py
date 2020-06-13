@@ -33,9 +33,12 @@ from mlstudio.supervised.core.tasks import LogisticRegression
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.callbacks.debugging import GradientCheck
 from mlstudio.supervised.callbacks.early_stop import Stability
+from mlstudio.supervised.callbacks.learning_rate import StepDecay
 from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
-from mlstudio.supervised.callbacks.learning_rate import ExponentialStepDecay, PowerSchedule
+from mlstudio.supervised.callbacks.learning_rate import ExponentialStepDecay
+from mlstudio.supervised.callbacks.learning_rate import PolynomialStepDecay
+from mlstudio.supervised.callbacks.learning_rate import PowerSchedule
 from mlstudio.supervised.callbacks.learning_rate import BottouSchedule, Improvement
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentClassifier
 from mlstudio.supervised.core.scorers import Accuracy
@@ -55,7 +58,7 @@ scenarios = [
                              objective=CrossEntropy(regularizer=L1_L2())),
     GradientDescentClassifier(gradient_check=True),
     GradientDescentClassifier(early_stop=Stability()),                                           
-    GradientDescentClassifier(schedule=BottouSchedule()),                                           
+    GradientDescentClassifier(learning_rate=BottouSchedule()),                                           
 
 ]
 
@@ -149,14 +152,14 @@ def test_logistic_regression_early_stop(get_logistic_regression_data_split, get_
 # --------------------------------------------------------------------------  #
 scenarios = [
     GradientDescentClassifier(objective=CrossEntropy(), learning_rate=0.01, epochs=1000),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), learning_rate=0.001, schedule=TimeDecay(), epochs=1000),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=SqrtTimeDecay(), epochs=1000),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), learning_rate=0.001, schedule=ExponentialDecay(), epochs=1000),
-    GradientDescentClassifier(objective=CrossEntropy(), schedule=PolynomialDecay(), learning_rate=0.001, epochs=1000),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), learning_rate=0.001, schedule=ExponentialStepDecay(), epochs=1000),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=PowerSchedule(), epochs=1000),    
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=BottouSchedule(), epochs=1000),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=0.001, schedule=Improvement(), epochs=1000)
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), learning_rate=TimeDecay(), epochs=1000),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=SqrtTimeDecay(), epochs=1000),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), learning_rate=ExponentialDecay(), epochs=1000),
+    GradientDescentClassifier(objective=CrossEntropy(), learning_rate=PolynomialDecay(),  epochs=1000),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), learning_rate=ExponentialStepDecay(), epochs=1000),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=PowerSchedule(), epochs=1000),    
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=BottouSchedule(), epochs=1000),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), learning_rate=Improvement(), epochs=1000)
 ]        
 @mark.logistic_regression
 @mark.logistic_regression_learning_rates
@@ -189,7 +192,7 @@ scenarios_sgd = [
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), early_stop=Stability(metric='val_score'), batch_size=1),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), early_stop=Stability(metric='train_score'), batch_size=1),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), early_stop=Stability(metric='gradient'), batch_size=1),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), schedule=BottouSchedule(), batch_size=1)    
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()),learning_rate=BottouSchedule(), batch_size=1)    
 ]   
 
 
@@ -212,8 +215,8 @@ scenarios_MBGD = [
     GradientDescentClassifier(objective=CrossEntropy(),early_stop=Stability(epsilon=0.0001, patience=100), batch_size=64, epochs=2000),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L1()), early_stop=Stability(metric='val_score'), batch_size=64),
     GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), early_stop=Stability(metric='train_score'), batch_size=64),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()), schedule=BottouSchedule(), early_stop=Stability(metric='val_cost'), batch_size=64, epochs=2000),
-    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()), schedule=BottouSchedule(), batch_size=64)    
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L1_L2()),learning_rate=BottouSchedule(), early_stop=Stability(metric='val_cost'), batch_size=64, epochs=2000),
+    GradientDescentClassifier(objective=CrossEntropy(regularizer=L2()),learning_rate=BottouSchedule(), batch_size=64)    
 ]   
 
 

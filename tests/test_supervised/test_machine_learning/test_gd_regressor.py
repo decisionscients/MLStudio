@@ -33,8 +33,11 @@ from mlstudio.supervised.core.tasks import LinearRegression
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.callbacks.debugging import GradientCheck
 from mlstudio.supervised.callbacks.early_stop import Stability
-from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay, Constant
+from mlstudio.supervised.callbacks.learning_rate import StepDecay
+from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
 from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
+from mlstudio.supervised.callbacks.learning_rate import ExponentialStepDecay
+from mlstudio.supervised.callbacks.learning_rate import PolynomialStepDecay
 from mlstudio.supervised.callbacks.learning_rate import PowerSchedule
 from mlstudio.supervised.callbacks.learning_rate import BottouSchedule, Improvement
 from mlstudio.supervised.callbacks.monitor import Monitor

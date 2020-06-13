@@ -29,10 +29,6 @@ from pytest import mark
 
 from mlstudio.supervised.callbacks.base import Callback
 from mlstudio.supervised.callbacks.early_stop import Stability
-from mlstudio.supervised.callbacks.learning_rate import TimeDecay, SqrtTimeDecay
-from mlstudio.supervised.callbacks.learning_rate import ExponentialDecay, PolynomialDecay
-from mlstudio.supervised.callbacks.learning_rate import ExponentialStepDecay, PowerSchedule
-from mlstudio.supervised.callbacks.learning_rate import BottouSchedule
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescent
 from mlstudio.supervised.core.objectives import Adjiman, Branin02
 from mlstudio.supervised.core.objectives import ThreeHumpCamel, Ursem01

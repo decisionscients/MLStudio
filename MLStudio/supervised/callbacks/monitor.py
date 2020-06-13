@@ -162,12 +162,6 @@ class BlackBox(Callback):
         self.start = datetime.datetime.now()
         self.epoch_log = {}
         self.batch_log = {}
-        # If a log has been passed, update the epoch log. This is used
-        # to add epoch 0 evaluation data to the log before training
-        if logs is not None:
-            for k,v in logs.items():
-                self.epoch_log.setdefault(k,[]).append(v)            
-
 
     def on_train_end(self, logs=None):        
         """Sets instance variables at end of training.
@@ -212,8 +206,11 @@ class BlackBox(Callback):
             beginning with 'val_'.
         """
         logs = logs or {}
-        self.total_epochs = epoch
+        self.total_epochs += 1
         for k,v in logs.items():
+            if k == "learning_rate" or k == "epoch":
+                print("Updating blackbox")
+                print("k is {k} | v is {v}".format(k=str(k), v=str(v)))
             self.epoch_log.setdefault(k,[]).append(v)
 
     def _report_hyperparameters(self):
