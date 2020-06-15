@@ -121,7 +121,7 @@ def validate_activation(activation):
         return True
 # --------------------------------------------------------------------------  #
 def validate_monitor(monitor):    
-    from mlstudio.supervised.observers.monitor import Performance        
+    from mlstudio.supervised.observers.history import Performance        
     if not isinstance(monitor, Performance):
         msg = "The monitor parameter must be a valid Performance object."
         raise TypeError(msg)

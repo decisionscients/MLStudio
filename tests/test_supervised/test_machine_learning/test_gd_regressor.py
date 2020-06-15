@@ -40,7 +40,7 @@ from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay
 from mlstudio.supervised.observers.learning_rate import PolynomialStepDecay
 from mlstudio.supervised.observers.learning_rate import PowerSchedule
 from mlstudio.supervised.observers.learning_rate import BottouSchedule, Improvement
-from mlstudio.supervised.observers.monitor import Performance
+from mlstudio.supervised.observers.history import Performance
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.supervised.core.objectives import MSE

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # =========================================================================== #
-# Project : MLStudio                                                          #
+# Project : ML Studio                                                         #
 # Version : 0.1.0                                                             #
-# File    : surface.py                                                        #
-# Python  : 3.8.2                                                             #
+# File    : benchmark.py                                                      #
+# Python  : 3.8.3                                                             #
 # --------------------------------------------------------------------------  #
 # Author  : John James                                                        #
 # Company : DecisionScients                                                   #
 # Email   : jjames@decisionscients.com                                        #
 # URL     : https://github.com/decisionscients/MLStudio                       #
 # --------------------------------------------------------------------------  #
-# Created       : Friday, April 10th 2020, 3:27:23 pm                         #
-# Last Modified : Friday, April 10th 2020, 3:27:24 pm                         #
+# Created       : Sunday, May 24th 2020, 11:06:10 am                          #
+# Last Modified : Sunday, June 14th 2020, 9:48:14 pm                          #
 # Modified By   : John James (jjames@decisionscients.com)                     #
 # --------------------------------------------------------------------------  #
 # License : BSD                                                               #
@@ -31,18 +31,16 @@ homedir = str(Path(__file__).parents[3])
 demodir = str(Path(__file__).parents[1])
 sys.path.append(homedir)
 
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescent
-from mlstudio.visual.animations.surface import Surface
-from mlstudio.visual.animations.surface_contour import SurfaceContour
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentOptimizer
+from mlstudio.visual.animations import animate_optimization
 from mlstudio.supervised.core.objectives import Adjiman, StyblinskiTank, Wikipedia
 from mlstudio.supervised.core.objectives import ThreeHumpCamel, Ursem01, Branin02
-from mlstudio.supervised.core.optimizers import Classic, Momentum, Nesterov
+from mlstudio.supervised.core.optimizers import GradientDescentOptimizer, Momentum, Nesterov
 from mlstudio.supervised.core.optimizers import Adagrad, Adadelta, RMSprop
 from mlstudio.supervised.core.optimizers import Adam, AdaMax, AdamW
 from mlstudio.supervised.core.optimizers import Nadam, AMSGrad, QHAdam
 from mlstudio.supervised.core.optimizers import QuasiHyperbolicMomentum
 from mlstudio.supervised.core.optimizers import AggMo
-from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay, TimeDecay
 from mlstudio.utils.data_analyzer import cosine
 from mlstudio.utils.file_manager import save_df
 
@@ -67,7 +65,7 @@ for objective in objectives:
 
     for optimizer in optimizers:
         estimators[optimizer.name] = {}
-        model = GradientDescent(learning_rate=0.01,
+        model = GradientDescentOptimizer(learning_rate=0.01,
                                 theta_init=objective.start, 
                                 epochs=500, objective=objective,
                                 optimizer=optimizer)
@@ -103,6 +101,8 @@ save_df(df, figures, df_filename)
 # --------------------------------------------------------------------------  #
 # Render plots
 for title, solution in solutions.items():        
-    v = Surface()
-    v.animate(estimators=solution, directory=figures, filename=title + " Optimization.html", show=True)        
+    filename = title + " Optimization.html"
+    filepath = os.path.join(figures, title)
+    animate_optimization(estimators=solution, filepath=filepath)
 
+#%#%%

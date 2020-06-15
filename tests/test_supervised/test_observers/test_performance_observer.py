@@ -115,7 +115,6 @@ class PerformanceTests:
         exp_best_epochs = exp_results['best'].to_numpy()
 
         # Gather actual results and convert to numpy format
-        print(observer)
         df = observer.get_performance_data()
         act_improvement = df['Improvement'].to_numpy()
         act_stability = df['Stability'].to_numpy()

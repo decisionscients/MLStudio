@@ -64,7 +64,7 @@ class Optimizer(ABC, BaseEstimator):
 
 
 # --------------------------------------------------------------------------  #
-class Classic(Optimizer):
+class GradientDescentOptimizer(Optimizer):
     """Standard gradient descent optimizer."""
 
     def __init__(self):

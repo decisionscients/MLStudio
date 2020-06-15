@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-# ============================================================================ #
-# Project : MLStudio                                                           #
-# Version : 0.1.0                                                              #
-# File    : estimator.py                                                       #
-# Python  : 3.8.2                                                              #
-# ---------------------------------------------------------------------------- #
-# Author  : John James                                                         #
-# Company : DecisionScients                                                    #
-# Email   : jjames@decisionscients.com                                         #
-# URL     : https://github.com/decisionscients/MLStudio                        #
-# ---------------------------------------------------------------------------- #
-# Created       : Sunday, March 15th 2020, 7:15:36 pm                          #
-# Last Modified : Sunday, March 15th 2020, 7:15:46 pm                          #
-# Modified By   : John James (jjames@decisionscients.com)                      #
-# ---------------------------------------------------------------------------- #
-# License : BSD                                                                #
-# Copyright (c) 2020 DecisionScients                                           #
-# ============================================================================ #
-"""Gradient Descent base class, from which regression and classification inherit."""
+# =========================================================================== #
+# Project : ML Studio                                                         #
+# Version : 0.1.0                                                             #
+# File    : gradient_descent.py                                               #
+# Python  : 3.8.3                                                             #
+# --------------------------------------------------------------------------  #
+# Author  : John James                                                        #
+# Company : DecisionScients                                                   #
+# Email   : jjames@decisionscients.com                                        #
+# URL     : https://github.com/decisionscients/MLStudio                       #
+# --------------------------------------------------------------------------  #
+# Created       : Wednesday, March 18th 2020, 4:34:57 am                      #
+# Last Modified : Saturday, June 13th 2020, 9:52:07 pm                        #
+# Modified By   : John James (jjames@decisionscients.com)                     #
+# --------------------------------------------------------------------------  #
+# License : BSD                                                               #
+# Copyright (c) 2020 DecisionScients                                          #
+# =========================================================================== #
+"""Gradient Descent Module"""
 from abc import ABC, abstractmethod, ABCMeta
 import sys
 import copy
@@ -28,60 +28,46 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 from sklearn.base import BaseEstimator
-from sklearn.base import RegressorMixin, ClassifierMixin
 
 from mlstudio.supervised.core.tasks import LinearRegression, LogisticRegression
 from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
 from mlstudio.supervised.core.objectives import MSE, CrossEntropy
 from mlstudio.supervised.core.objectives import CategoricalCrossEntropy
 from mlstudio.supervised.core.objectives import Adjiman
-from mlstudio.supervised.core.optimizers import Classic
+from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
 from mlstudio.supervised.core.scorers import R2, Accuracy
-from mlstudio.supervised.observers.performance import Performance
-from mlstudio.supervised.observers.debugging import GradientCheck
-from mlstudio.supervised.observers.base import ObserverList
-from mlstudio.supervised.observers.performance import Performance
-from mlstudio.supervised.observers.monitor import BlackBox, Progress, Performance
-from mlstudio.supervised.observers.learning_rate import LearningRateSchedule
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
 from mlstudio.utils.data_manager import add_bias_term, encode_labels, one_hot_encode
 from mlstudio.utils.data_manager import RegressionDataProcessor, ClassificationDataProcessor
 from mlstudio.utils.validation import check_X, check_X_y, check_is_fitted
 from mlstudio.utils.validation import validate_zero_to_one, validate_metric
 from mlstudio.utils.validation import validate_objective, validate_optimizer
-from mlstudio.utils.validation import validate_scorer, validate_performance
+from mlstudio.utils.validation import validate_scorer
 from mlstudio.utils.validation import validate_learning_rate_schedule
 from mlstudio.utils.validation import validate_int, validate_string
-from mlstudio.utils.validation import validate_performance, validate_metric
+from mlstudio.utils.validation import validate_metric
 from mlstudio.utils.validation import validate_scorer, validate_bool
 from mlstudio.utils.validation import validate_range, validate_monitor
 from mlstudio.utils.validation import validate_array_like, validate_gradient_check
 # =========================================================================== #
-#                          GRADIENT DESCENT                                   #
+#                       GRADIENT DESCENT ABSTRACT                             #
 # =========================================================================== #        
-class GradientDescent(BaseEstimator):
-    """Performs pure optimization of a 2d objective function."""
-    def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
-                 optimizer=Classic(), objective=MSE(), performance=None, 
-                 get_best_weights=True, verbose=False, checkpoint=100, 
-                 monitor=Performance(), random_state=None, gradient_check=False):
+class GradientDescentAbstract(ABC,BaseEstimator):
+    """Gradient Descent abstract base class."""
+    def __init__(self, learning_rate=0.01, epochs=1000, objective=None,
+                 theta_init=None, optimizer=None,  observers=None,
+                 verbose=False, random_state=None):
 
         self.learning_rate = learning_rate
         self.epochs = epochs
+        self.objective  = objective
         self.theta_init = theta_init
         self.optimizer = optimizer
-        self.objective  = objective        
-        self.performance = performance
-        self.get_best_weights = get_best_weights
+        self.observers = observers
         self.verbose = verbose
-        self.checkpoint = checkpoint
-        self.monitor = monitor
         self.random_state = random_state
-        self.gradient_check = gradient_check
 
-# --------------------------------------------------------------------------- #
-#                               PROPERTIES                                    #
-# --------------------------------------------------------------------------- #    
+    # ----------------------------------------------------------------------- #
     @property    
     def description(self):
         """Returns the estimator description."""                         
@@ -104,121 +90,150 @@ class GradientDescent(BaseEstimator):
     def converged(self, x):
         self._converged = x       
 
-# --------------------------------------------------------------------------- #
-#                                 VALIDATION                                  #
-# --------------------------------------------------------------------------- #   
-    def _validate_params(self):
-        """Performs validation on the hyperparameters."""
-        # ---------------------- Learning Rate ------------------------------ #
-        if isinstance(self.learning_rate, LearningRateSchedule):        
-            validate_learning_rate_schedule(self.learning_rate)
-        else:
-            validate_range(param=self.learning_rate, minimum=0,
-                           maximum=1, param_name='learning_rate',
-                           left="open", right="open")        
-        # --------------------------- Epochs -------------------------------- #
-        validate_int(param=self.epochs, param_name='epochs')
-        # ----------------------- Theta Init -------------------------------- #
-        if self.theta_init:
-            validate_array_like(param=self.theta_init, param_name='theta_init')
-        # ------------------------- Optimizer --------------------------------#
-        validate_optimizer(self.optimizer)
-        # -------------------------- Objective -------------------------------#
-        validate_objective(self.objective)
-        # ------------------------- Early Stop -------------------------------#
-        if self.performance:
-            validate_performance(self.performance)
-        # ---------------------- get_best_weights ----------------------------#
-        validate_bool(param=self.get_best_weights, param_name='get_best_weights')
-        # ------------------------- Verbose ----------------------------------#
-        validate_bool(param=self.verbose, param_name='verbose')
-        # ------------------------ Checkpoint --------------------------------#
-        validate_int(param=self.checkpoint, param_name='checkpoint')
-        # -------------------------- Performance ---------------------------------#
-        validate_monitor(self.monitor)
-        # ------------------------- Random State -----------------------------#
-        if self.random_state:
-            validate_int(param=self.random_state, param_name='random_state')
-        # ------------------------ Gradient check ----------------------------#
-        validate_gradient_check(self.gradient_check)
-
-# --------------------------------------------------------------------------- #
-#                               COMPILE                                       #
-# --------------------------------------------------------------------------- #    
+    # ----------------------------------------------------------------------- #
     def _copy_mutable_parameters(self):
-        """Copies mutable parameters to new members for sklearn compatibility."""
-        # ------------------------------------------------------------------- #
-        #                   Copy Required Mutable Objects                     #
-        # ------------------------------------------------------------------- #
-        self._optimizer = copy.deepcopy(self.optimizer)
-        self._objective = copy.deepcopy(self.objective)       
+        """Makes deepcopies of mutable parameters and makes them private members."""
 
-        # ------------------------------------------------------------------- #
-        #                   Copy Optional Mutable Objects                     #
-        # ------------------------------------------------------------------- #
-        # Performance and reports data regarding optimization stability
-        self._monitor = copy.deepcopy(self.monitor) if\
-            isinstance(self.monitor, Performance) else\
-                self.monitor              
-        
-    def _compile(self, log=None):
-        """Initializes all observers."""        
-        # ------------------------------------------------------------------- #
-        #     Copy Mutable Classes that will be Modified During Training      #
-        # ------------------------------------------------------------------- #
+        # Observers
+        self._observers = copy.deepcopy(self.observers) if self.observers\
+            else self.observers
 
-        self._copy_mutable_parameters()  
+        # The Optimizer algorithm
+        if self.optimizer:
+            self._optimizer = copy.deepcopy(self.optimizer)
+        else:
+            self._optimizer = GradientDescentOptimizer()
 
-        # ------------------------------------------------------------------- #
-        #                      Initialize Observer List                       #
-        # ------------------------------------------------------------------- #
-        self._cbks = ObserverList()              
-
-        # ------------------------------------------------------------------- #
-        #                Create Implicit Observer Dependencies                #
-        # ------------------------------------------------------------------- #        
-        self.blackbox_ = BlackBox()                
-
-        # ------------------------------------------------------------------- #
-        #                Add observers to observerlist.                       #
-        # ------------------------------------------------------------------- #
-        # Learning rate schedules anneal the learning rate via the eta attribute
-        if isinstance(self.learning_rate, LearningRateSchedule):
-            self._cbks.append(copy.deepcopy(self.learning_rate))                
-        
-        # Early stop observer signals convergence via the converged attribute            
-        if isinstance(self.performance, Performance):            
-            self._cbks.append(copy.deepcopy(self.performance))             
-        
-        # Checks gradients every n iterations and reports errors 
-        if self.gradient_check:
-            if isinstance(self.gradient_check, GradientCheck):
-                self._cbks.append(copy.deepcopy(self.gradient_check))    
-            else:
-                self._cbks.append(GradientCheck())    
-        
-        # Reports metrics each 'checkpoint' number of epochs
+        # The objective function to be minimized.
+        if self.objective:
+            self._objective = copy.deepcopy(self.objective)
+        else:
+            self._objective = MSE()
+    # ----------------------------------------------------------------------- #
+    def _create_observer_attributes(self):
+        """Adds each observer to model as an attribute."""
+        # First, add any additional observers that should be attributes
+        self._observers['blackbox_'] = BlackBox()        
+        for name, observer in self._observers.items():
+                setattr(self, name, observer)
+    # ----------------------------------------------------------------------- #
+    def _create_observer_list(self):
+        """Adds all observers to the observer list that gets notified."""
+        # Add any additional default observers to observer dictionary
         if self.verbose:
-            self._cbks.append(Progress())      
+            self._observers['progress'] = Progress()
+
+        self._observer_list = ObserverList()                
+        for observer in self._observers.values():
+            self._observer_list.append(observer)
+
+        # Publish model parameters and instance on observer objects.
+        self._observer_list.set_params(self.get_params())
+        self._observer_list.set_model(self)            
+
+    # ----------------------------------------------------------------------- #
+    def _compile(self):        
+        """Obtains, initializes object dependencies and registers observers."""
+
+        self._copy_mutable_parameters()
+        self._create_observer_attributes()
+        self._create_observer_list()
+
+    # ----------------------------------------------------------------------- #
+    def _on_train_begin(self, log=None):
+        """Initializes all data, objects, and dependencies.
         
-        # Performances performance and sends data when optimization has stabilized  
-        if self._monitor:
-            if isinstance(self._monitor, Performance):                
-                self._cbks.append(self._monitor)
-            else:
-                self._cbks.append(Performance())      
+        Parameters
+        ----------
+        log : dict
+            Data relevant this part of the process. Not used.
+        """
+        log = log or {}    
+        self._compile()    
+        self._epoch = 0       
+        self._theta = None
+        self._converged = False    
+        self._init_weights()
+        try:
+            self._eta = self.schedule.initial_learning_rate
+        except:
+            self._eta = self.learning_rate
+        self._observer_list.on_train_begin(log)
 
-        # Log of optimization data e.g. training error, learning rate, history
-        self._cbks.append(self.blackbox_)  
-        # ------------------------------------------------------------------- #
-        #                      Initialize All Observers                       #
-        # ------------------------------------------------------------------- #
-        self._cbks.set_params(self.get_params())
-        self._cbks.set_model(self)        
+    # ----------------------------------------------------------------------- #
+    def _on_train_end(self, log=None):
+        """Finalizes training, formats attributes, and ensures object state is fitted.
+        
+        Parameters
+        ----------
+        log : dict
+            Data relevant this part of the process. Not used.
+        
+        """
+        log = log or {}
+        self.n_iter_ = self._epoch 
+        self.theta_ = self._theta
+        self._observer_list.on_train_end(log)
+    # ----------------------------------------------------------------------- #
+    def _on_epoch_begin(self, epoch, log=None):
+        """Initializes all data, objects, and dependencies.
+        
+        Parameters
+        ----------
+        epoch : int
+            The current epoch number. Zero indexed.
 
-# --------------------------------------------------------------------------- #
-#                             INITIALIZATION                                  #
-# --------------------------------------------------------------------------- #              
+        log : dict
+            Data relevant this part of the process. Not used.
+        """
+        log = log or {}     
+        self._observer_list.on_epoch_begin(self._epoch,log)
+    # ----------------------------------------------------------------------- #
+    def _on_epoch_end(self, epoch, log=None):
+        """Finalizes epoching, formats attributes, and ensures object state is fitted.
+        
+        Parameters
+        ----------
+        epoch : int
+            The current epoch number. Zero indexed.
+        
+        log : dict
+            Data relevant this part of the process. Not used.
+        
+        """
+        log = log or {}     
+        self._observer_list.on_epoch_end(self._epoch, log)
+        self._epoch += 1
+    # ----------------------------------------------------------------------- #
+    @abstractmethod
+    def _init_weights(self):
+        pass
+    # ----------------------------------------------------------------------- #
+    @abstractmethod
+    def fit(self, X=None, y=None):
+        pass
+
+# =========================================================================== #
+#                    GRADIENT DESCENT PURE OPTIMIZER                          #
+# =========================================================================== #
+class GradientDescentPureOptimizer(GradientDescentAbstract):
+    """Performs pure optimization of an objective function."""
+
+    def __init__(self, learning_rate=0.01, epochs=1000, objective=None,
+                 theta_init=None, optimizer=None,  observers=None,
+                 verbose=False, random_state=None):
+        super(GradientDescentPureOptimizer, self).__init__(
+            learning_rate = learning_rate,
+            epochs = epochs,
+            objective  = objective,
+            theta_init = theta_init,
+            optimizer = optimizer,
+            observers = observers,
+            verbose = verbose,
+            random_state = random_state
+        )
+
+    # ----------------------------------------------------------------------- #
     def _init_weights(self):
         """Initializes parameters."""
         if self.theta_init is not None:
@@ -228,548 +243,63 @@ class GradientDescent(BaseEstimator):
                 self._theta = self.theta_init
         else:            
             rng = np.random.RandomState(self.random_state)         
-            self._theta = rng.randn(2)
-# --------------------------------------------------------------------------- #
-#                           EVALUATE EPOCH                                    #
-# --------------------------------------------------------------------------- #
-    def _evaluate_epoch(self, log=None):
-        log = log or {}
-        log['epoch'] = self._epoch
-        log['learning_rate'] = self._eta
-        log['theta'] = self._theta
-        # Grab training cost if available
-        if self._cost:
-            log['train_cost'] = self._cost
-        # Otherwise this is being called at train_begin and must be computed.
-        else:
-            log['train_cost'] = self._objective(self._theta)
-        log['gradient'] = self._objective.gradient(self._theta)
-        log['gradient_norm'] = np.linalg.norm(log['gradient'])
-        self._final_result = log
-        return log
-
-# --------------------------------------------------------------------------- #
-#                     INTERNAL AND EXTERNAL CALLBACKS                         #
-# --------------------------------------------------------------------------- #
-
-    def _begin_training(self, log=None):
-        """Performs initializations required at the beginning of training."""
-        log = log or {}
-        self._validate_params() 
-        # Private variables
-        self._epoch = 0
-        self._batch = 0                
-        self._converged = False        
-        self._eta = self.learning_rate if isinstance(self.learning_rate, float)\
-            else self.learning_rate.initial_learning_rate
-        self._gradient = None
-        self._cost = None
-        self._final_result = None     
-        self._best_result = None      
-        # Dependencies, data, and weights.
-        self._compile()              
-        self._init_weights()     
-        # Perform begin training routines on observers. 
-        self._cbks.on_train_begin(log) 
-
-    def _end_training(self, log=None):
-        """Closes history callout and assign final and best weights."""                    
-        log = log or {}
-        self._get_results()
-        self.n_iter_ = self._epoch + 1
-        self._cbks.on_train_end()
-
-    def _begin_epoch(self, log=None):
-        """Logic performed at the beginning of each epoch."""            
-        log = log or {}     
-        # Perform epoch evaluation 
-        log = self._evaluate_epoch(log)
-        # Perform begin epoch methods on observers e.g. blackbox
-        self._cbks.on_epoch_begin(self._epoch, log)          
-        # Bump epochs after observers to that we are zero indexed.
-        self._epoch += 1   
-
-
-    def _end_epoch(self, log=None):        
-        """Performs end-of-epoch evaluation and scoring."""        
-        log = log or {}        
-        # Perform end epoch methods on observers e.g. learning_rate schedules
-        self._cbks.on_epoch_end(self._epoch, log)                  
-        
-    def _get_results(self):
-        # Obtain best results
-        if self.performance:
-            self._best_result = self._performance.best_results
-        elif self._monitor:
-            self._best_result = self._monitor.best_results
-        else:
-            self._best_result = self._final_result
-
-        # Format thetas from final or best results as requested
-        if self.get_best_weights:
-            self.theta_ = self._best_result['theta']
-        else:
-            self.theta_ = self._final_result['theta']
-        
-        # Format final intercept and coefficient attributes
-        self.intercept_ = self.theta_[0]
-        self.coef_ = self.theta_[1:]   
-# --------------------------------------------------------------------------- #
-#                                 FIT                                         #
-# --------------------------------------------------------------------------- #
+            self._theta = rng.randn(2)    
+    # ----------------------------------------------------------------------- #            
     def fit(self, X=None, y=None):
-        """Fits the objective function.
+        """Performs the optimization of the objective function..
         
         Parameters
         ----------
         objective : object derived from Objective class
-            The objective function to be minimized
+            The objective function to be optimized
 
         Returns
         -------
         self
         """
         
-        self._begin_training()
+        self._on_train_begin()
 
         while (self._epoch < self.epochs and not self._converged):
 
-            self._begin_epoch()
+            self._on_epoch_begin(epoch=self._epoch)
 
-            self._cost = self._objective(self._theta)
+            cost = self._objective(self._theta)
 
-            self._theta_update, self._gradient = self._optimizer(gradient=self._objective.gradient, \
+            theta_update, gradient = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.deepcopy(self._theta))                    
 
-            self._end_epoch()
+            log = {'epoch': self._epoch, 'train_cost': cost, 
+                   'theta': copy.copy(self._theta), 'gradient': gradient,
+                   'gradient_norm': np.linalg.norm(gradient)}
 
-        self._end_training()
-        return self         
+            self._theta = theta_update
+            self._on_epoch_end(self._epoch, log=log)
+            
 
+        self._on_train_end()
+        return self   
 
 # =========================================================================== #
-#                          GRADIENT DESCENT ESTIMATOR                         #
-# =========================================================================== #
-class GradientDescentEstimator(ABC, GradientDescent):
-    """Base class gradient descent estimator."""
+#                        GRADIENT DESCENT ESTIMATOR                           #
+# =========================================================================== # 
+"""Base class for gradient descent estimators. """
+class GradientDescentEstimator(GradientDescentAbstract):
+    """Gradient Descent abstract base class."""
+    def __init__(self, learning_rate=0.01, learning_rate_schedule=None, epochs=1000, 
+                 theta_init=None, optimizer=None, objective=None, observer=None, 
+                 get_best_weights=True, verbose=False, checkpoint=100,  
+                 random_state=None, gradient_check=False):
 
-    def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
-                 optimizer=Classic(), objective=MSE(), batch_size=None, 
-                 val_size=0.3, monitor=Performance(), scorer=R2(), 
-                 performance=None, get_best_weights=True,
-                 verbose=False, checkpoint=100, random_state=None, 
-                 gradient_check=False):
-                 
-        super(GradientDescentEstimator, self).__init__(
-            learning_rate = learning_rate,      
-            epochs = epochs,
-            theta_init = theta_init,
-            optimizer = optimizer,
-            objective = objective,                                          
-            monitor=monitor,
-            performance = performance,
-            get_best_weights = get_best_weights,
-            verbose = verbose,
-            checkpoint = checkpoint,
-            random_state = random_state,
-            gradient_check = gradient_check
-        )
-        self.val_size = val_size        
-        self.batch_size = batch_size
-        self.scorer = scorer
-          
-# --------------------------------------------------------------------------- #
-#                                 VALIDATION                                  #
-# --------------------------------------------------------------------------- #   
-    def _validate_params(self):        
-        super(GradientDescentEstimator, self)._validate_params()
-        if self.val_size:
-            validate_zero_to_one(param=self.val_size, param_name='val_size')
-        if self.batch_size:
-            validate_int(param=self.batch_size, param_name='batch_size')
-        if self.scorer:
-            validate_scorer(self.scorer)
-# --------------------------------------------------------------------------- #
-#                               PROPERTIES                                    #
-# --------------------------------------------------------------------------- #   
-
-    @property
-    def variant(self):
-        if self.batch_size is None:
-            variant = 'Batch Gradient Descent'
-        elif self.batch_size == 1:
-            variant = 'Stochastic Gradient Descent'
-        else:
-            variant = 'Minibatch Gradient Descent'
-        return variant
-
-    @property
-    def task(self):
-        return self._task
-
-    @property
-    def description(self):
-        """Returns the estimator description."""                   
-        task = self._task.name
-        regularizer = self._objective.regularizer.__class__.__name__     
-        optimizer = self._optimizer.__class__.__name__
-        regularizer_title = ""
-        optimizer_title = ""
-
-        if regularizer != "Nill":
-            regularizer_title = " (" + regularizer + " Regularizer) "
-
-        if optimizer != "Classic":
-            optimizer_title = " (" + optimizer_title + " Optimization) "
-        
-        return task + regularizer_title + " with " + \
-            self.variant + optimizer_title      
-# --------------------------------------------------------------------------- #
-#                               COMPILE                                       #
-# --------------------------------------------------------------------------- # 
-    def _copy_mutable_parameters(self):
-        """Copies mutable parameters for sklearn compliance."""
-        super(GradientDescentEstimator, self)._copy_mutable_parameters()
-        self._scorer = copy.deepcopy(self.scorer)
-
-# --------------------------------------------------------------------------- #
-#                            INITIALIZATION                                   #
-# --------------------------------------------------------------------------- #                                        
-    @abstractmethod
-    def _init_weights(self):
-        pass
-
-# --------------------------------------------------------------------------- #
-#                             DATA PREPARATION                                #
-# --------------------------------------------------------------------------- #    
-    def _prepare_training_data(self, X, y):
-        """Prepares X and y data for training."""
-        data = self._data_processor.fit_transform(X, y)
-        # Set attributes from data.
-        for k, v in data.items():            
-            setattr(self, k, v)
-            # Attempt to extract feature names from the 'X' array  
-            if np.ndim(v) > 1:
-                if v.shape[1] > 1:
-                    try:
-                        self.features_ =  v.dtype.names                     
-                    except:
-                        self.features_ = None        
-
-# --------------------------------------------------------------------------- #
-#                               EVALUATION                                    #
-# --------------------------------------------------------------------------- #
-    def _evaluate_epoch(self, log=None):
-        """Computes training costs, and optionally scores, for each epoch."""   
-        log = log or {}
-        log['epoch'] = self._epoch      
-        log['learning_rate'] = self._eta    
-        log['theta'] = self._theta            
-        # Compute training costs and scores
-        y_out = self._task.compute_output(self._theta, self.X_train_)
-        log['train_cost'] = self._objective(self._theta, self.y_train_, y_out)
-        # If there is a scoring object, compute scores
-        if self.scorer:
-            y_pred = self._task.predict(self._theta, self.X_train_)
-            log['train_score'] = self._scorer(self.y_train_orig_, y_pred)
-
-        # If we have a validation set, compute validation error and score
-        if hasattr(self, 'X_val_'):
-            if self.X_val_.shape[0] > 0:
-                y_out_val = self._task.compute_output(self._theta, self.X_val_)
-                log['val_cost'] = self._objective(self._theta, self.y_val_, y_out_val)        
-                if self.scorer:
-                    y_pred_val = self._task.predict(self._theta, self.X_val_)
-                    log['val_score'] = self._scorer(self.y_val_orig_, y_pred_val)
-
-        # If we have the gradient, i.e. not the first iteration, grab it
-        if self._gradient is not None:
-            log['gradient'] = self._gradient
-        # Otherwise, compute it
-        else:
-            log['gradient'] = \
-                self._objective.gradient(theta=self._theta, X=self.X_train_,
-                                         y=self.y_train_, y_out=y_out)            
-        # Compute the gradient norm        
-        log['gradient_norm'] = \
-                np.linalg.norm(log['gradient']) 
-        self._final_result = log
-
-        return log      
-
-# --------------------------------------------------------------------------- #
-#                  INTERNAL AND EXTERNAL CALLBACKS                            #
-# --------------------------------------------------------------------------- #
-
-    def _begin_training(self, log=None):
-        """Performs initializations required at the beginning of training."""            
-        log = log or {}
-        self._validate_params() 
-        # Private variables
-        self._epoch = 0
-        self._batch = 0                
-        self._converged = False        
-        self._eta = self.learning_rate if isinstance(self.learning_rate, float)\
-            else self.learning_rate.initial_learning_rate
-        self._gradient = None
-        self._cost = None
-        self._final_result = None
-        self._best_result = None   
-        self._features = None
-        # Dependencies, data, and weights.
-        self._compile(log)              
-        self._prepare_training_data(log.get("X"),log.get("y"))        
-        self._init_weights()            
-        # Update training log
-        self._cbks.on_train_begin(log)  
-
-    def _begin_epoch(self, log=None):
-        """Increment the epoch, evaluate using current parameters and shuffle the data."""            
-        log = log or {}        
-        # Shuffle data      
-        rs = None
-        if self.random_state:
-            rs = self.random_state + self._epoch
-        self.X_train_, self.y_train_ = shuffle_data(self.X_train_, self.y_train_, random_state=rs) 
-        # Perform epoch evaluation 
-        log = self._evaluate_epoch(log)        
-        # Perform begin epoch methods on observers e.g. blackbox
-        self._cbks.on_epoch_begin(self._epoch, logs=log)               
-        # Bump epochs after observers so that we are zero indexed.
-        self._epoch += 1
-
-
-    def _end_epoch(self, log=None):        
-        """Performs end-of-epoch evaluation and scoring."""            
-        log = log or {}        
-        # Perform end epoch methods on observers e.g. learning_rate schedules
-        self._cbks.on_epoch_end(self._epoch, log)         
-
-    def _begin_batch(self, log=None):
-        log = log or {}
-        self._cbks.on_batch_begin(self._batch, log)
-
-    def _end_batch(self, log=None):        
-        log = log or {} 
-        self._cbks.on_batch_end(self._batch, log)
-        self._batch += 1
-
-        
-# --------------------------------------------------------------------------- #
-#                                  FIT                                        #
-# --------------------------------------------------------------------------- #
-    def fit(self, X, y):
-        """Trains model until stop condition is met.
-        
-        Parameters
-        ----------
-        X : array-like, shape (n_samples, n_features)
-            Training data
-
-        y : numpy array, shape (n_samples,)
-            Target values 
-
-        Returns
-        -------
-        self : returns instance of self._
-        """        
-        train_log = {'X': X, 'y': y}
-        self._begin_training(train_log)        
-
-        while (self._epoch < self.epochs and not self._converged):            
-
-            self._begin_epoch()
-
-            for X_batch, y_batch in batch_iterator(self.X_train_, self.y_train_, batch_size=self.batch_size):
-
-                self._begin_batch()
-                
-                # Compute model output
-                y_out = self._task.compute_output(self._theta, X_batch)     
-
-                # Compute costs
-                self._cost = self._objective(self._theta, y_batch, y_out)
-
-                # Format batch log
-                log = {'batch': self._batch,'theta': self._theta, 
-                       'train_cost': self._cost}
-
-                # Compute gradient and update parameters 
-                self._theta, self._gradient = self._optimizer(gradient=self._objective.gradient, \
-                    learning_rate=self._eta, theta=copy.copy(self._theta),  X=X_batch, y=y_batch,\
-                        y_out=y_out)                       
-
-                # Update batch log
-                log['gradient'] = self._gradient
-                log['gradient_norm'] = np.linalg.norm(self._gradient) 
-                self._end_batch(log=log)
-
-            # Wrap up epoch
-            self._end_epoch()
-
-        self._end_training()
-        return self     
-
-    def predict(self, X):
-        """Computes prediction for test data.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The input data
-
-        Returns
-        -------
-        y_pred : prediction
-        """
-        check_is_fitted(self)
-        X = check_X(X)
-        X = add_bias_term(X)
-        return self._task.predict(self._theta, X)
-    
-    def _score(self, X, y):
-        """Calculates scores during training."""
-        # Called during training. Assumes data has valid format. 
-        y_pred = self._task.predict(self._theta, X)
-        return self._scorer(y, y_pred)
-    
-    def score(self, X, y):
-        """Computes scores using test data.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The input data
-
-        y : array_like of shape (n_samples,) 
-            The target variable.
-
-        Returns
-        -------
-        score based upon the scorer object.
-        
-        """        
-        y_pred = self.predict(X)        
-        return self._scorer(y, y_pred)
-
-    def summary(self, features=None):        
-        self.blackbox_.report(features)
-
-# --------------------------------------------------------------------------- #
-#                     GRADIENT DESCENT REGRESSOR                              #
-# --------------------------------------------------------------------------- #
-class GradientDescentRegressor(GradientDescentEstimator, RegressorMixin):
-    """Gradient descent estimator for regression."""
-
-    def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
-                 optimizer=Classic(), objective=MSE(), batch_size=None, 
-                 val_size=0.3, monitor=Performance(), 
-                 scorer=R2(), performance=None, get_best_weights=True,
-                 verbose=False, checkpoint=100, random_state=None, 
-                 gradient_check=False):
-        
-        super(GradientDescentRegressor, self).__init__(\
-            learning_rate = learning_rate,
-            epochs = epochs,        
-            theta_init = theta_init,
-            optimizer = optimizer,
-            objective = objective,        
-            batch_size = batch_size,
-            val_size = val_size,            
-            monitor=monitor,
-            scorer = scorer,
-            performance = performance,
-            get_best_weights=get_best_weights,
-            verbose = verbose,
-            checkpoint = checkpoint,
-            random_state = random_state,
-            gradient_check = gradient_check   
-        )
-
-    def _compile(self, log=None):
-        """Compiles required objects."""
-        super(GradientDescentRegressor, self)._compile(log)        
-        self._task = LinearRegression()        
-        self._data_processor = RegressionDataProcessor(val_size=self.val_size, 
-                                            random_state=self.random_state)
-
-    def _init_weights(self):
-        """Initializes parameters."""
-        if self.theta_init is not None:
-            assert self.theta_init.shape == (self.X_train_.shape[1],), \
-                    "Initial parameters theta must have shape (n_features+1,)."
-            self._theta = self.theta_init
-        else:
-            rng = np.random.RandomState(self.random_state)                
-            self._theta = rng.randn(self.X_train_.shape[1])      
-
-# --------------------------------------------------------------------------- #
-#                     GRADIENT DESCENT CLASSIFIFER                            #
-# --------------------------------------------------------------------------- #
-class GradientDescentClassifier(GradientDescentEstimator, ClassifierMixin):
-    """Gradient descent estimator for classification."""
-
-    def __init__(self, learning_rate=0.01, epochs=1000, theta_init=None,
-                 optimizer=Classic(), objective=CrossEntropy(), batch_size=None, 
-                 val_size=0.3, monitor=Performance(), 
-                 scorer=Accuracy(), performance=None, get_best_weights=True,
-                 verbose=False, checkpoint=100, random_state=None, 
-                 gradient_check=False):
-        
-        super(GradientDescentClassifier, self).__init__(\
-            learning_rate = learning_rate,
-            epochs = epochs,        
-            theta_init = theta_init,
-            optimizer = optimizer,
-            objective = objective,        
-            batch_size = batch_size,
-            val_size = val_size,
-            monitor = monitor,
-            scorer = scorer,
-            performance = performance,
-            get_best_weights=get_best_weights,
-            verbose = verbose,
-            checkpoint = checkpoint,
-            random_state = random_state,
-            gradient_check = gradient_check   
-        )
-
-
-    def _compile(self, log=None):
-        """Compiles required objects."""
-        super(GradientDescentClassifier, self)._compile(log)        
-        y = log.get('y')
-        if np.ndim(y) == 2 or len(np.unique(y)==2):
-            self._task = LogisticRegression()
-        else:
-            self._task = MultinomialLogisticRegression()
-        self._data_processor = ClassificationDataProcessor(val_size=self.val_size, 
-                                            random_state=self.random_state)
-
-    def _init_weights_binary_classification(self):
-        """Initializes weights for binary classification."""
-        if self.theta_init is not None:
-            assert self.theta_init.shape == (self.n_features_,), \
-                "Initial parameters theta must have shape (n_features+1)."
-            self._theta = self.theta_init
-        else:
-            rng = np.random.RandomState(self.random_state)
-            self._theta = rng.randn(self.n_features_)   
-
-    def _init_weights_multiclass(self):
-        """Initializes weights for multiclass classification."""
-        if self.theta_init is not None:
-            assert self.theta_init.shape == (self.n_features_, self.n_classes_), \
-                "Initial parameters theta must have shape (n_features+1, n_classes)."
-            self._theta = self.theta_init
-        else:
-            rng = np.random.RandomState(self.random_state)                
-            self._theta = rng.randn(self.n_features_, self.n_classes_)        
-
-    def _init_weights(self):
-        """Initializes model parameters."""        
-        if self.y_train_.ndim == 1:
-            self._init_weights_binary_classification()
-        else:
-            self._init_weights_multiclass()
-
+        self.learning_rate = learning_rate
+        self.schedule = schedule
+        self.epochs = epochs
+        self.theta_init = theta_init
+        self.optimizer = optimizer
+        self.objective  = objective        
+        self.observer = observer
+        self.get_best_weights = get_best_weights
+        self.verbose = verbose
+        self.checkpoint = checkpoint
+        self.random_state = random_state
+        self.gradient_check = gradient_check
