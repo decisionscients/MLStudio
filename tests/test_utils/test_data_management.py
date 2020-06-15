@@ -28,8 +28,6 @@ import scipy.sparse as sp
 from mlstudio.datasets import load_urls
 from mlstudio.utils.data_manager import MinMaxScaler, data_split, GradientScaler
 from mlstudio.utils.data_manager import encode_labels, add_bias_term
-from mlstudio.utils.validation import check_X_y, check_X, check_is_fitted, is_multilabel
-from mlstudio.utils.validation import is_multilabel
 
 # --------------------------------------------------------------------------  #
 #                       TEST DATA CHECKS AND PREP                             #
@@ -49,64 +47,38 @@ def test_encode_labels(get_data_management_data):
         msg = "Encoding of " + k + " didn't work."
         assert np.array_equal(encoded_classes, y_new_classes), msg
   
-# --------------------------------------------------------------------------  #
-@mark.utils
-@mark.data_manager
-@mark.data_checks
-@mark.is_one_hot
-def test_is_one_hot(get_data_management_data):
-    d = get_data_management_data
-    for k, y in d.items():        
-        msg = "Is one-hot of " + k + " didn't work."
-        if k == 'one_hot':
-            assert is_one_hot(y), msg
-        else:
-            assert not is_one_hot(y), msg
 
 # --------------------------------------------------------------------------  #
-@mark.utils
-@mark.data_manager
-@mark.data_checks
-@mark.is_multilabel
-def test_is_multilabel(get_data_management_data):
-    d = get_data_management_data
-    for k, y in d.items():        
-        msg = "Is multilabel of " + k + " didn't work."
-        if 'multilabel' in k:
-            assert is_multilabel(y), msg
-        else:
-            assert not is_multilabel(y), msg
-
-
-# --------------------------------------------------------------------------  #
-#                        TEST VECTOR SCALER                                   #
+#                        TEST GRADIENT SCALER                                 #
 # --------------------------------------------------------------------------  #  
-clip_norm = [1,2,10]
-low = [1e-16, 1e15, 1e-16]
-high = [1e-15, 1e16, 1e-15] 
 @mark.utils
 @mark.data_manager
-@mark.vector_scaler
-def test_vector_scaler_normalize():            
-    for s in zip(clip_norm, low, high):
-        X = np.random.default_rng().uniform(low=s[1], high=s[2], size=20)
-        scaler = GradientScaler(method="n", lower_threshold=s[1], upper_threshold=s[2], clip_norm=s[0])
+@mark.gradient_scaler
+def test_gradient_scaler():            
+    lower_threshold = 1e-10
+    upper_threshold = 1e10
+    lows = [1e-20, 1e15, 1] 
+    highs = [1e-10, 1e20, 5]
+    for g in zip(lows, highs):    
+        X = np.random.default_rng().uniform(low=g[0], high=g[1], size=20)                
+        X_orig_norm = np.linalg.norm(X)        
+        scaler = GradientScaler(lower_threshold=lower_threshold, 
+                                upper_threshold=upper_threshold)
         X_new = scaler.fit_transform(X)
-        assert np.isclose(np.linalg.norm(X_new),s[0]), "Normalization didn't work"
+        X_new_norm = np.linalg.norm(X_new)
+        assert X_new_norm>=lower_threshold and \
+               X_new_norm<=upper_threshold, \
+                   "Scaling didn't work. X_new_norm = {n}".format(
+                   n=str(X_new_norm))
+        X_orig_norm = np.linalg.norm(X)
         X_old = scaler.inverse_transform(X_new)
-        assert np.allclose(X, X_old), "Denormalization didn't work"
+        X_old_norm = np.linalg.norm(X_old)
 
-@mark.utils
-@mark.data_manager
-@mark.vector_scaler
-def test_vector_scaler_clip():      
-    for s in zip(clip_norm, low, high):
-        X = np.random.default_rng().uniform(low=s[1], high=s[2], size=20)
-        scaler = GradientScaler(method="c", lower_threshold=s[1], upper_threshold=s[2], clip_norm=s[0])
-        X_new = scaler.fit_transform(X)
-        assert len(X_new[X_new < s[1]])==0, "Clipping didn't work"
-        assert len(X_new[X_new > s[2]])==0, "Clipping didn't work"
-
+        assert np.isclose(X_orig_norm, X_old_norm), \
+            "Reverse transform didn't work\
+                \nX_orig_norm = {n1}\nX_old_norm={n2}".format(n1=str(X_orig_norm),
+                n2=str(X_old_norm))
+        
 
 # --------------------------------------------------------------------------  #
 #                       TEST MINMAX SCALER                                    #
@@ -140,8 +112,6 @@ def test_data_split():
     train_proportions = train_counts / n_train
     test_proportions = test_counts / n_test
     assert np.allclose(train_proportions, test_proportions, rtol=1e-2), "Data split stratification problem "
-    print(train_proportions)
-    print(test_proportions)
 
 
 

@@ -36,7 +36,32 @@ def check_X_y(X, y):
 
 def check_is_fitted(estimator):
     skl.check_is_fitted(estimator)
+    
+# --------------------------------------------------------------------------  #
+def is_valid_array_size(x, lower=1e-10, upper=1e10):
+    """Checks whether a vector or matrix norm is within lower and upper bounds.
+    
+    Parameters
+    ----------
+    x : array-like
+        The data to be checked
 
+    lower : float (default = 1e-10)
+        The lower bound vector or matrix norm.
+
+    upper : float (default = 1e10)
+        The upper bound vector or matrix norm.
+
+    Returns
+    -------
+    bools : True if greater than lower and less than upper, False otherwise.
+    """
+    r = np.linalg.norm(x)
+    if r > lower and r < upper:
+        return True
+    else:
+        return False
+# --------------------------------------------------------------------------  #
 def is_one_hot(x):
     """Returns true if a 2 dimensional matrix is in one-hot encoded format."""
     if np.ndim(x) == 1:
@@ -45,7 +70,7 @@ def is_one_hot(x):
         return np.sum(x) / x.shape[0]  == 1
     except:
         return False
-
+# --------------------------------------------------------------------------  #
 def is_multilabel(y):
     """Returns true if y is multilabel"""
     y = np.asarray(y)
@@ -54,7 +79,8 @@ def is_multilabel(y):
     if is_one_hot(y):
         return False
     if y.shape[1] > 1:
-        return True
+        return True        
+
 # --------------------------------------------------------------------------  #
 def validate_bool(param, param_name=""):        
     if not isinstance(param, bool):

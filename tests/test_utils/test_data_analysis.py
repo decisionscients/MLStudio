@@ -50,7 +50,6 @@ def test_describe_categorical_array():
     a = np.random.choice(s, size=100)
     d = describe_categorical_array(a)
     columns = ['count', 'top', 'unique', 'freq']
-    print(d)
     assert len(d) == 4, "Describe categorical array dictionary wrong length."
     for c in columns:        
         assert d.get(c) is not None, "Describe categorical didn't return " + c

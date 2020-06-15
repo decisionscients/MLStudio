@@ -25,9 +25,47 @@ import pytest
 from pytest import mark
 import scipy.sparse as sp
 
+from mlstudio.utils.validation import is_one_hot
+from mlstudio.utils.validation import is_multilabel, is_valid_array_size
+# --------------------------------------------------------------------------  #
+@mark.utils
+@mark.validation
+@mark.data_checks
+@mark.is_one_hot
+def test_is_one_hot(get_data_management_data):
+    d = get_data_management_data
+    for k, y in d.items():        
+        msg = "Is one-hot of " + k + " didn't work."
+        if k == 'one_hot':
+            assert is_one_hot(y), msg
+        else:
+            assert not is_one_hot(y), msg
 
 # --------------------------------------------------------------------------  #
-#                          TEST VALIDATION                                    #
+@mark.utils
+@mark.validation
+@mark.data_checks
+@mark.is_multilabel
+def test_is_multilabel(get_data_management_data):
+    d = get_data_management_data
+    for k, y in d.items():        
+        msg = "Is multilabel of " + k + " didn't work."
+        if 'multilabel' in k:
+            assert is_multilabel(y), msg
+        else:
+            assert not is_multilabel(y), msg
+
+# --------------------------------------------------------------------------  #
+@mark.utils
+@mark.validation
+@mark.data_checks
+def test_is_valid_array_size():
+    from mlstudio.utils.validation import is_valid_array_size
+    X = np.random.default_rng().uniform(low=100, high=200, size=20)       
+    Y = np.random.default_rng().uniform(low=1, high=5, size=20)       
+    assert not is_valid_array_size(X, lower=1, upper=2), "is_valid_array_size failed"
+    assert is_valid_array_size(Y, lower=1, upper=100), "is_valid_array_size failed"
+  
 # --------------------------------------------------------------------------  #
 @mark.utils
 @mark.validation

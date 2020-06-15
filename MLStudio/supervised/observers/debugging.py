@@ -27,7 +27,7 @@ from scipy.sparse import issparse
 from mlstudio.supervised.observers.base import Observer
 from mlstudio.supervised.core.objectives import Cost
 from mlstudio.supervised.core.regularizers import Nill
-from mlstudio.utils.data_manager import valid_array
+from mlstudio.utils.data_manager import is_valid_array_size
 
 # --------------------------------------------------------------------------- #
 #                              GRADIENT CHECK                                 #
@@ -138,7 +138,7 @@ class GradientCheck(Observer):
                 grad_approx = np.array(grad_approx)
 
                 # Check norms and bail if gradients are rediculous.
-                if valid_array(grad) and valid_array(grad_approx):
+                if is_valid_array_size(grad) and is_valid_array_size(grad_approx):
                     # Evaluate
                     numerator = np.linalg.norm(grad-grad_approx)
                     denominator = np.linalg.norm(grad) + np.linalg.norm(grad_approx)

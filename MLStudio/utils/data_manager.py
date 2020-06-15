@@ -466,7 +466,7 @@ class GradientScaler(BaseEstimator, TransformerMixin):
 
     """
 
-    def __init__(self, lower_threshold=1e-10, upper_threshold=1): 
+    def __init__(self, lower_threshold=1e-10, upper_threshold=1e10): 
         self.lower_threshold  = lower_threshold
         self.upper_threshold = upper_threshold
         self.normalizer_ = None
@@ -477,13 +477,11 @@ class GradientScaler(BaseEstimator, TransformerMixin):
         return self       
 
     def transform(self, X):
-        """Transforms the data."""        
-        # If lower than threshold, return unit vector
+        """Transforms the data."""                
         if self._r < self.lower_threshold:
-            X = np.divide(X, self._r) 
+            X = X * self.lower_threshold / self._r
         elif self._r > self.upper_threshold:
-            # Rescale
-            X = self.upper_threshold / self._r * X
+            X = X * self.upper_threshold / self._r
         return X
 
     def fit_transform(self, X):
@@ -493,36 +491,12 @@ class GradientScaler(BaseEstimator, TransformerMixin):
 
     def inverse_transform(self, X):
         """Apply the inverse transformation. Only works for normalized data."""
-        return self._r
+        if self._r < self.lower_threshold:
+            X = X * self._r / self.lower_threshold
+        elif self._r > self.upper_threshold:
+            X = X * self._r / self.upper_threshold
+        return X
 
-# --------------------------------------------------------------------------- #
-#                              VALID ARRAY                                    #
-# --------------------------------------------------------------------------- #
-def valid_array(x, lower=1e-10, upper=1e10):
-    """Checks whether a vector or matrix norm is within lower and upper bounds.
-    
-    Parameters
-    ----------
-    x : array-like
-        The data to be checked
-
-    lower : float (default = 1e-10)
-        The lower bound vector or matrix norm.
-
-    upper : float (default = 1e10)
-        The upper bound vector or matrix norm.
-
-    Returns
-    -------
-    bools : True if greater than lower and less than upper, False otherwise.
-    """
-    r = np.linalg.norm(x)
-    if r > lower and r < upper:
-        return True
-    else:
-        return False
-
-    
 # --------------------------------------------------------------------------- #
 #                            SHUFFLE DATA                                     #
 # --------------------------------------------------------------------------- #
