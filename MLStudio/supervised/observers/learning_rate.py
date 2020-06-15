@@ -23,9 +23,8 @@ from abc import abstractmethod
 import math
 import numpy as np
 
-from mlstudio.supervised.observers.base import Observer
+from mlstudio.supervised.observers.base import Observer, PerformanceBaseObserver
 from mlstudio.supervised.core.scorers import MSE
-from mlstudio.supervised.observers.performance import Performance
 from mlstudio.utils.validation import validate_bool, validate_performance
 from mlstudio.utils.validation import validate_int
 from mlstudio.utils.validation import validate_learning_rate_schedule
@@ -72,17 +71,17 @@ class LearningRateSchedule(Observer):
                              left='closed', right='open')
 
     @abstractmethod
-    def _compute_learning_rate(self, epoch, logs):
+    def _compute_learning_rate(self, epoch, log):
         pass
 
-    def on_train_begin(self, logs=None):
-        super(LearningRateSchedule, self).on_train_begin(logs)        
+    def on_train_begin(self, log=None):
+        super(LearningRateSchedule, self).on_train_begin(log)        
         self._validate()
 
-    def on_epoch_begin(self, epoch, logs=None):
-        super(LearningRateSchedule, self).on_epoch_begin(epoch=epoch, logs=logs)        
+    def on_epoch_end(self, epoch, log=None):
+        super(LearningRateSchedule, self).on_epoch_begin(epoch=epoch, log=log)        
         self.model.eta = max(self.min_learning_rate,\
-            self._compute_learning_rate(epoch=epoch, logs=logs))
+            self._compute_learning_rate(epoch=epoch, log=log))
     
         
 
@@ -128,13 +127,13 @@ class StepDecay(LearningRateSchedule):
                      param_name='decay_steps',
                      minimum=1, left='closed', right='open')                
 
-    def _compute_learning_rate(self, epoch, logs):        
+    def _compute_learning_rate(self, epoch, log):        
         exponent = (1 + epoch) // self._steps
         return self.initial_learning_rate * \
             np.power(self.decay_factor, exponent)
 
-    def on_train_begin(self, logs=None):
-        super(StepDecay, self).on_train_begin(logs=logs)        
+    def on_train_begin(self, log=None):
+        super(StepDecay, self).on_train_begin(log=log)        
         self.decay_steps = min(self.decay_steps, self.model.epochs)            
         self._steps = self.model.epochs // self.decay_steps
 
@@ -171,14 +170,14 @@ class TimeDecay(LearningRateSchedule):
         return 1 - (self.initial_learning_rate - self.min_learning_rate)\
             / self.model.epochs
 
-    def _compute_learning_rate(self, epoch, logs):
+    def _compute_learning_rate(self, epoch, log):
         return self.initial_learning_rate / \
             (1 + self.decay_factor * epoch)
 
-    def on_train_begin(self, logs=None):
+    def on_train_begin(self, log=None):
         if self.decay_factor == 'optimal':
             self.decay_factor = self._compute_optimal_decay_factor()            
-        super(LearningRateSchedule, self).on_train_begin(logs)        
+        super(TimeDecay, self).on_train_begin(log)        
 
 # --------------------------------------------------------------------------  #
 class SqrtTimeDecay(LearningRateSchedule):
@@ -206,7 +205,7 @@ class SqrtTimeDecay(LearningRateSchedule):
 
         self.name = "Sqrt Time Decay Learning Rate Schedule"
 
-    def _compute_learning_rate(self, epoch, logs):
+    def _compute_learning_rate(self, epoch, log):
         return self.initial_learning_rate / \
             (1 + self.decay_factor * np.sqrt(epoch))       
                
@@ -239,7 +238,7 @@ class ExponentialDecay(LearningRateSchedule):
 
         self.name = "Exponential Decay Learning Rate Schedule"
 
-    def _compute_learning_rate(self, epoch, logs):
+    def _compute_learning_rate(self, epoch, log):
         return self.initial_learning_rate * \
             np.exp(-self.decay_factor * epoch)
 
@@ -285,16 +284,16 @@ class ExponentialStepDecay(LearningRateSchedule):
                      param_name='decay_steps',
                      minimum=1, left='open', right='open')        
 
-    def _compute_learning_rate(self, epoch, logs):
+    def _compute_learning_rate(self, epoch, log):
         exponent =  epoch // self._decay_step_length if self.staircase else \
             epoch / self._decay_step_length
         return self.initial_learning_rate * np.power(self.decay_factor, \
             exponent)
 
-    def on_train_begin(self, logs=None):
+    def on_train_begin(self, log=None):
+        super(ExponentialStepDecay, self).on_train_begin(log=log)
         self.decay_steps = min(self.decay_steps, self.model.epochs)
-        self._decay_step_length = self.model.epochs // self.decay_steps
-        super(ExponentialStepDecay, self).on_train_begin(logs=logs)
+        self._decay_step_length = self.model.epochs // self.decay_steps        
         
 # --------------------------------------------------------------------------  #
 class PolynomialDecay(LearningRateSchedule):
@@ -325,11 +324,12 @@ class PolynomialDecay(LearningRateSchedule):
 
     def _validate(self):
         """Performs hyperparameter validation"""
+        super(PolynomialDecay, self)._validate()
         validate_zero_to_one(param=self.power, 
                              param_name='power',
                              left='open', right='closed')                                
 
-    def _compute_learning_rate(self, epoch, logs):
+    def _compute_learning_rate(self, epoch, log):
         decay = (1 - (epoch / float(self.model.epochs))) ** self.power                
         return self.initial_learning_rate * decay
 
@@ -358,7 +358,7 @@ class PolynomialStepDecay(LearningRateSchedule):
                        min_learning_rate=1e-4,
                        decay_steps=100,
                        power=1.0):        
-        super(PolynomialDecay, self).__init__(
+        super(PolynomialStepDecay, self).__init__(
             initial_learning_rate=initial_learning_rate,
             min_learning_rate=min_learning_rate)   
 
@@ -378,15 +378,16 @@ class PolynomialStepDecay(LearningRateSchedule):
                      param_name='decay_steps',
                      minimum=1, left='open', right='open')                
 
-    def _compute_learning_rate(self, epoch, logs):
+    def _compute_learning_rate(self, epoch, log):
         step = min(epoch, self.decay_steps)
         return (self.initial_learning_rate - self.min_learning_rate) *\
             (1 - step / self.decay_steps) ** self.power +\
                 self.min_learning_rate
 
-    def on_train_begin(self, logs=None):
+    def on_train_begin(self, log=None):
+        super(PolynomialStepDecay, self).on_train_begin(log=log)
         self.decay_steps = min(self.decay_steps, self.model.epochs)
-        super(PolynomialStepDecay, self).on_train_begin(logs=logs)
+        
 
 # --------------------------------------------------------------------------  #
 class PowerSchedule(LearningRateSchedule):
@@ -421,6 +422,7 @@ class PowerSchedule(LearningRateSchedule):
 
     def _validate(self):
         """Performs hyperparameter """
+        super(PowerSchedule, self)._validate()
         validate_zero_to_one(param=self.power, 
                              param_name='power',
                              left='open', right='closed')    
@@ -429,7 +431,7 @@ class PowerSchedule(LearningRateSchedule):
                      param_name='decay_steps',
                      minimum=1, left='open', right='open') 
 
-    def _compute_learning_rate(self, epoch, logs):
+    def _compute_learning_rate(self, epoch, log):
         return self.initial_learning_rate / (1 + epoch/self.decay_steps)**self.power
 
 # --------------------------------------------------------------------------  #
@@ -460,12 +462,12 @@ class BottouSchedule(LearningRateSchedule):
         
         self.name = "Bottou Schedule Learning Rate Schedule"
 
-    def _compute_learning_rate(self, epoch, logs):
+    def _compute_learning_rate(self, epoch, log):
         return self.initial_learning_rate * (1 + self.initial_learning_rate * \
             self.decay_factor * epoch)**(-1)
 
 # --------------------------------------------------------------------------- #
-#                             IMPROVEMENT                                       #
+#                             IMPROVEMENT                                     #
 # --------------------------------------------------------------------------- #
 class Improvement(LearningRateSchedule):
     """Decays the learning rate if performance plateaus.
@@ -501,7 +503,7 @@ class Improvement(LearningRateSchedule):
     """
 
     def __init__(self, initial_learning_rate=0.1, min_learning_rate=1e-4,
-                 decay_factor=0.5, metric='train_cost',  epsilon=1e-4, 
+                 decay_factor=0.5, metric='train_cost',  epsilon=0.01, 
                  patience=10):
         super(Improvement, self).__init__(
             initial_learning_rate=initial_learning_rate,
@@ -513,19 +515,7 @@ class Improvement(LearningRateSchedule):
         self.epsilon = epsilon
         self.patience = patience        
 
-    def _validate(self):
-        super(Improvement, self)._validate()        
-        validate_metric(self.metric)
-
-        validate_zero_to_one(param=self.epsilon, 
-                             param_name='epsilon',
-                             left='open', right='closed')    
-        
-        validate_int(param=self.patience, 
-                     param_name='patience',
-                     minimum=1, left='open', right='open')                 
-
-    def on_train_begin(self, logs=None):        
+    def on_train_begin(self, log=None):        
         """Sets key variables at beginning of training.
         
         Parameters
@@ -533,29 +523,29 @@ class Improvement(LearningRateSchedule):
         log : dict
             Contains no information
         """
-        super(Improvement, self).on_train_begin(logs)
-        self._validate()        
-        self._observer = Performance(metric=self.metric, scorer=self.model.scorer, \
+        super(Improvement, self).on_train_begin(log)
+        self._observer = PerformanceBaseObserver(metric=self.metric, scorer=self.model.scorer, \
             epsilon=self.epsilon, patience=self.patience)    
-        self._observer.initialize()        
+        self._observer.on_train_begin()        
 
-    def _compute_learning_rate(self, epoch, logs):
-        learning_rate = logs.get('learning_rate')
+    def _compute_learning_rate(self, epoch, log):
+        learning_rate = log.get('learning_rate')
         return learning_rate * self.decay_factor
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, log=None):
         """Determines whether convergence has been achieved.
         Parameters
         ----------
         epoch : int
             The current epoch number
-        logs : dict
+        log : dict
             Dictionary containing training cost, (and if metric=score, 
             validation cost)  
         """
-        super(Improvement, self).on_epoch_begin(epoch, logs)        
-        logs = logs or {}        
+        super(Improvement, self).on_epoch_begin(epoch, log)        
+        log = log or {}                
         
-        if self._observer.evaluate_performance(epoch, logs):                        
+        self._observer.on_epoch_end(epoch, log)
+        if self._observer.stabilized:                        
             self.model.eta = max(self.min_learning_rate,\
-                self._compute_learning_rate(epoch=epoch, logs=logs))            
+                self._compute_learning_rate(epoch=epoch, log=log))            

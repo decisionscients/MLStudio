@@ -41,7 +41,7 @@ class GradientCheck(Observer):
         self.iterations = iterations
         self.verbose = verbose
         
-    def on_train_begin(self, logs=None):        
+    def on_train_begin(self, log=None):        
         """Initializes gradient check parameters.
         
         Parameters
@@ -61,11 +61,11 @@ class GradientCheck(Observer):
         self._objective = copy.deepcopy(self.model.objective)
         self._objective.turn_off_gradient_scaling
 
-    def _check_cost_functions(self, logs):
+    def _check_cost_functions(self, log):
         """Computes gradient and approximation for cost functions."""
         X = self.model.X_train_
         y = self.model.y_train_
-        theta = logs.get('theta')               
+        theta = log.get('theta')               
 
         grad_approx = []
         for i in np.arange(len(theta)):
@@ -90,9 +90,9 @@ class GradientCheck(Observer):
         grad = self._objective.gradient(theta, X, y, y_pred)         
         return grad, grad_approx
 
-    def _check_benchmark_functions(self, logs):
+    def _check_benchmark_functions(self, log):
         """Computes gradient and approximation for benchmark functions."""
-        theta = logs.get('theta')               
+        theta = log.get('theta')               
         grad_approx = []
         for i in np.arange(len(theta)):
 
@@ -114,7 +114,7 @@ class GradientCheck(Observer):
 
 
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, log=None):
         """Checks gradient each self.iterations number of iterations.
 
         Parameters
@@ -122,17 +122,17 @@ class GradientCheck(Observer):
         epoch : int
             The current epoch number
 
-        logs : dict
+        log : dict
             Dictionary containing training cost, (and if metric=score, 
             validation cost)  
 
         """
         if self.model.gradient_check:
-            if logs.get('epoch') % self.iterations == 0:                                         
+            if log.get('epoch') % self.iterations == 0:                                         
                 if isinstance(self._objective, Cost):
-                    grad, grad_approx = self._check_cost_functions(logs)
+                    grad, grad_approx = self._check_cost_functions(log)
                 else:
-                    grad, grad_approx = self._check_benchmark_functions(logs)               
+                    grad, grad_approx = self._check_benchmark_functions(log)               
 
                 grad = np.array(grad)
                 grad_approx = np.array(grad_approx)
@@ -148,7 +148,7 @@ class GradientCheck(Observer):
                     # Update results
                     self._n += 1
                     self._iteration.append(self._n)
-                    self._theta.append(logs.get('theta'))
+                    self._theta.append(log.get('theta'))
                     self._gradients.append(grad)
                     self._approximations.append(grad_approx)
                     self._differences.append(difference)                
@@ -184,7 +184,7 @@ class GradientCheck(Observer):
                 msg = msg + ' with ' + self._objective.regularization.name 
         raise Exception(msg)        
 
-    def on_train_end(self, logs=None):
+    def on_train_end(self, log=None):
         d = {"Iteration": self._iteration, "Theta": self._theta,
              "Difference": self._differences,
              "Result": self._results, "Gradient": self._gradients,

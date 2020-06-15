@@ -34,18 +34,18 @@ warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
 from mlstudio.supervised.core.optimizers import Adagrad
 from mlstudio.supervised.core.objectives import StyblinskiTank
 from mlstudio.supervised.observers.learning_rate import TimeDecay
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescent
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentClassifier
+from mlstudio.supervised.core.scorers import MSE
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentAbstract
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentPureOptimizer
 
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 #                               FILES TO SKIP                                  #
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 collect_ignore_glob = ["/test_visual/test_model*.py"]
 
-# ============================================================================ #
+# ---------------------------------------------------------------------------- #
 #                                  DATA                                        #
-# ============================================================================ #  
+# ---------------------------------------------------------------------------- #  
 @fixture(scope="session")
 def get_target_2d_vector():
     y = np.array([0,1,1,0,1,0,1,0,0,0,1,0,1,1,0,1,0,1,0,0], ndmin=2).reshape(-1,1)
@@ -169,42 +169,96 @@ def get_softmax_regression_data_features():
     data = datasets.load_iris()
     return data['feature_names']    
 
-@fixture(scope="session")
-def get_regression_prediction(get_regression_data):
-    X, y = get_regression_data
-    gd = GradientDescentRegressor(algorithm=LinearRegression(),
-                                  epochs=4000)
-    gd.fit(X,y)
-    y_pred = gd.predict(X)    
-    return y, y_pred
+# @fixture(scope="session")
+# def get_regression_prediction(get_regression_data):
+#     X, y = get_regression_data
+#     gd = GradientDescentRegressor(algorithm=LinearRegression(),
+#                                   epochs=4000)
+#     gd.fit(X,y)
+#     y_pred = gd.predict(X)    
+#     return y, y_pred
+
+# @fixture(scope="session")
+# def get_logistic_regression_prediction(get_logistic_regression_data):
+#     X, y = get_logistic_regression_data
+#     gd = GradientDescentClassifier(algorithm=LogisticRegression())
+#     gd.fit(X,y)
+#     y_pred = gd.predict(X)    
+#     return y, y_pred    
+
+# @fixture(scope="session")
+# def get_softmax_regression_prediction(get_softmax_regression_data):
+#     X, y = get_softmax_regression_data
+#     gd = GradientDescentClassifier(algorithm=SoftmaxRegression())
+#     gd.fit(X,y)
+#     y_pred = gd.predict(X)    
+#     return y, y_pred       
+
+# ---------------------------------------------------------------------------- #
+#                                   STUBS                                      #
+# ---------------------------------------------------------------------------- #
+class MockBlackBox:
+    def __init__(self):
+        self.epoch_log = {}
+
+    def on_epoch_end(self, epoch, log=None):
+        log = log or {}
+        for k,v in log.items():
+            self.epoch_log.setdefault(k,[]).append(v)        
+
+# ---------------------------------------------------------------------------- #  
+class MockEstimator:
+    """Mocks gradient descent estimator class."""
+    def __init__(self, learning_rate=0.01, epochs=1000, objective=None,
+                 theta_init=None, optimizer=None,  observers=None,
+                 verbose=False, random_state=None):
+
+        self.learning_rate = learning_rate
+        self.epochs = epochs
+        self.objective  = objective
+        self.theta_init = theta_init
+        self.optimizer = optimizer
+        self.observers = observers
+        self.verbose = verbose
+        self.random_state = random_state
+        # Initialize attributes and variables required
+        self.scorer = MSE()
+        self.blackbox_ = MockBlackBox()
+        self._eta = learning_rate
+    # ----------------------------------------------------------------------- #
+    @property
+    def eta(self):
+        return self._eta
+
+    @eta.setter  
+    def eta(self, x):
+        self._eta = x
+        
+    @property
+    def converged(self):
+        return self._converged
+
+    @converged.setter
+    def converged(self, x):
+        self._converged = x  
+
+    # ----------------------------------------------------------------------- #
+    def fit(self, X=None, y=None):    
+
+        # Initialize observers
+        for observer in self.observers.values():
+            setattr(observer, 'model', self)
+            observer.on_train_begin()
+        
+        for i in range(self.epochs):
+            for observer in self.observers.values():
+                observer.on_epoch_end(epoch=i, log=None)
+            log = {'epoch': i, 'learning_rate': self._eta}            
+            self.blackbox_.on_epoch_end(epoch=i,log=log)            
 
 @fixture(scope="session")
-def get_logistic_regression_prediction(get_logistic_regression_data):
-    X, y = get_logistic_regression_data
-    gd = GradientDescentClassifier(algorithm=LogisticRegression())
-    gd.fit(X,y)
-    y_pred = gd.predict(X)    
-    return y, y_pred    
-
-@fixture(scope="session")
-def get_softmax_regression_prediction(get_softmax_regression_data):
-    X, y = get_softmax_regression_data
-    gd = GradientDescentClassifier(algorithm=SoftmaxRegression())
-    gd.fit(X,y)
-    y_pred = gd.predict(X)    
-    return y, y_pred       
-
-@fixture(scope="session")
-def get_estimator():
-    objective = StyblinskiTank()
-    optimizer = Adagrad()
-    est = GradientDescent(learning_rate=0.1,
-                          theta_init=objective.start, 
-                          epochs=500, objective=objective,
-                          schedule=TimeDecay(decay_factor=0.9),
-                          optimizer=optimizer)
-    est.fit()    
-    return est
+def get_mock_estimator():
+    return MockEstimator            
 
 @fixture(scope='session')
 def get_log():

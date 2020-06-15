@@ -140,42 +140,49 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._create_observer_list()
 
     # ----------------------------------------------------------------------- #
-    def _on_train_begin(self, log=None):
+    def _set_current_state(self):
+        """Takes snapshot of current state and performance."""
+        d = {}
+        d['epoch'] = self._epoch
+        d['learning_rate'] = self._eta
+        d['theta'] = self._theta
+        d['train_cost'] = self._objective(self._theta)
+        if self._gradient:
+            d['gradient'] = self._gradient
+            d['gradient_norm'] = np.linalg.norm(self._gradient)
+        self._current_state = d
+    # ----------------------------------------------------------------------- #
+    def _on_train_begin(self):
         """Initializes all data, objects, and dependencies.
         
         Parameters
         ----------
-        log : dict
+         : dict
             Data relevant this part of the process. Not used.
         """
-        log = log or {}    
         self._compile()    
         self._epoch = 0       
         self._theta = None
+        self._theta_new = None
+        self._gradient = None
+        self._current_state = {}
         self._converged = False    
         self._init_weights()
         try:
             self._eta = self.schedule.initial_learning_rate
         except:
             self._eta = self.learning_rate
-        self._observer_list.on_train_begin(log)
+        
+        self._observer_list.on_train_begin()
 
     # ----------------------------------------------------------------------- #
-    def _on_train_end(self, log=None):
-        """Finalizes training, formats attributes, and ensures object state is fitted.
-        
-        Parameters
-        ----------
-        log : dict
-            Data relevant this part of the process. Not used.
-        
-        """
-        log = log or {}
+    def _on_train_end(self):
+        """Finalizes training, formats attributes, and ensures object state is fitted."""
         self.n_iter_ = self._epoch 
         self.theta_ = self._theta
-        self._observer_list.on_train_end(log)
+        self._observer_list.on_train_end()
     # ----------------------------------------------------------------------- #
-    def _on_epoch_begin(self, epoch, log=None):
+    def _on_epoch_begin(self):
         """Initializes all data, objects, and dependencies.
         
         Parameters
@@ -186,10 +193,10 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         log : dict
             Data relevant this part of the process. Not used.
         """
-        log = log or {}     
-        self._observer_list.on_epoch_begin(self._epoch,log)
+        self._set_current_state()
+        self._observer_list.on_epoch_begin(epoch=self._epoch, log=self._current_state)
     # ----------------------------------------------------------------------- #
-    def _on_epoch_end(self, epoch, log=None):
+    def _on_epoch_end(self):
         """Finalizes epoching, formats attributes, and ensures object state is fitted.
         
         Parameters
@@ -201,8 +208,8 @@ class GradientDescentAbstract(ABC,BaseEstimator):
             Data relevant this part of the process. Not used.
         
         """
-        log = log or {}     
-        self._observer_list.on_epoch_end(self._epoch, log)
+        self._observer_list.on_epoch_end(epoch=self._epoch, log=self._current_state)
+        self._theta = self._theta_new        
         self._epoch += 1
     # ----------------------------------------------------------------------- #
     @abstractmethod
@@ -262,19 +269,14 @@ class GradientDescentPureOptimizer(GradientDescentAbstract):
 
         while (self._epoch < self.epochs and not self._converged):
 
-            self._on_epoch_begin(epoch=self._epoch)
+            self._on_epoch_begin()
 
             cost = self._objective(self._theta)
 
-            theta_update, gradient = self._optimizer(gradient=self._objective.gradient, \
+            self._theta_new, self._gradient = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.deepcopy(self._theta))                    
 
-            log = {'epoch': self._epoch, 'train_cost': cost, 
-                   'theta': copy.copy(self._theta), 'gradient': gradient,
-                   'gradient_norm': np.linalg.norm(gradient)}
-
-            self._theta = theta_update
-            self._on_epoch_end(self._epoch, log=log)
+            self._on_epoch_end()
             
 
         self._on_train_end()

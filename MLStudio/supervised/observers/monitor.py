@@ -23,7 +23,7 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from mlstudio.supervised.observers.base import Observer
+from mlstudio.supervised.observers.base import Observer, PerformanceBaseObserver
 from mlstudio.utils.validation import validate_metric, validate_int
 from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
@@ -32,12 +32,12 @@ from mlstudio.utils.validation import validate_zero_to_one
 class BlackBox(Observer):
     """Repository for data obtained during optimization."""
 
-    def on_train_begin(self, logs=None):
+    def on_train_begin(self, log=None):
         """Sets instance variables at the beginning of training.
         
         Parameters
         ----------
-        logs : Dict
+        log : Dict
             Dictionary containing the X and y data
         """ 
         self.total_epochs = 0
@@ -46,12 +46,12 @@ class BlackBox(Observer):
         self.epoch_log = {}
         self.batch_log = {}
 
-    def on_train_end(self, logs=None):        
+    def on_train_end(self, log=None):        
         """Sets instance variables at end of training.
         
         Parameters
         ----------
-        logs : Dict
+        log : Dict
             Not used 
         """
         self.end = datetime.datetime.now()
@@ -59,7 +59,7 @@ class BlackBox(Observer):
         if self.model.verbose:
             self.report()
 
-    def on_batch_end(self, batch, logs=None):
+    def on_batch_end(self, batch, log=None):
         """Updates data and statistics relevant to the training batch.
         
         Parameters
@@ -67,15 +67,15 @@ class BlackBox(Observer):
         batch : int
             The current training batch
         
-        logs : dict
+        log : dict
             Dictionary containing batch statistics, such as batch size, current
             weights and training cost.
         """
         self.total_batches = batch
-        for k,v in logs.items():
+        for k,v in log.items():
             self.batch_log.setdefault(k,[]).append(v)        
 
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch, log=None):
         """Updates data and statistics relevant to the training epoch.
 
         Parameters
@@ -83,14 +83,14 @@ class BlackBox(Observer):
         epoch : int
             The current training epoch
         
-        logs : dict
+        log : dict
             Dictionary containing data and statistics for the current epoch,
             such as weights, costs, and optional validation set statistics
             beginning with 'val_'.
         """
-        logs = logs or {}
+        log = log or {}
         self.total_epochs += 1
-        for k,v in logs.items():
+        for k,v in log.items():
             self.epoch_log.setdefault(k,[]).append(v)
 
 
@@ -100,7 +100,7 @@ class BlackBox(Observer):
 class Progress(Observer):
     """Class that reports progress at designated points during training."""
     
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_begin(self, epoch, log=None):
         """Reports progress at the end of each epoch.
 
         Parameters
@@ -108,7 +108,7 @@ class Progress(Observer):
         epoch : int
             The current training epoch
 
-        logs : Dict
+        log : Dict
             Statistics obtained at end of epoch
         """
         if self.model.verbose:
@@ -119,19 +119,18 @@ class Progress(Observer):
             else:
                 if epoch % self.model.verbose == 0:
                     items_to_report = ('epoch', 'train', 'val')
-                    logs = {k:v for k,v in logs.items() if k.startswith(items_to_report)}
+                    log = {k:v for k,v in log.items() if k.startswith(items_to_report)}
                     progress = "".join(str(key) + ': ' + str(np.round(value,4)) + ' ' \
-                        for key, value in logs.items())
+                        for key, value in log.items())
                     print(progress)
         
 # --------------------------------------------------------------------------- #
 #                             PERFORMANCE                                     #
 # --------------------------------------------------------------------------- #
-class Performance(Observer):
-    """Performances and logs model performance, critical points and stability. 
+class Performance(PerformanceBaseObserver):
+    """Performances and log model performance, critical points and stability. 
 
-    Performance of the estimator object is the domain of concern for this class.
-    We define performance in terms of:
+    Performance is defined in terms of:
 
         * Metric : A metric to observe. This can be training error, validation
             score, gradient norm or the like 
@@ -175,126 +174,16 @@ class Performance(Observer):
 
     def __init__(self, mode='passive', metric='train_cost', scorer=None, 
                  epsilon=1e-3, patience=5): 
-        super(Performance, self).__init__()       
-        self.name = "Performance"
+        super(Performance, self).__init__(       
+            name = "Performance",
+            metric = metric,        
+            scorer = scorer,
+            epsilon = epsilon,
+            patience = patience,
+        )
         self.mode = mode
-        self.metric = metric        
-        self.scorer = scorer
-        self.epsilon = epsilon
-        self.patience = patience
 
-    @property
-    def best_results(self):
-        return self._best_results
-
-    @property
-    def critical_points(self):
-        return self._critical_points
-
-    def get_performance_data(self):
-        d = {'Epoch': self._epoch_log, 'Performance': self._performance_log,
-             'Baseline': self._baseline_log, 'Relative Change': self._relative_change_log,
-             'Improvement': self._improvement_log,'Iters No Change': self._iter_no_improvement_log,
-             'Stability': self._stability_log, 'Best Epochs': self._best_epochs_log}
-        df = pd.DataFrame(data=d)
-        return df
-       
-    def _validate(self):        
-        validate_zero_to_one(param=self.epsilon, param_name='epsilon',
-                             left='closed', right='closed')       
-        validate_int(param=self.patience, param_name='patience',
-                     minimum=0, left='open', right='open')
-
-    def on_train_begin(self, logs=None):                
-        """Sets key variables at beginning of training.        
-        
-        Parameters
-        ----------
-        log : dict
-            Contains no information
-        """        
-        logs = logs or {}        
-        self._validate()
-        # Private variables
-        self._baseline = None        
-        self._iter_no_improvement = 0
-        self._better = None   
-        self._stabilized = False   
-        self._significant_improvement = False
-
-        # Implicit dependencies
-        if 'score' in self.metric:
-            try:                
-                self._scorer = self.model.scorer
-                self._better = self._scorer.better
-            except:
-                e = "The Performance Observer requires a scorer object for 'score' metrics."
-                raise TypeError(e)
-        else:
-            self._better = np.less
-
-        # Validation
-        validate_metric(self.metric)
-        validate_zero_to_one(param=self.epsilon, param_name='epsilon',
-                             left='open', right='open')
-        validate_int(param=self.patience, param_name='patience')
-
-        # log data
-        self._epoch_log = []
-        self._performance_log = []
-        self._baseline_log = []
-        self._relative_change_log = []
-        self._improvement_log = []
-        self._iter_no_improvement_log = []
-        self._stability_log = []
-        self._best_epochs_log = []                       
-
-    def _update_log(self, current, logs):
-        """Creates log dictionary of lists of performance results."""
-        self._epoch_log.append(logs.get('epoch'))
-        self._performance_log.append(logs.get(self.metric))
-        self._baseline_log.append(self._baseline)
-        self._relative_change_log.append(self._relative_change)
-        self._improvement_log.append(self._significant_improvement)
-        self._iter_no_improvement_log.append(self._iter_no_improvement)
-        self._stability_log.append(self._stabilized)
-        self._best_epochs_log.append(self._best_epoch)
-
-    def _metric_improved(self, current):
-        """Returns true if the direction and magnitude of change indicates improvement"""
-        # Determine if change is in the right direction.
-        if self._better(current, self._baseline):
-            return True
-        else:
-            return False
-
-    def _significant_relative_change(self, current):        
-        self._relative_change = abs(current-self._baseline) / abs(self._baseline)
-        return self._relative_change > self.epsilon                
-
-    def _process_improvement(self, current, logs=None):
-        """Sets values of parameters and attributes if improved."""
-        self._iter_no_improvement = 0            
-        self._stabilized = False
-        self._baseline = current 
-        self._best_epoch = logs.get('epoch')        
-
-    def _process_no_improvement(self, logs=None):
-        """Sets values of parameters and attributes if no improved."""    
-        self._iter_no_improvement += 1  
-        if self._iter_no_improvement == self.patience:
-            self._iter_no_improvement = 0
-            self._stabilized = True               
-
-    def _get_current_value(self, logs):
-        """Obtain the designated metric from the logs."""
-        current = logs.get(self.metric)
-        if not current:
-            msg = "{m} was not found in the log.".format(m=self.metric)
-            raise KeyError(msg)     
-        return current
-
-    def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, log=None):
         """Logic executed at the end of each epoch.
         
         Parameters
@@ -302,55 +191,24 @@ class Performance(Observer):
         epoch : int
             Current epoch
         
-        logs: dict
+        log: dict
             Dictionary containing the data, cost, batch size and current weights
         """                  
-        logs = logs or {}   
-        
-        # Initialize state variables        
-        self._significant_improvement = False
-        self._relative_change = 0
-        self._stabilized = False
-        
-        # Obtain current performance
-        current = self._get_current_value(logs)
-
-        # Handle first iteration as an improvement by default
-        if self._baseline is None:                             # First iteration
-            self._significant_improvement = True
-            self._process_improvement(current, logs)    
-
-        # Otherwise, evaluate the direction and magnitude of the change        
-        else:
-            self._significant_improvement = self._metric_improved(current) and \
-                self._significant_relative_change(current)
-
-            if self._significant_improvement:
-                self._process_improvement(current, logs)
-            else:
-                self._process_no_improvement()
-
-        # Log results
-        self._update_log(current, logs)
-
-        # If performance has stabilized and the observer is in 'active' mode,
-        # direct the subject that the optimization has converged.
-        if self._stabilized and self.mode == 'active':
+        super(Performance, self).on_epoch_end(epoch=epoch=log=log)
+        if self.stabilized and self.mode == 'active':
             self.model.converged = True
-        return self
 
-    def on_train_end(self, logs=None):
+    def on_train_end(self, log=None):
         """Logic executed at the end of training.
         
         Parameters
         ----------        
-        logs: dict
+        log: dict
             Dictionary containing the data, cost, batch size and current weights
         """    
         self._best_results = self._best_epochs_log[-1]
         self._critical_points = np.where(self._stability_log)[0].tolist()
         self._critical_points = [self._best_epochs_log[i] for i in self._critical_points] 
-        
-        return self
+       
 
 
