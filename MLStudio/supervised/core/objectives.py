@@ -151,11 +151,11 @@ class MSE(Cost):
         -------
         cost : The quadratic cost 
 
-        """
+        """        
         n_samples = y.shape[0]
         J = 0.5 * np.mean((y-y_out)**2) 
         # Add regularizer of weights
-        J += self.regularizer(theta)  / n_samples
+        J += 1. / (2 * n_samples) * self.regularizer(theta) 
         return J
 
     def gradient(self, theta, X, y, y_out):
@@ -180,14 +180,20 @@ class MSE(Cost):
         gradient of the cost function w.r.t. the parameters.
 
         """
+        gradient = {}
         n_samples = X.shape[0]
         dZ = y_out-y
+        # Compute derivatives w.r.t weights and bias
         dW = float(1. / n_samples) * X.T.dot(dZ) 
-        # Check gradient scale  before applying regularization
-        dW = self._check_gradient_scale(dW)
-        # Add the gradient of regularizer of weights 
-        dW += self.regularizer.gradient(theta) / n_samples        
-        return(dW)        
+        db = float(1. / n_samples) * dz
+        # Pack up the gradients and check scale before regularization
+        g = np.concatenate(db, dW)        
+        g = self._check_gradient_scale(g)
+        # Unpack and add the regularization to the weights
+        gradient['weights'] = g[1:] 
+        gradient['bias'] = g[0]        
+        gradient['weights'] += 1. / n_samples * self.regularizer.gradient(theta)      
+        return(gradient)        
 
 # --------------------------------------------------------------------------  #
 class CrossEntropy(Cost):
@@ -221,7 +227,7 @@ class CrossEntropy(Cost):
         J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + \
             np.multiply(1-y, np.log(1-y_out))) 
         # Add regularizer of weights 
-        J += self.regularizer(theta) / n_samples        
+        J += 1. / (2 * n_samples) * self.regularizer(theta)  
         return J   
 
     def gradient(self, theta, X, y, y_out):
@@ -248,12 +254,17 @@ class CrossEntropy(Cost):
         """
         n_samples = X.shape[0]
         dZ = y_out-y
-        dW = float(1./n_samples) * (dZ).dot(X)
-        # Check gradient scale before applying regularization
-        dW = self._check_gradient_scale(dW)
-        # Apply regularization as appropriate        
-        dW += self.regularizer.gradient(theta) / n_samples        
-        return(dW)          
+        # Compute derivatives w.r.t weights and bias
+        dW = float(1. / n_samples) * X.T.dot(dZ) 
+        db = float(1. / n_samples) * dz
+        # Pack up the gradients and check scale before regularization
+        g = np.concatenate(db, dW)        
+        g = self._check_gradient_scale(g)
+        # Unpack and add the regularization to the weights
+        gradient['weights'] = g[1:] 
+        gradient['bias'] = g[0]        
+        gradient['weights'] += 1. / n_samples * self.regularizer.gradient(theta)              
+        return(gradient)          
 
 # --------------------------------------------------------------------------  #
 class CategoricalCrossEntropy(Cost):
@@ -289,7 +300,7 @@ class CategoricalCrossEntropy(Cost):
         # Obtain unregularized cost
         J = np.mean(-np.sum(np.log(y_out) * y, axis=1))
         # Add regularizer of weights 
-        J += self.regularizer(theta) / n_samples
+        J += 1 / (2 * n_samples) * self.regularizer(theta) 
         return J 
 
     def gradient(self, theta, X, y, y_out):
@@ -316,11 +327,12 @@ class CategoricalCrossEntropy(Cost):
         """
         n_samples = y.shape[0]
         dZ = y_out-y
-        dW = 1/n_samples * X.T.dot(dZ)
+        gradient['weights'] = 1/n_samples * X.T.dot(dZ)
+        gradient['bias'] = 1/n_samples * dZ
         # Check gradient scale before applying regularization
         dW = self._check_gradient_scale(dW)        
         # Add regularizer of weights 
-        dW += self.regularizer.gradient(theta) / n_samples        
+        gradient['weights'] += 1. / n_samples * self.regularizer.gradient(theta)      
         return(dW)                  
 # --------------------------------------------------------------------------  #
 #                         BENCHMARK FUNCTIONS                                 #        

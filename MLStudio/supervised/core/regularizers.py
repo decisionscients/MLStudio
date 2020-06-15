@@ -56,11 +56,11 @@ class L1(Regularizer):
         self.alpha = alpha
         self.name = "Lasso (L1) Regularizer"
     
-    def __call__(self, theta):
-        return self.alpha * np.linalg.norm(theta, 1)
+    def __call__(self, theta):        
+        return self.alpha * np.sum(np.abs(theta['weights']), axis=0)
 
     def gradient(self, theta):
-        return self.alpha * np.sign(theta)
+        return self.alpha * np.sign(theta['weights'])
     
 # --------------------------------------------------------------------------  #
 class L2(Regularizer):
@@ -70,10 +70,10 @@ class L2(Regularizer):
         self.name = "Ridge (L2) Regularizer"
     
     def __call__(self, theta):
-        return self.alpha * 0.5 * theta.T.dot(theta)
+        return self.alpha * np.sum(np.square(theta['weights']))
 
     def gradient(self, theta):
-        return self.alpha * theta
+        return self.alpha * theta['weights']
 # --------------------------------------------------------------------------  #
 class L1_L2(Regularizer):
     """ Regularizer for Elastic Net Regression """
@@ -83,11 +83,11 @@ class L1_L2(Regularizer):
         self.name = "Elasticnet (L1_L2) Regularizer"
 
     def __call__(self, theta):
-        l1_contr = self.ratio * np.linalg.norm(theta, 1)
-        l2_contr = (1 - self.ratio) * 0.5 * theta.T.dot(theta)
+        l1_contr = self.ratio * np.sum(np.abs(theta['weights']), axis=0)
+        l2_contr = (1 - self.ratio) * 0.5 * np.sum(np.square(theta['weights']))
         return self.alpha * (l1_contr + l2_contr)
 
     def gradient(self, theta):
-        l1_contr = self.ratio * np.sign(theta)
-        l2_contr = (1 - self.ratio) * theta
+        l1_contr = self.ratio * np.sign(theta['weights'])
+        l2_contr = (1 - self.ratio) * theta['weights']
         return self.alpha * (l1_contr + l2_contr) 

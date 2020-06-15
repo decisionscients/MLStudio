@@ -54,7 +54,8 @@ def test_encode_labels(get_data_management_data):
 @mark.utils
 @mark.data_manager
 @mark.gradient_scaler
-def test_gradient_scaler():            
+@mark.gradient_scaler_1d
+def test_gradient_scaler_1d():            
     lower_threshold = 1e-10
     upper_threshold = 1e10
     lows = [1e-20, 1e15, 1] 
@@ -62,16 +63,20 @@ def test_gradient_scaler():
     for g in zip(lows, highs):    
         X = np.random.default_rng().uniform(low=g[0], high=g[1], size=20)                
         X_orig_norm = np.linalg.norm(X)        
+        theta = {}
+        theta['bias'] = np.array([[X[0]]])
+        theta['weights'] = np.array([X[1:]])
         scaler = GradientScaler(lower_threshold=lower_threshold, 
-                                upper_threshold=upper_threshold)
-        X_new = scaler.fit_transform(X)
+                                upper_threshold=upper_threshold)                                        
+        theta_new = scaler.fit_transform(theta)
+        X_new = g = np.insert(theta_new['weights'], 0, theta_new['bias'], axis=0)
         X_new_norm = np.linalg.norm(X_new)
         assert X_new_norm>=lower_threshold and \
                X_new_norm<=upper_threshold, \
                    "Scaling didn't work. X_new_norm = {n}".format(
-                   n=str(X_new_norm))
-        X_orig_norm = np.linalg.norm(X)
-        X_old = scaler.inverse_transform(X_new)
+                   n=str(X_new_norm))        
+        theta_old = scaler.inverse_transform(theta_new)
+        X_old = np.insert(theta_old['weights'], 0, theta_old['bias'], axis=0)
         X_old_norm = np.linalg.norm(X_old)
 
         assert np.isclose(X_orig_norm, X_old_norm), \
@@ -79,6 +84,38 @@ def test_gradient_scaler():
                 \nX_orig_norm = {n1}\nX_old_norm={n2}".format(n1=str(X_orig_norm),
                 n2=str(X_old_norm))
         
+@mark.utils
+@mark.data_manager
+@mark.gradient_scaler
+@mark.gradient_scaler_2d
+def test_gradient_scaler_2d():            
+    lower_threshold = 1e-10
+    upper_threshold = 1e10
+    lows = [1e-20, 1e15, 1] 
+    highs = [1e-10, 1e20, 5]
+    for g in zip(lows, highs):    
+        X = np.random.default_rng().uniform(low=g[0], high=g[1], size=(20,4))                
+        X_orig_norm = np.linalg.norm(X, axis=0)        
+        theta = {}
+        theta['bias'] = X[0]
+        theta['weights'] = X[1:]
+        scaler = GradientScaler(lower_threshold=lower_threshold, 
+                                upper_threshold=upper_threshold)                                        
+        theta_new = scaler.fit_transform(theta)
+        X_new = np.concatenate(theta_new['bias'], theta_new['weights'])
+        X_new_norm = np.linalg.norm(X_new)
+        assert X_new_norm>=lower_threshold and \
+               X_new_norm<=upper_threshold, \
+                   "Scaling didn't work. X_new_norm = {n}".format(
+                   n=str(X_new_norm))        
+        theta_old = scaler.inverse_transform(theta_new)
+        X_old = np.concatenate(theta_old['bias'], theta_old['weights'])
+        X_old_norm = np.linalg.norm(X_old)
+
+        assert np.isclose(X_orig_norm, X_old_norm), \
+            "Reverse transform didn't work\
+                \nX_orig_norm = {n1}\nX_old_norm={n2}".format(n1=str(X_orig_norm),
+                n2=str(X_old_norm))
 
 # --------------------------------------------------------------------------  #
 #                       TEST MINMAX SCALER                                    #

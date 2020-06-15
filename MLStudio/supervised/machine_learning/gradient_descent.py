@@ -36,6 +36,7 @@ from mlstudio.supervised.core.objectives import CategoricalCrossEntropy
 from mlstudio.supervised.core.objectives import Adjiman
 from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
 from mlstudio.supervised.core.scorers import R2, Accuracy
+from mlstudio.utils.data_analyzer import compute_gradient_norm
 from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
 from mlstudio.utils.data_manager import add_bias_term, encode_labels, one_hot_encode
 from mlstudio.utils.data_manager import RegressionDataProcessor, ClassificationDataProcessor
@@ -149,7 +150,7 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         d['train_cost'] = self._objective(self._theta)
         if self._gradient:
             d['gradient'] = self._gradient
-            d['gradient_norm'] = np.linalg.norm(self._gradient)
+            d['gradient_norm'] = compute_gradient_norm(self._gradient)
         self._current_state = d
     # ----------------------------------------------------------------------- #
     def _on_train_begin(self):

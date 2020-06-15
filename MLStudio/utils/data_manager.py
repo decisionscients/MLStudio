@@ -473,15 +473,21 @@ class GradientScaler(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
         """Fits the transformer to the data. """
-        self._r = np.linalg.norm(X)
+        g = np.insert(X['weights'], 0, X['bias'], axis=0)        
+        self._r = np.linalg.norm(g)
         return self       
 
     def transform(self, X):
-        """Transforms the data."""                
+        """Transforms the data."""
+        print(X)
+        g = np.insert(X['weights'], 0, X['bias'], axis=0)                
+        print(g)
         if self._r < self.lower_threshold:
-            X = X * self.lower_threshold / self._r
+            g = g * self.lower_threshold / self._r            
         elif self._r > self.upper_threshold:
-            X = X * self.upper_threshold / self._r
+            g = g * self.upper_threshold / self._r
+        X['bias'] = g[0]
+        X['weights'] = g[1:]
         return X
 
     def fit_transform(self, X):
@@ -490,11 +496,14 @@ class GradientScaler(BaseEstimator, TransformerMixin):
         return self.transform(X)
 
     def inverse_transform(self, X):
-        """Apply the inverse transformation. Only works for normalized data."""
+        """Apply the inverse transformation."""
+        g = np.insert(X['weights'], 0, X['bias'], axis=0)
         if self._r < self.lower_threshold:
-            X = X * self._r / self.lower_threshold
+            g = g * self._r / self.lower_threshold
         elif self._r > self.upper_threshold:
-            X = X * self._r / self.upper_threshold
+            g = g * self._r / self.upper_threshold
+        X['bias'] = g[0]
+        X['weights'] = g[1:]        
         return X
 
 # --------------------------------------------------------------------------- #
