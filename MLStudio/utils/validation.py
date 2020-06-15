@@ -93,7 +93,7 @@ def validate_learning_rate_schedule(schedule):
         return True         
 # --------------------------------------------------------------------------  #
 def validate_performance(performance):    
-    from mlstudio.supervised.observers.performance import Performance    
+    from mlstudio.supervised.observers.monitor import Performance    
     if not isinstance(performance, Performance):
         msg = "A valid Performance Observer object is required."
         raise TypeError(msg)
@@ -204,7 +204,7 @@ def validate_string(param, param_name="", valid_values=None):
         return True        
 
 # --------------------------------------------------------------------------  #
-def validate_range(param, param_name, minimum=0, maximum=np.Inf, left='open', right='open'):        
+def validate_range(param, param_name="", minimum=0, maximum=np.Inf, left='open', right='open'):        
     if not isinstance(param, (int,float)):
         msg = param_name + " hyperparameter must be numeric."
         raise TypeError(msg)
