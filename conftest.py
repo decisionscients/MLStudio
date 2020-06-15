@@ -209,9 +209,9 @@ class MockBlackBox:
 # ---------------------------------------------------------------------------- #  
 class MockEstimator:
     """Mocks gradient descent estimator class."""
-    def __init__(self, learning_rate=0.01, epochs=1000, objective=None,
-                 theta_init=None, optimizer=None,  observers=None,
-                 verbose=False, random_state=None):
+    def __init__(self, learning_rate=0.01, epochs=1000, objective=None, 
+                 theta_init=None, optimizer=None,  
+                 observers=None, verbose=False, random_state=None):
 
         self.learning_rate = learning_rate
         self.epochs = epochs

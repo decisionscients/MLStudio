@@ -27,8 +27,8 @@ from abc import ABC, abstractmethod, ABCMeta
 
 import datetime
 import numpy as np
+import pandas as pd
 from sklearn.base import BaseEstimator
-import types
 
 from mlstudio.utils.validation import validate_int, validate_zero_to_one
 from mlstudio.utils.validation import validate_metric
@@ -279,17 +279,21 @@ class Observer(ABC, BaseEstimator):
 # --------------------------------------------------------------------------- #
 #                             PERFORMANCE BASE                                #
 # --------------------------------------------------------------------------- #
-class PerformanceBaseObserver(Observer):
+class PerformanceObserver(Observer):
     """Base class for performance observers."""
 
     def __init__(self, metric='train_cost', scorer=None, 
                  epsilon=1e-3, patience=5): 
-        super(PerformanceBaseObserver, self).__init__()       
+        super(PerformanceObserver, self).__init__()       
         self.name = "Performance Base Observer"
         self.metric = metric        
         self.scorer = scorer
         self.epsilon = epsilon
-        self.patience = patience
+        self.patience = patience        
+
+    @property
+    def stabilized(self):
+        return self._stabilized
 
     @property
     def best_results(self):
@@ -327,7 +331,7 @@ class PerformanceBaseObserver(Observer):
         self._baseline = None        
         self._iter_no_improvement = 0
         self._better = None   
-        self.stabilized = False   
+        self._stabilized = False
         self._significant_improvement = False
 
         # Implicit dependencies
@@ -365,7 +369,7 @@ class PerformanceBaseObserver(Observer):
         self._relative_change_log.append(self._relative_change)
         self._improvement_log.append(self._significant_improvement)
         self._iter_no_improvement_log.append(self._iter_no_improvement)
-        self._stability_log.append(self.stabilized)
+        self._stability_log.append(self._stabilized)
         self._best_epochs_log.append(self._best_epoch)
 
     def _metric_improved(self, current):
@@ -383,16 +387,15 @@ class PerformanceBaseObserver(Observer):
     def _process_improvement(self, current, log=None):
         """Sets values of parameters and attributes if improved."""
         self._iter_no_improvement = 0            
-        self.stabilized = False
+        self._stabilized = False
         self._baseline = current 
         self._best_epoch = log.get('epoch')        
 
     def _process_no_improvement(self, log=None):
         """Sets values of parameters and attributes if no improved."""    
         self._iter_no_improvement += 1  
-        if self._iter_no_improvement == self.patience:
-            self._iter_no_improvement = 0
-            self.stabilized = True               
+        if self._iter_no_improvement >= self.patience:
+            self._stabilized = True               
 
     def _get_current_value(self, log):
         """Obtain the designated metric from the log."""
@@ -418,7 +421,6 @@ class PerformanceBaseObserver(Observer):
         # Initialize state variables        
         self._significant_improvement = False
         self._relative_change = 0
-        self.stabilized = False
         
         # Obtain current performance
         current = self._get_current_value(log)

@@ -23,7 +23,7 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from mlstudio.supervised.observers.base import Observer, PerformanceBaseObserver
+from mlstudio.supervised.observers.base import Observer, PerformanceObserver
 from mlstudio.utils.validation import validate_metric, validate_int
 from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
@@ -127,7 +127,7 @@ class Progress(Observer):
 # --------------------------------------------------------------------------- #
 #                             PERFORMANCE                                     #
 # --------------------------------------------------------------------------- #
-class Performance(PerformanceBaseObserver):
+class Performance(PerformanceObserver):
     """Performances and log model performance, critical points and stability. 
 
     Performance is defined in terms of:
@@ -173,14 +173,14 @@ class Performance(PerformanceBaseObserver):
     """
 
     def __init__(self, mode='passive', metric='train_cost', scorer=None, 
-                 epsilon=1e-3, patience=5): 
-        super(Performance, self).__init__(       
-            name = "Performance",
+                 epsilon=0.01, patience=5): 
+        super(Performance, self).__init__(                   
             metric = metric,        
             scorer = scorer,
             epsilon = epsilon,
             patience = patience,
         )
+        self.name = "Performance Observer"
         self.mode = mode
 
     def on_epoch_end(self, epoch, log=None):
@@ -194,21 +194,8 @@ class Performance(PerformanceBaseObserver):
         log: dict
             Dictionary containing the data, cost, batch size and current weights
         """                  
-        super(Performance, self).on_epoch_end(epoch=epoch=log=log)
-        if self.stabilized and self.mode == 'active':
-            self.model.converged = True
-
-    def on_train_end(self, log=None):
-        """Logic executed at the end of training.
-        
-        Parameters
-        ----------        
-        log: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """    
-        self._best_results = self._best_epochs_log[-1]
-        self._critical_points = np.where(self._stability_log)[0].tolist()
-        self._critical_points = [self._best_epochs_log[i] for i in self._critical_points] 
-       
+        super(Performance, self).on_epoch_end(epoch=epoch, log=log)
+        if self._stabilized and self.mode == 'active':
+            self.model.converged = True       
 
 

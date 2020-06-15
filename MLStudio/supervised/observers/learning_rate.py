@@ -23,7 +23,7 @@ from abc import abstractmethod
 import math
 import numpy as np
 
-from mlstudio.supervised.observers.base import Observer, PerformanceBaseObserver
+from mlstudio.supervised.observers.base import Observer, PerformanceObserver
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.utils.validation import validate_bool, validate_performance
 from mlstudio.utils.validation import validate_int
@@ -524,7 +524,7 @@ class Improvement(LearningRateSchedule):
             Contains no information
         """
         super(Improvement, self).on_train_begin(log)
-        self._observer = PerformanceBaseObserver(metric=self.metric, scorer=self.model.scorer, \
+        self._observer = PerformanceObserver(metric=self.metric, scorer=self.model.scorer, \
             epsilon=self.epsilon, patience=self.patience)    
         self._observer.on_train_begin()        
 
