@@ -27,6 +27,7 @@ from pytest import fixture
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
+from sklearn.datasets import make_regression, make_classification
 import warnings
 warnings.filterwarnings('ignore')
 warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
@@ -169,30 +170,23 @@ def get_softmax_regression_data_features():
     data = datasets.load_iris()
     return data['feature_names']    
 
-# @fixture(scope="session")
-# def get_regression_prediction(get_regression_data):
-#     X, y = get_regression_data
-#     gd = GradientDescentRegressor(algorithm=LinearRegression(),
-#                                   epochs=4000)
-#     gd.fit(X,y)
-#     y_pred = gd.predict(X)    
-#     return y, y_pred
+@fixture(scope="session")
+def get_regression_prediction():
+    X, y = make_regression()
+    X, y_pred = make_regression()
+    return y, y_pred
 
-# @fixture(scope="session")
-# def get_logistic_regression_prediction(get_logistic_regression_data):
-#     X, y = get_logistic_regression_data
-#     gd = GradientDescentClassifier(algorithm=LogisticRegression())
-#     gd.fit(X,y)
-#     y_pred = gd.predict(X)    
-#     return y, y_pred    
+@fixture(scope="session")
+def get_logistic_regression_prediction():
+    X, y = make_classification()
+    X, y_pred = make_classification()
+    return y, y_pred    
 
-# @fixture(scope="session")
-# def get_softmax_regression_prediction(get_softmax_regression_data):
-#     X, y = get_softmax_regression_data
-#     gd = GradientDescentClassifier(algorithm=SoftmaxRegression())
-#     gd.fit(X,y)
-#     y_pred = gd.predict(X)    
-#     return y, y_pred       
+@fixture(scope="session")
+def get_softmax_regression_prediction():
+    X, y = make_classification(n_classes=5)
+    X, y_pred = make_classification(n_classes=5)
+    return y, y_pred       
 
 # ---------------------------------------------------------------------------- #
 #                                   STUBS                                      #
