@@ -24,7 +24,8 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from scipy.special import expit, softmax
+from scipy.special import expit
+from sklearn.utils.extmath import softmax
 
 from mlstudio.supervised.core.activations import Sigmoid, Softmax
 # --------------------------------------------------------------------------  #
@@ -43,14 +44,14 @@ class SigmoidActivationTests:
         assert np.allclose(exp_result, act_result), "Sigmoid error"        
 
 @mark.activations
-@mark.sigmoid
+@mark.softmax
 class SoftmaxActivationTests:
 
     def test_softmax_activation(self):
         # Get an array
         x = np.random.default_rng().uniform(low=0, high=20, size=(20,4))
-        # Expected result
-        exp_result = softmax(x, axis=1)
+        # Expected result        
+        exp_result = softmax(x)
         # Actual result
         act = Softmax()
         act_result = act(x)

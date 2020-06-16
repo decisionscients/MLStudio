@@ -53,8 +53,8 @@ class Sigmoid(Activation):
 class Softmax(Activation):
     def __call__(self, x):
         # Subtract the max to avoid underflow or overflow errors 
-        e_x = np.exp(x - np.max(x))
-        return e_x / np.sum(e_x, axis=0)
+        e_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
+        return e_x / np.sum(e_x, axis=-1, keepdims=True)
 
     def gradient(self, x):
         p = self.__call__(x)
