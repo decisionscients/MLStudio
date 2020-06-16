@@ -23,12 +23,77 @@
 import numpy as np
 import pytest
 from pytest import mark
-import scipy.sparse as sp
+from scipy.sparse import csr_matrix
 
 from mlstudio.datasets import load_urls
 from mlstudio.utils.data_manager import MinMaxScaler, data_split, GradientScaler
-from mlstudio.utils.data_manager import encode_labels, add_bias_term
-from mlstudio.utils.data_manager import pack_weights_bias, unpack_weights_bias
+from mlstudio.utils.data_manager import encode_labels
+from mlstudio.utils.data_manager import AddBiasTerm, ZeroBiasTerm
+# --------------------------------------------------------------------------  #
+#                       TEST ADD BIAS TERM TRANSFORMER                        #
+# --------------------------------------------------------------------------  #
+@mark.utils
+@mark.data_manager
+@mark.add_bias_term
+def test_add_bias_term_np():
+    X = np.random.rand(5,5)
+    xformer = AddBiasTerm()
+    X = xformer.fit_transform(X)
+    assert X.shape[1] == 6, "Bias term not added."
+    assert np.all(X[:,0] == 1.0), "Column zero not ones."
+    # Inverse transform
+    X = xformer.inverse_transform(X)
+    assert X.shape[1] == 5, "Bias term not removed."
+    
+
+@mark.utils
+@mark.data_manager
+@mark.add_bias_term
+def test_add_bias_term_csr():
+    X = np.random.rand(5,5)
+    X = csr_matrix(X)
+    xformer = AddBiasTerm()
+    X = xformer.fit_transform(X)
+    assert X.shape[1] == 6, "Bias term not added."
+    assert np.all(X.toarray()[:,0] == 1.0), "Column zero not ones."   
+    # Inverse transform
+    X = xformer.inverse_transform(X)
+    assert X.shape[1] == 5, "Bias term not removed."    
+
+# --------------------------------------------------------------------------  #
+#                       TEST ZERO BIAS TERM TRANSFORMER                       #
+# --------------------------------------------------------------------------  #
+@mark.utils
+@mark.data_manager
+@mark.zero_bias_term
+def test_zero_bias_term_np():
+    X = np.random.rand(5,5)
+    xformer = AddBiasTerm()
+    X = xformer.fit_transform(X)
+    xformer = ZeroBiasTerm()
+    X = xformer.fit_transform(X)
+    assert X.shape[1] == 6, "Bias term not zeroed."
+    assert np.all(X[:,0] == 0.0), "Bias not zeroed out ."
+    # Inverse transform
+    X = xformer.inverse_transform(X)
+    assert np.all(X[:,0] == 1.0), "Bias not restored."
+    
+
+@mark.utils
+@mark.data_manager
+@mark.zero_bias_term
+def test_zero_bias_term_csr():
+    X = np.random.rand(5,5)
+    X = csr_matrix(X)
+    xformer = AddBiasTerm()
+    X = xformer.fit_transform(X)
+    xformer = ZeroBiasTerm()
+    X = xformer.fit_transform(X)
+    assert X.shape[1] == 6, "Bias term not zeroed."
+    assert np.all(X.toarray()[:,0] == 0.0), "Bias not zeroed out ."
+    # Inverse transform
+    X = xformer.inverse_transform(X)
+    assert np.all(X.toarray()[:,0] == 1.0), "Bias not restored."   
 
 # --------------------------------------------------------------------------  #
 #                       TEST DATA CHECKS AND PREP                             #
@@ -64,18 +129,15 @@ def test_gradient_scaler_1d():
     for g in zip(lows, highs):    
         X = np.random.default_rng().uniform(low=g[0], high=g[1], size=20)                
         X_orig_norm = np.linalg.norm(X)        
-        theta = unpack_weights_bias(X)
         scaler = GradientScaler(lower_threshold=lower_threshold, 
                                 upper_threshold=upper_threshold)                                        
-        theta_new = scaler.fit_transform(theta)
-        X_new = pack_weights_bias(theta_new)
+        X_new = scaler.fit_transform(X)        
         X_new_norm = np.linalg.norm(X_new)
         assert X_new_norm>=lower_threshold and \
                X_new_norm<=upper_threshold, \
                    "Scaling didn't work. X_new_norm = {n}".format(
                    n=str(X_new_norm))        
-        theta_old = scaler.inverse_transform(theta_new)
-        X_old = pack_weights_bias(theta_old)
+        X_old = scaler.inverse_transform(X_new)
         X_old_norm = np.linalg.norm(X_old)
 
         assert np.isclose(X_orig_norm, X_old_norm), \
@@ -94,20 +156,16 @@ def test_gradient_scaler_2d():
     highs = [1e-10, 1e20, 5]
     for g in zip(lows, highs):    
         X = np.random.default_rng().uniform(low=g[0], high=g[1], size=(20,4))                
-        X_orig_norm = (np.linalg.norm(X))        
-        theta = unpack_weights_bias(X)
-        print(theta['bias'])
+        X_orig_norm = (np.linalg.norm(X))                
         scaler = GradientScaler(lower_threshold=lower_threshold, 
                                 upper_threshold=upper_threshold)                                        
-        theta_new = scaler.fit_transform(theta)
-        X_new = pack_weights_bias(theta_new)
+        X_new = scaler.fit_transform(X)        
         X_new_norm = np.linalg.norm(X_new)
         assert X_new_norm>=lower_threshold and \
                X_new_norm<=upper_threshold, \
                    "Scaling didn't work. X_new_norm = {n}".format(
                    n=str(X_new_norm))        
-        theta_old = scaler.inverse_transform(theta_new)
-        X_old = pack_weights_bias(theta_old)
+        X_old = scaler.inverse_transform(X_new)
         X_old_norm = np.linalg.norm(X_old)
 
         assert np.allclose(X_orig_norm, X_old_norm), \

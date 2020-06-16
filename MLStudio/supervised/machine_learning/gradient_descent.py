@@ -29,27 +29,11 @@ import pandas as pd
 from scipy import sparse
 from sklearn.base import BaseEstimator
 
-from mlstudio.supervised.core.tasks import LinearRegression, LogisticRegression
-from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
-from mlstudio.supervised.core.objectives import MSE, CrossEntropy
-from mlstudio.supervised.core.objectives import CategoricalCrossEntropy
 from mlstudio.supervised.core.objectives import Adjiman
 from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
-from mlstudio.supervised.core.scorers import R2, Accuracy
+from mlstudio.supervised.observers.base import Observer, ObserverList
+from mlstudio.supervised.observers.monitor import BlackBox
 from mlstudio.utils.data_analyzer import compute_gradient_norm
-from mlstudio.utils.data_manager import batch_iterator, data_split, shuffle_data
-from mlstudio.utils.data_manager import add_bias_term, encode_labels, one_hot_encode
-from mlstudio.utils.data_manager import RegressionDataProcessor, ClassificationDataProcessor
-from mlstudio.utils.validation import check_X, check_X_y, check_is_fitted
-from mlstudio.utils.validation import validate_zero_to_one, validate_metric
-from mlstudio.utils.validation import validate_objective, validate_optimizer
-from mlstudio.utils.validation import validate_scorer
-from mlstudio.utils.validation import validate_learning_rate_schedule
-from mlstudio.utils.validation import validate_int, validate_string
-from mlstudio.utils.validation import validate_metric
-from mlstudio.utils.validation import validate_scorer, validate_bool
-from mlstudio.utils.validation import validate_range, validate_monitor
-from mlstudio.utils.validation import validate_array_like, validate_gradient_check
 # =========================================================================== #
 #                       GRADIENT DESCENT ABSTRACT                             #
 # =========================================================================== #        
@@ -96,6 +80,7 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         """Makes deepcopies of mutable parameters and makes them private members."""
 
         # Observers
+        self.observers = self.observers or {}
         self._observers = copy.deepcopy(self.observers) if self.observers\
             else self.observers
 
@@ -113,10 +98,10 @@ class GradientDescentAbstract(ABC,BaseEstimator):
     # ----------------------------------------------------------------------- #
     def _create_observer_attributes(self):
         """Adds each observer to model as an attribute."""
-        # First, add any additional observers that should be attributes
-        self._observers['blackbox_'] = BlackBox()        
+        # First, add any additional observers that should be attributes        
+        self._observers['blackbox_'] = BlackBox() 
         for name, observer in self._observers.items():
-                setattr(self, name, observer)
+            setattr(self, name, observer)
     # ----------------------------------------------------------------------- #
     def _create_observer_list(self):
         """Adds all observers to the observer list that gets notified."""

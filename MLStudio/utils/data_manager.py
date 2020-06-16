@@ -38,6 +38,14 @@ import pandas as pd
 #                           DATA PREPARATION                                  #
 # --------------------------------------------------------------------------- #
 
+def check_coo(X):
+    """Converts coo matrices to csr format."""
+    if issparse(X):
+        if isspmatrix_coo(X):
+            X = X.tocsr()
+    return X    
+
+
 def one_hot_encode(y):
     """One hot encodes a multiclass target variable of shape (n_samples,)"""
     encoder = LabelBinarizer()
@@ -64,37 +72,87 @@ def encode_labels(y):
         encoder = LabelEncoder()
         return encoder.fit_transform(y)
 
-def pack_weights_bias(X):
-    """Packs weights and bias into a single array."""
-    return np.insert(X['weights'], 0, X['bias'])
-
-def unpack_weights_bias(g):
-    """Unpacks weights and biases into a dictionary."""
-    X = {}    
-    if len(g.shape) == 1:
-        X['weights'] = g[1:]
-        X['bias'] = g[0]
-    else:
-        X['weights'] = g[1:,:]
-        X['bias'] = g[0,:]
-    return X        
-
-def add_bias_term(X):
-    """Adds a bias vector of ones to X."""
-    if issparse(X):
-        # If COO matrix, convert to CSR
-        if isspmatrix_coo(X):
-            X = x.tocsr()
-        ones = np.ones((X.shape[0],1))
-        bias_term = csr_matrix(ones, dtype=float)
-        X = hstack((bias_term, X))
-    else:
-        X = np.insert(X, 0, 1.0, axis=1)
-    return X
-
-
 # --------------------------------------------------------------------------- #
 #                               TRANSFORMERS                                  #
+# --------------------------------------------------------------------------- #
+class AddBiasTerm(BaseEstimator, TransformerMixin):
+    """Adds bias term of ones to matrix."""
+
+    def fit(self, X, y=None):
+        """Fits data to the transformer."""
+        return self
+
+    def _transform_numpy(self, X):
+        """Adds bias term to numpy matrix."""
+        return np.insert(X, 0, 1.0, axis=1)
+    
+    def _transform_csr(self, X):
+        """Adds bias term to csr matrix."""
+        X = check_coo(X)
+        ones = np.ones((X.shape[0],1))
+        bias_term = csr_matrix(ones, dtype=float)
+        X = hstack((bias_term, X)) 
+        X = check_coo(X)
+        return X
+
+    def transform(self, X, y=None):
+        """Adds bias term to matrix and returns it to the caller."""
+        if issparse(X):
+            X = self._transform_csr(X)
+        else:
+            X = self._transform_numpy(X)
+        return X        
+    
+    def inverse_transform(self, X):
+        """Removes bias term from matrix and returns it to caller."""
+        X = check_coo(X)
+        return X[:,1:]
+                        
+# --------------------------------------------------------------------------- #
+class ZeroBiasTerm(BaseEstimator, TransformerMixin):
+    """Zeros out bias term."""
+
+    def fit(self, X, y=None):
+        """Fits data to the transformer."""
+        return self
+
+    def _transform_numpy(self, X):
+        """Zero out bias term in numpy matrix."""
+        X[:,0] = np.zeros(shape=X.shape[0])        
+        return X
+    
+    def _transform_csr(self, X):
+        """Zeros out bias term in csr matrix."""
+        X = check_coo(X)
+        X = X[:,1:]
+        zeros = np.zeros((X.shape[0],1))
+        bias_term = csr_matrix(zeros, dtype=float)
+        X = hstack((bias_term, X)) 
+        X = check_coo(X)
+        return X
+
+    def transform(self, X, y=None):
+        """Zeros bias term to matrix and returns it to the caller."""
+        if issparse(X):
+            X = self._transform_csr(X)
+        else:
+            X = self._transform_numpy(X)
+        return X        
+    
+    def inverse_transform(self, X):
+        """Removes bias term from matrix and returns it to caller."""
+        X = check_coo(X)
+        X = X[:,1:]
+        if issparse(X):
+            ones = np.ones((X.shape[0],1))
+            bias_term = csr_matrix(ones, dtype=float)
+            X = hstack((bias_term, X))
+            X = check_coo(X)
+        else:
+            X = np.insert(X, 0, 1.0, axis=1)          
+        return X
+                        
+
 # --------------------------------------------------------------------------- #
 class DataProcessor(ABC, BaseEstimator):
     """Prepares data for training.
@@ -488,18 +546,16 @@ class GradientScaler(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
         """Fits the transformer to the data. """  
-        self._g = pack_weights_bias(X)
-        self._r = np.linalg.norm(self._g)
+        self._r = np.linalg.norm(X)
         return self       
 
     def transform(self, X):
-        """Transforms the data."""        
-        g = self._g
+        """Transforms the data."""                
         if self._r < self.lower_threshold:
-            g = self._g  * self.lower_threshold / self._r                        
+            X = X  * self.lower_threshold / self._r                        
         elif self._r > self.upper_threshold:
-            g = self._g  * self.upper_threshold / self._r            
-        return unpack_weights_bias(g)
+            X = X  * self.upper_threshold / self._r            
+        return X
             
     def fit_transform(self, X):
         """Performs fit and transform."""
@@ -508,7 +564,11 @@ class GradientScaler(BaseEstimator, TransformerMixin):
 
     def inverse_transform(self, X):
         """Apply the inverse transformation."""
-        return unpack_weights_bias(self._g)
+        if self._r < self.lower_threshold:
+            X = X  * self._r / self.lower_threshold                         
+        elif self._r > self.upper_threshold:
+            X = X  * self._r / self.upper_threshold                    
+        return X
 
 # --------------------------------------------------------------------------- #
 #                            SHUFFLE DATA                                     #

@@ -22,6 +22,8 @@
 from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.base import BaseEstimator
+
+from mlstudio.utils.data_manager import unpack_weights_bias
 # --------------------------------------------------------------------------  #
 class Regularizer(ABC, BaseEstimator):
     """Base class for regularization classes."""
@@ -57,7 +59,8 @@ class L1(Regularizer):
         self.alpha = alpha
         self.name = "Lasso (L1) Regularizer"
     
-    def __call__(self, theta):        
+    def __call__(self, theta):  
+        theta = unpack_weights_bias(theta)      
         return self.alpha * np.sum(np.abs(theta['weights']), axis=0)
 
     def gradient(self, theta):

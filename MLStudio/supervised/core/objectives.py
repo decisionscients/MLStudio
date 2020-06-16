@@ -184,13 +184,12 @@ class MSE(Cost):
         n_samples = X.shape[0]
         dZ = y_out-y
         # Compute derivatives w.r.t weights and bias
-        gradient['weights'] = float(1. / n_samples) * X.T.dot(dZ) 
-        gradient['bias'] = np.mean(float(1. / n_samples) * dZ)
+        gradient= float(1. / n_samples) * X.T.dot(dZ)         
         # Check scale before regularization        
         gradient = self._check_gradient_scale(gradient)
         # Add the regularization to the weights
-        gradient['weights'] += 1. / n_samples * self.regularizer.gradient(theta)      
-        return(gradient)        
+        gradient += 1. / n_samples * self.regularizer.gradient(theta)      
+        return gradient        
 
 # --------------------------------------------------------------------------  #
 class CrossEntropy(Cost):
@@ -253,13 +252,12 @@ class CrossEntropy(Cost):
         n_samples = X.shape[0]
         dZ = y_out-y
         # Compute derivatives w.r.t weights and bias
-        gradient['weights'] = float(1. / n_samples) * X.T.dot(dZ) 
-        gradient['bias'] = np.mean(float(1. / n_samples) * dZ)
+        gradient = float(1. / n_samples) * X.T.dot(dZ)         
         # Check scale before regularization
         gradient = self._check_gradient_scale(gradient)
         # Add the regularization to the weights
-        gradient['weights'] += 1. / n_samples * self.regularizer.gradient(theta)              
-        return(gradient)          
+        gradient += 1. / n_samples * self.regularizer.gradient(theta)              
+        return gradient          
 
 # --------------------------------------------------------------------------  #
 class CategoricalCrossEntropy(Cost):
@@ -323,13 +321,12 @@ class CategoricalCrossEntropy(Cost):
         gradient = {}
         n_samples = y.shape[0]
         dZ = y_out-y
-        gradient['weights'] = 1/n_samples * X.T.dot(dZ)
-        gradient['bias'] = np.mean(1/n_samples * dZ)
+        gradient = 1/n_samples * X.T.dot(dZ)        
         # Check gradient scale before applying regularization
         gradient = self._check_gradient_scale(gradient)        
         # Add regularizer of weights 
-        gradient['weights'] += 1. / n_samples * self.regularizer.gradient(theta)      
-        return(gradient)                  
+        gradient += 1. / n_samples * self.regularizer.gradient(theta)      
+        return gradient                  
 # --------------------------------------------------------------------------  #
 #                         BENCHMARK FUNCTIONS                                 #        
 # --------------------------------------------------------------------------  #
@@ -407,10 +404,12 @@ class Adjiman(Benchmark):
         """Computes the gradient of the objective function."""
         dfdx = -(1/(theta[1]**2+1))*((theta[1]**2+1)*np.sin(theta[0])*np.sin(theta[1])+1)
         dfdy = 2*theta[0]*theta[1] /(theta[1]**2+1)**2 + np.cos(theta[0])*np.cos(theta[1])
-        df = np.array([dfdx, dfdy])
+        g = {}
+        g['bias'] = dfdx
+        g['weights'] = dfdy        
         # Check gradient scale 
-        df = self._check_gradient_scale(df)                
-        return df
+        g = self._check_gradient_scale(g)                
+        return g
 
 # --------------------------------------------------------------------------  #
 class BartelsConn(Benchmark):

@@ -31,7 +31,7 @@ homedir = str(Path(__file__).parents[3])
 demodir = str(Path(__file__).parents[1])
 sys.path.append(homedir)
 
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentOptimizer
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentPureOptimizer
 from mlstudio.visual.animations import animate_optimization
 from mlstudio.supervised.core.objectives import Adjiman, StyblinskiTank, Wikipedia
 from mlstudio.supervised.core.objectives import ThreeHumpCamel, Ursem01, Branin02
@@ -65,7 +65,7 @@ for objective in objectives:
 
     for optimizer in optimizers:
         estimators[optimizer.name] = {}
-        model = GradientDescentOptimizer(learning_rate=0.01,
+        model = GradientDescentPureOptimizer(learning_rate=0.01,
                                 theta_init=objective.start, 
                                 epochs=500, objective=objective,
                                 optimizer=optimizer)
