@@ -35,7 +35,7 @@ class RegressionMetricsTests:
 
     @mark.scorers
     def test_r2(self, get_regression_prediction):
-        y, y_pred = get_regression_prediction
+        X, y, y_pred = get_regression_prediction
         x = scorers.R2()(y, y_pred)         
         skl = r2_score(y, y_pred)   
         assert x<=1, "R2 is not less than 1"
@@ -43,7 +43,7 @@ class RegressionMetricsTests:
 
     @mark.scorers
     def test_var_explained(self, get_regression_prediction):
-        y, y_pred = get_regression_prediction
+        X, y, y_pred = get_regression_prediction
         x = scorers.VarExplained()(y, y_pred)        
         skl = explained_variance_score(y, y_pred)
         assert x<=1, "Variance explained not between 0 and 1"        
@@ -51,7 +51,7 @@ class RegressionMetricsTests:
 
     @mark.scorers
     def test_mae(self, get_regression_prediction):
-        y, y_pred = get_regression_prediction
+        X, y, y_pred = get_regression_prediction
         x = scorers.MAE()(y, y_pred)        
         skl = mean_absolute_error(y, y_pred)
         assert x>0, "MAE is not positive"       
@@ -59,7 +59,7 @@ class RegressionMetricsTests:
 
     @mark.scorers
     def test_mse(self, get_regression_prediction):
-        y, y_pred = get_regression_prediction
+        X, y, y_pred = get_regression_prediction
         x = scorers.MSE()(y, y_pred)        
         skl = mean_squared_error(y, y_pred)
         assert isinstance(x, float), "MSE is not a float"        
@@ -68,7 +68,7 @@ class RegressionMetricsTests:
 
     @mark.scorers
     def test_nmse(self, get_regression_prediction):
-        y, y_pred = get_regression_prediction
+        X, y, y_pred = get_regression_prediction
         x = scorers.NMSE()(y, y_pred)      
         skl = -1*mean_squared_error(y, y_pred)  
         assert isinstance(x, float), "NMSE is not a float"                
@@ -77,7 +77,7 @@ class RegressionMetricsTests:
 
     @mark.scorers
     def test_rmse(self, get_regression_prediction):
-        y, y_pred = get_regression_prediction
+        X, y, y_pred = get_regression_prediction
         x = scorers.RMSE()(y, y_pred)      
         skl = mean_squared_error(y, y_pred)  
         assert isinstance(x, float), "RMSE is not a float"                
@@ -86,7 +86,7 @@ class RegressionMetricsTests:
 
     @mark.scorers
     def test_nrmse(self, get_regression_prediction):
-        y, y_pred = get_regression_prediction
+        X, y, y_pred = get_regression_prediction
         x = scorers.NRMSE()(y, y_pred)       
         skl = mean_squared_error(y, y_pred)   
         assert isinstance(x, float), "NRMSE is not a float"                
@@ -95,7 +95,7 @@ class RegressionMetricsTests:
 
     @mark.scorers
     def test_msle(self, get_regression_prediction):
-        y, y_pred = get_regression_prediction
+        X, y, y_pred = get_regression_prediction
         x = scorers.MSLE()(y, y_pred) 
         if all(y_pred > 0) and (y > 0):
             skl = mean_squared_log_error(y, y_pred)  
@@ -107,7 +107,7 @@ class RegressionMetricsTests:
 
     @mark.scorers
     def test_rmsle(self, get_regression_prediction):
-        y, y_pred = get_regression_prediction
+        X, y, y_pred = get_regression_prediction
         x = scorers.RMSLE()(y, y_pred)        
         if all(y_pred > 0) and (y > 0):
             skl = np.sqrt(mean_squared_log_error(y, y_pred))
@@ -118,7 +118,7 @@ class RegressionMetricsTests:
 
     @mark.scorers
     def test_medae(self, get_regression_prediction):
-        y, y_pred = get_regression_prediction
+        X, y, y_pred = get_regression_prediction
         x = scorers.MEDAE()(y, y_pred)        
         skl = median_absolute_error(y, y_pred)
         assert isinstance(x, float), "MEDAE is not a float"                

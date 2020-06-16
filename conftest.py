@@ -174,19 +174,19 @@ def get_softmax_regression_data_features():
 def get_regression_prediction():
     X, y = make_regression()
     X, y_pred = make_regression()
-    return y, y_pred
+    return X, y, y_pred
 
 @fixture(scope="session")
 def get_logistic_regression_prediction():
     X, y = make_classification()
     X, y_pred = make_classification()
-    return y, y_pred    
+    return X, y, y_pred    
 
 @fixture(scope="session")
 def get_softmax_regression_prediction():
     X, y = make_classification(n_classes=5)
     X, y_pred = make_classification(n_classes=5)
-    return y, y_pred       
+    return X, y, y_pred       
 
 # ---------------------------------------------------------------------------- #
 #                                   STUBS                                      #

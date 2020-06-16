@@ -64,6 +64,21 @@ def encode_labels(y):
         encoder = LabelEncoder()
         return encoder.fit_transform(y)
 
+def pack_weights_bias(self, X):
+    """Packs weights and bias into a single array."""
+    return np.insert(X['weights'], 0, X['bias'], axis=1)
+
+def unpack_weights_bias(self, g):
+    """Unpacks weights and biases into a dictionary."""
+    X = {}
+    if len(ndim(g)) == 1:
+        X['weights'] = g[1:]
+        X['bias'] = g[0]
+    else:
+        X['weights'] = g[:,1:]
+        X['bias'] = g[:,0]
+    return X        
+
 def add_bias_term(X):
     """Adds a bias vector of ones to X."""
     if issparse(X):
@@ -472,24 +487,20 @@ class GradientScaler(BaseEstimator, TransformerMixin):
         self.normalizer_ = None
 
     def fit(self, X, y=None):
-        """Fits the transformer to the data. """
-        g = np.insert(X['weights'], 0, X['bias'], axis=0)        
-        self._r = np.linalg.norm(g)
+        """Fits the transformer to the data. """  
+        self._g = pack_weights_bias(X)
+        self._r = np.linalg.norm(self._g)
         return self       
 
     def transform(self, X):
-        """Transforms the data."""
-        print(X)
-        g = np.insert(X['weights'], 0, X['bias'], axis=0)                
-        print(g)
+        """Transforms the data."""        
+        g = self._g
         if self._r < self.lower_threshold:
-            g = g * self.lower_threshold / self._r            
+            g = self._g  * self.lower_threshold / self._r                        
         elif self._r > self.upper_threshold:
-            g = g * self.upper_threshold / self._r
-        X['bias'] = g[0]
-        X['weights'] = g[1:]
-        return X
-
+            g = self._g  * self.upper_threshold / self._r            
+        return unpack_weights_bias(g)
+            
     def fit_transform(self, X):
         """Performs fit and transform."""
         self.fit(X)
@@ -497,14 +508,7 @@ class GradientScaler(BaseEstimator, TransformerMixin):
 
     def inverse_transform(self, X):
         """Apply the inverse transformation."""
-        g = np.insert(X['weights'], 0, X['bias'], axis=0)
-        if self._r < self.lower_threshold:
-            g = g * self._r / self.lower_threshold
-        elif self._r > self.upper_threshold:
-            g = g * self._r / self.upper_threshold
-        X['bias'] = g[0]
-        X['weights'] = g[1:]        
-        return X
+        return unpack_weights_bias(self._g)
 
 # --------------------------------------------------------------------------- #
 #                            SHUFFLE DATA                                     #

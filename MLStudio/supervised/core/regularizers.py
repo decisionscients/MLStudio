@@ -47,8 +47,9 @@ class Nill(Regularizer):
     def __call__(self, theta):
         return 0        
     
-    def gradient(self, theta):
-        return np.zeros(theta.shape)
+    def gradient(self, theta):        
+        return np.zeros(theta['weights'].shape)
+        
 # --------------------------------------------------------------------------  #
 class L1(Regularizer):
     """ Regularizer for Lasso Regression """
