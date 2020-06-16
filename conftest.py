@@ -118,6 +118,12 @@ def get_regression_data():
     return X, y
 
 @fixture(scope="session")
+def get_regression_data_and_weights():
+    X, y, coef = datasets.make_regression(n_samples=1000, coef=True, random_state=5)    
+    return X, y, coef
+
+
+@fixture(scope="session")
 def get_regression_data_features():
     data = datasets.load_boston()
     return data['feature_names']
@@ -153,7 +159,7 @@ def get_logistic_regression_data_features():
 
 @fixture(scope="session")
 def get_softmax_regression_data():
-    X, y = datasets.load_iris(return_X_y=True)
+    X, y = datasets.make_multilabel_classification(n_samples=1000,n_features=20, n_classes=4)
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)
     return X, y
