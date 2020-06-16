@@ -129,7 +129,7 @@ class ClassificationMetricsTests:
 
     @mark.scorers
     def test_accuracy(self, get_logistic_regression_prediction):
-        y, y_pred = get_logistic_regression_prediction
+        X, y, y_pred = get_logistic_regression_prediction
         x = scorers.Accuracy()(y, y_pred)         
         skl = accuracy_score(y, y_pred)   
         assert x<=1, "R2 is not less than 1"

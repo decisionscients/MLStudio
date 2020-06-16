@@ -28,6 +28,7 @@ import scipy.sparse as sp
 from mlstudio.datasets import load_urls
 from mlstudio.utils.data_manager import MinMaxScaler, data_split, GradientScaler
 from mlstudio.utils.data_manager import encode_labels, add_bias_term
+from mlstudio.utils.data_manager import pack_weights_bias, unpack_weights_bias
 
 # --------------------------------------------------------------------------  #
 #                       TEST DATA CHECKS AND PREP                             #
@@ -63,20 +64,18 @@ def test_gradient_scaler_1d():
     for g in zip(lows, highs):    
         X = np.random.default_rng().uniform(low=g[0], high=g[1], size=20)                
         X_orig_norm = np.linalg.norm(X)        
-        theta = {}
-        theta['bias'] = np.array([[X[0]]])
-        theta['weights'] = np.array([X[1:]])
+        theta = unpack_weights_bias(X)
         scaler = GradientScaler(lower_threshold=lower_threshold, 
                                 upper_threshold=upper_threshold)                                        
         theta_new = scaler.fit_transform(theta)
-        X_new = np.insert(theta_new['weights'], 0, theta_new['bias'], axis=0)
+        X_new = pack_weights_bias(theta_new)
         X_new_norm = np.linalg.norm(X_new)
         assert X_new_norm>=lower_threshold and \
                X_new_norm<=upper_threshold, \
                    "Scaling didn't work. X_new_norm = {n}".format(
                    n=str(X_new_norm))        
         theta_old = scaler.inverse_transform(theta_new)
-        X_old = np.insert(theta_old['weights'], 0, theta_old['bias'], axis=0)
+        X_old = pack_weights_bias(theta_old)
         X_old_norm = np.linalg.norm(X_old)
 
         assert np.isclose(X_orig_norm, X_old_norm), \
@@ -96,20 +95,19 @@ def test_gradient_scaler_2d():
     for g in zip(lows, highs):    
         X = np.random.default_rng().uniform(low=g[0], high=g[1], size=(20,4))                
         X_orig_norm = (np.linalg.norm(X))        
-        theta = {}
-        theta['bias'] = X[:,0]
-        theta['weights'] = X[:,1:]
+        theta = unpack_weights_bias(X)
+        print(theta['bias'])
         scaler = GradientScaler(lower_threshold=lower_threshold, 
                                 upper_threshold=upper_threshold)                                        
         theta_new = scaler.fit_transform(theta)
-        X_new = np.insert(theta_new['weights'], 0, theta_new['bias'], axis=0)
+        X_new = pack_weights_bias(theta_new)
         X_new_norm = np.linalg.norm(X_new)
         assert X_new_norm>=lower_threshold and \
                X_new_norm<=upper_threshold, \
                    "Scaling didn't work. X_new_norm = {n}".format(
                    n=str(X_new_norm))        
         theta_old = scaler.inverse_transform(theta_new)
-        X_old = np.insert(theta_old['weights'], 0, theta_old['bias'], axis=0)
+        X_old = pack_weights_bias(theta_old)
         X_old_norm = np.linalg.norm(X_old)
 
         assert np.allclose(X_orig_norm, X_old_norm), \

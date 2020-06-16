@@ -64,19 +64,19 @@ def encode_labels(y):
         encoder = LabelEncoder()
         return encoder.fit_transform(y)
 
-def pack_weights_bias(self, X):
+def pack_weights_bias(X):
     """Packs weights and bias into a single array."""
-    return np.insert(X['weights'], 0, X['bias'], axis=1)
+    return np.insert(X['weights'], 0, X['bias'])
 
-def unpack_weights_bias(self, g):
+def unpack_weights_bias(g):
     """Unpacks weights and biases into a dictionary."""
-    X = {}
-    if len(ndim(g)) == 1:
+    X = {}    
+    if len(g.shape) == 1:
         X['weights'] = g[1:]
         X['bias'] = g[0]
     else:
-        X['weights'] = g[:,1:]
-        X['bias'] = g[:,0]
+        X['weights'] = g[1:,:]
+        X['bias'] = g[0,:]
     return X        
 
 def add_bias_term(X):
