@@ -28,7 +28,7 @@ import numpy as np
 from numpy.random import RandomState
 from scipy.sparse import isspmatrix_coo, issparse, csr_matrix, hstack
 from sklearn.base import TransformerMixin, BaseEstimator
-from sklearn.utils import shuffle
+from sklearn.utils import shuffle, check_array
 from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 
 from mlstudio.utils.validation import check_X_y
@@ -97,6 +97,7 @@ class AddBiasTerm(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         """Adds bias term to matrix and returns it to the caller."""
+        X = check_array(X, accept_sparse=True, accept_large_sparse=True)
         if issparse(X):
             X = self._transform_csr(X)
         else:
@@ -110,48 +111,20 @@ class AddBiasTerm(BaseEstimator, TransformerMixin):
                         
 # --------------------------------------------------------------------------- #
 class ZeroBiasTerm(BaseEstimator, TransformerMixin):
-    """Zeros out bias term."""
+    """Zeros out bias term in a parameters matrix or tensor."""
 
     def fit(self, X, y=None):
         """Fits data to the transformer."""
         return self
 
-    def _transform_numpy(self, X):
+    def transform(self, X):
         """Zero out bias term in numpy matrix."""
-        X[:,0] = np.zeros(shape=X.shape[0])        
-        return X
-    
-    def _transform_csr(self, X):
-        """Zeros out bias term in csr matrix."""
-        X = check_coo(X)
-        X = X[:,1:]
-        zeros = np.zeros((X.shape[0],1))
-        bias_term = csr_matrix(zeros, dtype=float)
-        X = hstack((bias_term, X)) 
-        X = check_coo(X)
-        return X
-
-    def transform(self, X, y=None):
-        """Zeros bias term to matrix and returns it to the caller."""
-        if issparse(X):
-            X = self._transform_csr(X)
+        if np.ndim(X) == 1:
+            X[0] = 0
         else:
-            X = self._transform_numpy(X)
-        return X        
-    
-    def inverse_transform(self, X):
-        """Removes bias term from matrix and returns it to caller."""
-        X = check_coo(X)
-        X = X[:,1:]
-        if issparse(X):
-            ones = np.ones((X.shape[0],1))
-            bias_term = csr_matrix(ones, dtype=float)
-            X = hstack((bias_term, X))
-            X = check_coo(X)
-        else:
-            X = np.insert(X, 0, 1.0, axis=1)          
+            X[0,:] = np.zeros(shape=X.shape[1])
         return X
-                        
+           
 
 # --------------------------------------------------------------------------- #
 class DataProcessor(ABC, BaseEstimator):

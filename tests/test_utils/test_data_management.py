@@ -66,34 +66,16 @@ def test_add_bias_term_csr():
 @mark.utils
 @mark.data_manager
 @mark.zero_bias_term
-def test_zero_bias_term_np():
-    X = np.random.rand(5,5)
-    xformer = AddBiasTerm()
-    X = xformer.fit_transform(X)
+def test_zero_bias_term():
+    X = np.random.rand(5)
     xformer = ZeroBiasTerm()
-    X = xformer.fit_transform(X)
-    assert X.shape[1] == 6, "Bias term not zeroed."
-    assert np.all(X[:,0] == 0.0), "Bias not zeroed out ."
-    # Inverse transform
-    X = xformer.inverse_transform(X)
-    assert np.all(X[:,0] == 1.0), "Bias not restored."
-    
+    X = xformer.fit_transform(X)    
+    assert X[0] == 0.0, "Bias not zeroed out ."
+    X = np.random.rand(5,5)
+    xformer = ZeroBiasTerm()
+    X = xformer.fit_transform(X)    
+    assert np.array_equal(X[0,:], np.zeros(shape=X.shape[1])), "Bias not zeroed out ."
 
-@mark.utils
-@mark.data_manager
-@mark.zero_bias_term
-def test_zero_bias_term_csr():
-    X = np.random.rand(5,5)
-    X = csr_matrix(X)
-    xformer = AddBiasTerm()
-    X = xformer.fit_transform(X)
-    xformer = ZeroBiasTerm()
-    X = xformer.fit_transform(X)
-    assert X.shape[1] == 6, "Bias term not zeroed."
-    assert np.all(X.toarray()[:,0] == 0.0), "Bias not zeroed out ."
-    # Inverse transform
-    X = xformer.inverse_transform(X)
-    assert np.all(X.toarray()[:,0] == 1.0), "Bias not restored."   
 
 # --------------------------------------------------------------------------  #
 #                       TEST DATA CHECKS AND PREP                             #
