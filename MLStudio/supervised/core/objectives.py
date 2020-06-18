@@ -24,7 +24,6 @@ from abc import ABC, abstractmethod
 import numpy as np
 from sklearn.base import BaseEstimator
 
-from mlstudio.supervised.core.regularizers import Nill
 from mlstudio.utils.data_manager import GradientScaler    
 
 # --------------------------------------------------------------------------  #
@@ -46,8 +45,6 @@ class Objective(ABC, BaseEstimator):
     def __init__(self, regularizer=None, gradient_scaler=None):
         self.regularizer = regularizer
         self.gradient_scaler = gradient_scaler
-        if not regularizer:
-            self.regularizer = Nill()       
         
     def _validation(self):
         from mlstudio.utils.validation import validate_regularizer                
@@ -111,8 +108,6 @@ class Cost(Objective):
     def __init__(self, regularizer=None, gradient_scaler=None):
         self.regularizer = regularizer
         self.gradient_scaler = gradient_scaler
-        if not regularizer:
-            self.regularizer = Nill()        
     
     @property
     def name(self):
@@ -151,12 +146,16 @@ class MSE(Cost):
         -------
         cost : The quadratic cost 
 
-        """        
-        n_samples = y.shape[0]
-        J = 0.5 * np.mean((y-y_out)**2) 
-        # Add regularizer of weights
-        J += 1. / (2 * n_samples) * self.regularizer(theta) 
-        return J
+        """   
+        # Number of samples in the dataset     
+        m = y.shape[0]     
+        # Compute total loss without consideration for batch size
+        L_total = np.sum((y_out-y)**2)        
+        # Apply regularization, again without consideration of batch size
+        if self.regularizer:
+            L_total += self.regularizer(theta)
+        # Normalize cost and regularization by 
+        return L_total / (2*m)
 
     def gradient(self, theta, X, y, y_out):
         """Computes quadratic costs gradient with respect to weights.
@@ -180,15 +179,17 @@ class MSE(Cost):
         gradient of the cost function w.r.t. the parameters.
 
         """
-        gradient = {}
-        n_samples = X.shape[0]
-        dZ = y_out-y
-        # Compute derivatives w.r.t weights and bias
-        gradient= float(1. / n_samples) * X.T.dot(dZ)         
-        # Check scale before regularization        
-        gradient = self._check_gradient_scale(gradient)
-        # Add the regularization to the weights
-        gradient += 1. / n_samples * self.regularizer.gradient(theta)      
+        # Number of samples in the dataset
+        m = y.shape[0]
+        # Compute derivative w.r.t. parameters theta without batch size norm
+        gradient_total = X.T.dot(y_out-y)                         
+        # Apply regularization to the weights (not bias) in gradient
+        if self.regularizer:
+            gradient_total += self.regularizer.gradient(theta)      
+        # Normalize gradient_total by batch size
+        gradient = gradient_total / m
+        # Check any vanishing or exploding gradients          
+        gradient = self._check_gradient_scale(gradient)                            
         return gradient        
 
 # --------------------------------------------------------------------------  #
@@ -217,14 +218,17 @@ class CrossEntropy(Cost):
         cost : The quadratic cost 
 
         """
-        n_samples = y.shape[0]
+        # Number of samples in the dataset
+        m = y.shape[0]
         # Prevent division by zero
-        y_out = np.clip(y_out, 1e-15, 1-1e-15)        
-        J = -1*(1/n_samples) * np.sum(np.multiply(y, np.log(y_out)) + \
-            np.multiply(1-y, np.log(1-y_out))) 
-        # Add regularizer of weights 
-        J += 1. / (2 * n_samples) * self.regularizer(theta)  
-        return J   
+        y_out = np.clip(y_out, 1e-15, 1-1e-15)    
+        # Compute cross entropy
+        H = -np.sum(y * np.log(y_out) + (1-y) * np.log(1-y_out)) 
+        # Apply regularization to the weights (not bias) in gradient
+        if self.regularizer: 
+            H += self.regularizer(theta)  
+        # Return cost as average of cross entropy
+        return H / m   
 
     def gradient(self, theta, X, y, y_out):
         """Computes cross entropy cost  gradient with respect to weights.
@@ -248,15 +252,17 @@ class CrossEntropy(Cost):
         gradient of the cost function w.r.t. the parameters.
 
         """
-        gradient = {}
-        n_samples = X.shape[0]
-        dZ = y_out-y
+        # Number of samples in the dataset
+        m = X.shape[0]        
         # Compute derivatives w.r.t weights and bias
-        gradient = float(1. / n_samples) * X.T.dot(dZ)         
-        # Check scale before regularization
-        gradient = self._check_gradient_scale(gradient)
-        # Add the regularization to the weights
-        gradient += 1. / n_samples * self.regularizer.gradient(theta)              
+        gradient_total =  X.T.dot(y-y_out)         
+        # Apply regularization to the weights (not bias) in gradient
+        if self.regularizer:
+            gradient_total += self.regularizer.gradient(theta)                
+        # Compute gradient as average of total gradient 
+        gradient = gradient_total / m
+        # Check any vanishing or exploding gradients
+        gradient = self._check_gradient_scale(gradient)            
         return gradient          
 
 # --------------------------------------------------------------------------  #
@@ -286,15 +292,17 @@ class CategoricalCrossEntropy(Cost):
         cost : The quadratic cost 
 
         """
-        
-        n_samples = y.shape[0]
+        # Number of samples in the dataset
+        m = y.shape[0]
         # Prevent division by zero
         y_out = np.clip(y_out, 1e-15, 1-1e-15)    
-        # Obtain unregularized cost
-        J = -np.mean(np.log(y_out) * y)
+        # Compute cross-entropy  
+        H = -np.sum(y * np.log(y_out), axis=1)
         # Add regularizer of weights 
-        J += 1 / (2 * n_samples) * self.regularizer(theta) 
-        return J 
+        if self.regularizer:
+            H += self.regularizer(theta) 
+        # Return cost as average of cross-entropy
+        return H / m
 
     def gradient(self, theta, X, y, y_out):
         """Computes gradient of cross-entropy cost with respect to weights.
@@ -319,13 +327,17 @@ class CategoricalCrossEntropy(Cost):
 
         """
         gradient = {}
-        n_samples = y.shape[0]
-        dZ = y_out-y
-        gradient = 1/n_samples * X.T.dot(dZ)        
-        # Check gradient scale before applying regularization
-        gradient = self._check_gradient_scale(gradient)        
+        # Number of samples in the dataset
+        m = y.shape[0]
+        # Compute sum of gradients as gradient_total        
+        gradient_total = -(X.T.dot(y-y_out))
         # Add regularizer of weights 
-        gradient += 1. / n_samples * self.regularizer.gradient(theta)      
+        if self.regularizer:
+            gradient_total += self.regularizer.gradient(theta)     
+        # Compute gradient as average of total gradient
+        gradient = gradient_total / m 
+        # Check gradient scale before applying regularization
+        gradient = self._check_gradient_scale(gradient)                    
         return gradient                  
 # --------------------------------------------------------------------------  #
 #                         BENCHMARK FUNCTIONS                                 #        
@@ -336,8 +348,6 @@ class Benchmark(Objective):
     def __init__(self, regularizer=None, gradient_scaler=GradientScaler()):
         self.regularizer = regularizer
         self.gradient_scaler = gradient_scaler
-        if not regularizer:
-            self.regularizer = Nill()        
 
     @property
     def name(self):

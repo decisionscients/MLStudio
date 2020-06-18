@@ -33,9 +33,9 @@ from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
 @mark.linear_regression
 class LinearRegressionTaskTests:
 
-    def test_linear_regression_output(self, get_regression_data_and_weights):
+    def test_linear_regression_output(self, make_regression_data):
         theta = {}        
-        X, y, theta['weights'] = get_regression_data_and_weights
+        X, y, theta['weights'] = make_regression_data
         theta['bias'] = np.array([0])
         t = LinearRegression()
         y_pred = t.compute_output(theta, X)        
@@ -64,9 +64,9 @@ class LogisticRegressionTaskTests:
 @mark.softmax_regression
 class SoftmaxRegressionTaskTests:
 
-    def test_softmax_regression_output(self, get_softmax_regression_data):
+    def test_softmax_regression_output(self, make_multiclass_data):
         theta = {}        
-        X, y = get_softmax_regression_data
+        X, y = make_multiclass_data
         theta['weights'] = np.random.default_rng().uniform(low=0, high=20, size=(X.shape[1],y.shape[1]))
         theta['bias'] = np.random.default_rng().uniform(low=0, high=20, size=y.shape[1])
         t = MultinomialLogisticRegression()

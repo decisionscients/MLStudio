@@ -19,15 +19,22 @@
 # Copyright (c) 2020 DecisionScients                                           #
 # ============================================================================ #
 # %%
+import os
+from pathlib import Path
+import sys
+
 import numpy as np
 import pandas as pd
 import pytest
 from pytest import fixture
 
 from sklearn import datasets
+from sklearn.linear_model import LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_regression, make_classification
+from sklearn.datasets import make_multilabel_classification
 import warnings
 warnings.filterwarnings('ignore')
 warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
@@ -39,6 +46,10 @@ from mlstudio.supervised.core.scorers import MSE
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentAbstract
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentPureOptimizer
 
+homedir = str(Path(__file__).parents[0])
+datadir = os.path.join(homedir, "tests\\test_data")
+sys.path.append(homedir)
+sys.path.append(datadir)
 # ---------------------------------------------------------------------------- #
 #                               FILES TO SKIP                                  #
 # ---------------------------------------------------------------------------- #
@@ -118,12 +129,6 @@ def get_regression_data():
     return X, y
 
 @fixture(scope="session")
-def get_regression_data_and_weights():
-    X, y, coef = datasets.make_regression(n_samples=1000, coef=True, random_state=5)    
-    return X, y, coef
-
-
-@fixture(scope="session")
 def get_regression_data_features():
     data = datasets.load_boston()
     return data['feature_names']
@@ -158,21 +163,14 @@ def get_logistic_regression_data_features():
     return data['feature_names']
 
 @fixture(scope="session")
-def get_softmax_regression_data():
-    X, y = datasets.make_multilabel_classification(n_samples=1000,n_features=20, n_classes=4)
-    scaler = StandardScaler()    
-    X = scaler.fit_transform(X)
-    return X, y
-
-@fixture(scope="session")
-def get_softmax_regression_split_data(get_softmax_regression_data):
-    X, y = get_softmax_regression_data
+def get_softmax_regression_split_data(make_multiclass_data):
+    X, y = make_multiclass_data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.33, random_state=50)
     return X_train, X_test, y_train, y_test                
 
 @fixture(scope="session")
-def get_softmax_regression_data_features():
+def make_multiclass_data_features():
     data = datasets.load_iris()
     return data['feature_names']    
 
@@ -188,11 +186,45 @@ def get_logistic_regression_prediction():
     X, y_pred = make_classification()
     return X, y, y_pred    
 
+@fixture(scope='session')
+def get_log():
+    filepath = "tests/test_data/test_monitor.csv"
+    df = pd.read_csv(filepath)
+    log = []
+    for idx, row in df.iterrows():
+        epoch_log = {'epoch': row['epoch'],
+                    'train_cost': row['train_cost'],
+                    'train_score': row['train_score'],
+                    'val_cost': row['val_cost'],
+                    'val_score': row['val_score'],                    
+                    'gradient_norm': row['gradient_norm']                    
+                    }
+        log.append(epoch_log)    
+    return log
+# ---------------------------------------------------------------------------- #
+#                              SIMULATED DATA                                  #
+# ---------------------------------------------------------------------------- #
 @fixture(scope="session")
-def get_softmax_regression_prediction():
-    X, y = make_classification(n_classes=5)
-    X, y_pred = make_classification(n_classes=5)
-    return X, y, y_pred       
+def make_regression_data():
+    X, y = make_regression(n_samples=100, n_features=5, random_state=5)    
+    scaler = StandardScaler()    
+    X = scaler.fit_transform(X)    
+    return X, y
+
+@fixture(scope="session")
+def make_classification_data():
+    X, y, = make_classification(n_samples=100, n_features=5, random_state=5)        
+    scaler = StandardScaler()    
+    X = scaler.fit_transform(X)    
+    return X, y
+
+@fixture(scope="session")
+def make_multiclass_data():
+    X, y = make_multilabel_classification(n_samples=100,n_features=5, 
+                n_classes=4, random_state=5)
+    scaler = StandardScaler()    
+    X = scaler.fit_transform(X)    
+    return X, y
 
 # ---------------------------------------------------------------------------- #
 #                                   STUBS                                      #
@@ -260,21 +292,81 @@ class MockEstimator:
 def get_mock_estimator():
     return MockEstimator            
 
+
+# ---------------------------------------------------------------------------- #
+#                                   TEST PACKAGES                              #
+# ---------------------------------------------------------------------------- #
+def get_objective_test_package(filepath):
+    # Get X data
+    d = {}
+    xlsx = pd.ExcelFile(filepath)
+    d['X'] = pd.read_excel(xlsx, sheet_name='X', header=0, usecols="B:F").to_numpy()
+    d['y'] = pd.read_excel(xlsx, sheet_name='y', header=0, usecols="B").to_numpy()    
+    d['y_pred'] = pd.read_excel(xlsx, sheet_name='y_pred', header=0, usecols="B").to_numpy()   
+    d['theta'] = pd.read_excel(xlsx, sheet_name='theta', header=0, usecols="B").to_numpy()   
+    d['cost'] = pd.read_excel(xlsx, sheet_name='cost', header=0, usecols="A").values
+    d['cost_l1'] = pd.read_excel(xlsx, sheet_name='cost', header=0, usecols="B").values
+    d['cost_l2'] = pd.read_excel(xlsx, sheet_name='cost', header=0, usecols="C").values
+    d['cost_l1_l2'] = pd.read_excel(xlsx, sheet_name='cost', header=0, usecols="D").values
+    d['grad'] = pd.read_excel(xlsx, sheet_name='gradient', header=0, usecols="A").to_numpy()
+    d['grad_l1'] = pd.read_excel(xlsx, sheet_name='gradient', header=0, usecols="B").to_numpy()
+    d['grad_l2'] = pd.read_excel(xlsx, sheet_name='gradient', header=0, usecols="C").to_numpy()
+    d['grad_l1_l2'] = pd.read_excel(xlsx, sheet_name='gradient', header=0, usecols="D").to_numpy()
+    return d
+
+def get_objective_test_package_cxe(filepath):
+    # Get X data
+    d = {}
+    xlsx = pd.ExcelFile(filepath)
+    d['X'] = pd.read_excel(xlsx, sheet_name='X', header=0, usecols="B:F").to_numpy()
+    d['y'] = pd.read_excel(xlsx, sheet_name='y', header=0, usecols="B:E").to_numpy()    
+    d['y_pred'] = pd.read_excel(xlsx, sheet_name='y_pred', header=0, usecols="B:E").to_numpy()   
+    d['theta'] = pd.read_excel(xlsx, sheet_name='theta', header=0, usecols="B:E").to_numpy()   
+    d['cost'] = pd.read_excel(xlsx, sheet_name='cost', header=0, usecols="A").values
+    d['cost_l1'] = pd.read_excel(xlsx, sheet_name='cost', header=0, usecols="B").values
+    d['cost_l2'] = pd.read_excel(xlsx, sheet_name='cost', header=0, usecols="C").values
+    d['cost_l1_l2'] = pd.read_excel(xlsx, sheet_name='cost', header=0, usecols="D").values
+    d['grad'] = pd.read_excel(xlsx, sheet_name='gradient', header=0, usecols="A:D").to_numpy()
+    d['grad_l1'] = pd.read_excel(xlsx, sheet_name='gradient', header=0, usecols="F:I").to_numpy()
+    d['grad_l2'] = pd.read_excel(xlsx, sheet_name='gradient', header=0, usecols="K:N").to_numpy()
+    d['grad_l1_l2'] = pd.read_excel(xlsx, sheet_name='gradient', header=0, usecols="P:S").to_numpy()
+    return d    
+
+def get_regularization_test_package(filepath):
+    d = {}
+    xlsx = pd.ExcelFile(filepath)
+    d['l1_cost'] = pd.read_excel(xlsx, sheet_name='lasso', header=0, usecols="A").to_numpy()
+    d['l1_grad'] = pd.read_excel(xlsx, sheet_name='lasso_grad', header=0, usecols="A").to_numpy().flatten()
+    d['l2_cost'] = pd.read_excel(xlsx, sheet_name='ridge', header=0, usecols="A").to_numpy()
+    d['l2_grad'] = pd.read_excel(xlsx, sheet_name='ridge_grad', header=0, usecols="A").to_numpy().flatten()
+    d['l1_l2_cost'] = pd.read_excel(xlsx, sheet_name='elasticnet', header=0, usecols="A").to_numpy()
+    d['l1_l2_grad'] = pd.read_excel(xlsx, sheet_name='elasticnet_grad', header=0, usecols="A").to_numpy().flatten()
+    return d
+
 @fixture(scope='session')
-def get_log():
-    filepath = "tests/test_data/test_monitor.csv"
-    df = pd.read_csv(filepath)
-    log = []
-    for idx, row in df.iterrows():
-        epoch_log = {'epoch': row['epoch'],
-                    'train_cost': row['train_cost'],
-                    'train_score': row['train_score'],
-                    'val_cost': row['val_cost'],
-                    'val_score': row['val_score'],                    
-                    'gradient_norm': row['gradient_norm']                    
-                    }
-        log.append(epoch_log)    
-    return log
+def get_objective_mse_package():
+    filename = "test_objective_cost_functions_mse.xlsx"
+    filepath = os.path.join(datadir, filename)
+    return get_objective_test_package(filepath)
+
+@fixture(scope='session')
+def get_objective_xe_package():
+    filename = "test_objective_cost_functions_xe.xlsx"
+    filepath = os.path.join(datadir, filename)
+    return get_objective_test_package(filepath)    
+
+@fixture(scope='session')
+def get_objective_cxe_package():
+    filename = "test_objective_cost_functions_cxe.xlsx"
+    filepath = os.path.join(datadir, filename)
+    return get_objective_test_package_cxe(filepath)  
+
+@fixture(scope='session')
+def get_regularization_package():
+    filename = "test_regularization.xlsx"
+    filepath = os.path.join(datadir, filename)
+    return get_regularization_test_package(filepath)  
+
 
 
 

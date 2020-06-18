@@ -29,59 +29,74 @@ from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 @mark.lasso
 class LassoTests:
 
-    def test_lasso(self):
-        theta = {}
-        alpha = 0.1
-        theta = np.array([40, 6, -22, 31,26])      
+    def test_lasso(self, get_regularization_package):
+        regularization_package = get_regularization_package
+        theta = np.array([40, 6, -22, 31,26])   
+        alpha = 0.1                
         lasso = L1(alpha=alpha)
         # Lasso loss regularization        
-        exp_result = 8.5
+        exp_result = regularization_package['l1_cost'] 
         act_result = lasso(theta)
-        assert np.isclose(exp_result,act_result), "Lasso regularization error"
-        # Lasso loss regularization gradient
-        exp_result = np.array([0,0.1,-0.1,0.1,0.1])
+        assert np.isclose(exp_result,act_result), "Lasso regularization cost error"
+
+    def test_lasso_gradient(self, get_regularization_package):
+        regularization_package = get_regularization_package
+        theta = np.array([40, 6, -22, 31,26])   
+        alpha = 0.1                
+        lasso = L1(alpha=alpha)
+        # Lasso loss regularization        
+        exp_result = regularization_package['l1_grad'] 
         act_result = lasso.gradient(theta)
-        assert np.allclose(exp_result, act_result), "Lasso gradient error"
+        assert np.allclose(exp_result,act_result), "Lasso regularization gradient error"
 
 # --------------------------------------------------------------------------  #
 @mark.regularizers
 @mark.ridge
 class RidgeTests:
 
-    def test_ridge(self):
-        theta = {}
-        alpha = 0.1
-        theta = np.array([40, 6, -22, 31,26])      
+    def test_ridge(self, get_regularization_package):
+        regularization_package = get_regularization_package
+        theta = np.array([40, 6, -22, 31,26])   
+        alpha = 0.1                
         ridge = L2(alpha=alpha)
-        # Ridge loss regularization        
-        exp_result = 215.7
+        # Lasso loss regularization        
+        exp_result = regularization_package['l2_cost'] 
         act_result = ridge(theta)
-        assert np.isclose(exp_result,act_result), "Ridge regularization error"
-        # Ridge loss regularization gradient
-        exp_result = np.array([0,0.6,-2.2,3.1,2.6])
+        assert np.isclose(exp_result,act_result), "Ridge regularization cost error"
+
+    def test_ridge_gradient(self, get_regularization_package):
+        regularization_package = get_regularization_package
+        theta = np.array([40, 6, -22, 31,26])   
+        alpha = 0.1                
+        ridge = L2(alpha=alpha)
+        # Lasso loss regularization        
+        exp_result = regularization_package['l2_grad'] 
         act_result = ridge.gradient(theta)
-        assert np.allclose(exp_result, act_result), "Ridge gradient error"
-    
+        assert np.allclose(exp_result,act_result), "Ridge regularization gradient error"
+
 # --------------------------------------------------------------------------  #
 @mark.regularizers
 @mark.elasticnet
-class ElasticnetTests:
+class ElasticNetTests:
 
-    def test_elasticnet(self):
-        theta = {}
-        alpha = 0.1
-        ratio = 0.5
-        theta = np.array([40, 6, -22, 31,26])      
+    def test_elasticnet(self, get_regularization_package):
+        regularization_package = get_regularization_package
+        theta = np.array([40, 6, -22, 31,26])   
+        alpha = 0.1            
+        ratio = 0.5    
         elasticnet = L1_L2(alpha=alpha, ratio=ratio)
-        # Elasticnet loss regularization        
-        exp_result = 58.175
+        # Lasso loss regularization        
+        exp_result = regularization_package['l1_l2_cost'] 
         act_result = elasticnet(theta)
-        assert np.isclose(exp_result,act_result), "Elasticnet regularization error"
-        # Elasticnet loss regularization gradient
-        exp_result = np.array([0,0.35,-1.15, 1.6,1.35])
+        assert np.isclose(exp_result,act_result), "ElasticNet regularization cost error"
+
+    def test_elasticnet_gradient(self, get_regularization_package):
+        regularization_package = get_regularization_package
+        theta = np.array([40, 6, -22, 31,26])   
+        alpha = 0.1
+        ratio = 0.5                
+        elasticnet = L1_L2(alpha=alpha, ratio=ratio)
+        # Lasso loss regularization        
+        exp_result = regularization_package['l1_l2_grad'] 
         act_result = elasticnet.gradient(theta)
-        assert np.allclose(exp_result, act_result), "Elasticnet gradient error"
-
-
-   
-      
+        assert np.allclose(exp_result,act_result), "ElasticNet regularization gradient error"

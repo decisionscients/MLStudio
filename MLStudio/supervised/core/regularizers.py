@@ -33,25 +33,32 @@ class Regularizer(ABC, BaseEstimator, TransformerMixin):
 
     @abstractmethod
     def __call__(self, theta):
+        """Computes regularization to be added to cost function.
+
+        Parameters
+        ----------
+        theta : np.array shape = (n_features) or (n_features, n_classes)
+            The model parameters
+
+        m : int
+            The sample size
+        """
         pass
 
     @abstractmethod
     def gradient(self, theta):
+        """Computes the regularization gradient.
+
+        Parameters
+        ----------
+        theta : np.array shape = (n_features) or (n_features, n_classes)
+            The model parameters
+
+        m : int
+            The sample size
+        """
         pass
 
-# --------------------------------------------------------------------------  #
-class Nill(Regularizer):
-    """ No Regularizer """
-    def __init__(self):
-        super(Nill, self).__init__()
-        self.name = "No Regularizer"
-    
-    def __call__(self, theta):
-        return 0        
-    
-    def gradient(self, theta):        
-        return np.zeros(theta.shape)
-        
 # --------------------------------------------------------------------------  #
 class L1(Regularizer):
     """ Regularizer for Lasso Regression """
@@ -60,13 +67,13 @@ class L1(Regularizer):
         self.alpha = alpha
         self.name = "Lasso (L1) Regularizer"
     
-    def __call__(self, theta):  
+    def __call__(self, theta):
         theta = self._zero_bias_term.fit_transform(theta)
-        return self.alpha * np.sum(np.abs(theta), axis=0)
+        return self.alpha * np.sum(np.abs(theta))
 
-    def gradient(self, theta):
-        theta = self._zero_bias_term.fit_transform(theta)
-        return self.alpha * np.sign(theta)
+    def gradient(self, theta):        
+        theta = self._zero_bias_term.fit_transform(theta)        
+        return self.alpha * np.sign(theta)        
     
 # --------------------------------------------------------------------------  #
 class L2(Regularizer):
@@ -86,6 +93,7 @@ class L2(Regularizer):
 # --------------------------------------------------------------------------  #
 class L1_L2(Regularizer):
     """ Regularizer for Elastic Net Regression """
+
     def __init__(self, alpha=0.01, ratio=0.5):
         super(L1_L2, self).__init__()
         self.alpha = alpha
@@ -94,8 +102,8 @@ class L1_L2(Regularizer):
 
     def __call__(self, theta):
         theta = self._zero_bias_term.fit_transform(theta)
-        l1_contr = self.ratio * np.sum(np.abs(theta), axis=0)
-        l2_contr = (1 - self.ratio) * 0.5 * np.sum(np.square(theta))
+        l1_contr = self.ratio * np.sum(np.abs(theta))
+        l2_contr = (1 - self.ratio) * np.sum(np.square(theta))
         return self.alpha * (l1_contr + l2_contr)
 
     def gradient(self, theta):
