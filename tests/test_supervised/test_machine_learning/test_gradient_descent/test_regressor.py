@@ -24,6 +24,8 @@ import numpy as np
 import pytest
 from pytest import mark
 from sklearn.linear_model import LinearRegression
+from sklearn.utils.estimator_checks import parametrize_with_checks
+from sklearn.utils.estimator_checks import check_estimator
 
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.supervised.observers.learning_rate import TimeDecay, StepDecay
@@ -44,17 +46,23 @@ from mlstudio.supervised.core.optimizers import RMSprop
 from mlstudio.supervised.core.optimizers import Adam, AdaMax, Nadam
 from mlstudio.supervised.core.optimizers import AMSGrad, AdamW, QHAdam
 from mlstudio.supervised.core.optimizers import QuasiHyperbolicMomentum
-from mlstudio.supervised.core.scorers import MSE
+from mlstudio.supervised.core.scorers import R2
 # --------------------------------------------------------------------------  #
 
 @mark.gd
 @mark.regressor
 class RegressorTests:
 
+    scenarios = [GradientDescentRegressor(epochs=5000, scorer=R2())]
+
+    @parametrize_with_checks(scenarios)
+    def test_regression_sklearn(self,estimator, check):
+        check(estimator)
+
     def test_regressor_no_observers(self, get_regression_data_split):
         X_train, X_test, y_train, y_test = get_regression_data_split
         # Fit the model
-        est = GradientDescentRegressor(epochs=5000)
+        est = GradientDescentRegressor(epochs=5000, scorer=R2())
         est.fit(X_train,y_train)
         mls_score = est.score(X_test, y_test)
         # Fit sklearn's model

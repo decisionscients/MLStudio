@@ -469,15 +469,15 @@ class GradientDescentEstimator(GradientDescentAbstract):
             verbose = verbose,
             random_state = random_state    
         )
-        self._batch_size = batch_size               
+        self.batch_size = batch_size               
 
     # ----------------------------------------------------------------------- #                
     @property
     def variant(self):
         """Returns the gradient descent variant based upon the batch size."""
-        if self._batch_size is None:
+        if self.batch_size is None:
             variant = "Batch Gradient Descent"
-        elif self._batch_size == 1:
+        elif self.batch_size == 1:
             variant = "Stochastic Gradient Descent"   
         else:
             variant = "Minibatch Gradient Descent"   
@@ -593,7 +593,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
 
             self._on_epoch_begin()
 
-            for X_batch, y_batch in batch_iterator(self.X_train_, self.y_train_, batch_size=self._batch_size):
+            for X_batch, y_batch in batch_iterator(self.X_train_, self.y_train_, batch_size=self.batch_size):
 
                 self._on_batch_begin()
                 
@@ -645,6 +645,8 @@ class GradientDescentEstimator(GradientDescentAbstract):
     def _score(self, X, y):
         """Calculates scores during as the beginning of each training epoch."""        
         y_pred = self._task.predict(self._theta, X)
+        if self._scorer is None:
+            raise Exception("Unable to compute score. No scorer object provided.")
         return self._scorer(y, y_pred)
 
     # ----------------------------------------------------------------------- #    
@@ -665,6 +667,8 @@ class GradientDescentEstimator(GradientDescentAbstract):
         
         """        
         y_pred = self.predict(X)        
+        if self._scorer is None:
+            raise Exception("Unable to compute score. No scorer object provided.")        
         return self._scorer(y, y_pred)    
 
     # ----------------------------------------------------------------------- #    
@@ -724,9 +728,8 @@ class GradientDescentRegressor(GradientDescentEstimator):
     # ----------------------------------------------------------------------- #    
     def _copy_mutable_parameters(self, log=None):
         super(GradientDescentEstimator, self)._copy_mutable_parameters()
-        if self.scorer is None:
-            self.scorer = R2()
-        self._scorer = copy.deepcopy(self.scorer) 
+        self._scorer = copy.deepcopy(self.scorer) if self.scorer else \
+            self.scorer
 
     # ----------------------------------------------------------------------- #    
     def _obtain_implicit_dependencies(self):
