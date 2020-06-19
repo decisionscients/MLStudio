@@ -93,6 +93,7 @@ class BlackBox(Observer):
         for k,v in log.items():
             self.epoch_log.setdefault(k,[]).append(v)
 
+   
 
 # --------------------------------------------------------------------------- #
 #                                PROGRESS                                     #
@@ -151,6 +152,10 @@ class Performance(PerformanceObserver):
         the observer collects, analyzes and stores performance data, but
         does not effect the subject's behavior. 
 
+    val_size : float (default=0.3)
+        The proportion of the training set to allocate to the 
+        validation set.
+
     metric : str, optional (default='train_cost')
         Specifies which statistic to metric for evaluation purposes.
 
@@ -168,20 +173,27 @@ class Performance(PerformanceObserver):
         The number of consecutive epochs of non-improvement that is 
         tolerated before considering the optimization stable.
 
+    best_or_final : str, optional (default='best')
+        Indicates whether the composing estimator should use the best
+        or final results from the Performance object when reporting results
+        and computing predictions
+
     All estimator performance considerations are managed and controlled
     by this class. 
     """
 
-    def __init__(self, mode='passive', metric='train_cost', scorer=None, 
-                 epsilon=0.01, patience=5): 
+    def __init__(self, mode='passive', val_size=0.3, metric='train_cost', 
+                 scorer=None,  epsilon=0.01, patience=5, best_or_final='best'): 
         super(Performance, self).__init__(                   
+            val_size = val_size,
             metric = metric,        
             scorer = scorer,
             epsilon = epsilon,
-            patience = patience,
+            patience = patience
         )
         self.name = "Performance Observer"
-        self.mode = mode
+        self.mode = mode       
+        self.best_or_final = best_or_final 
 
     def on_epoch_end(self, epoch, log=None):
         """Logic executed at the end of each epoch.

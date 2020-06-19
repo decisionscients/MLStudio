@@ -28,7 +28,7 @@ from scipy.sparse import csr_matrix
 from mlstudio.datasets import load_urls
 from mlstudio.utils.data_manager import MinMaxScaler, data_split, GradientScaler
 from mlstudio.utils.data_manager import encode_labels
-from mlstudio.utils.data_manager import AddBiasTerm, ZeroBiasTerm
+from mlstudio.utils.data_manager import AddBiasTerm, ZeroBiasTerm, unpack_parameters
 # --------------------------------------------------------------------------  #
 #                       TEST ADD BIAS TERM TRANSFORMER                        #
 # --------------------------------------------------------------------------  #
@@ -188,6 +188,22 @@ def test_data_split():
     test_proportions = test_counts / n_test
     assert np.allclose(train_proportions, test_proportions, rtol=1e-2), "Data split stratification problem "
 
+# --------------------------------------------------------------------------  #
+#                        TEST UNPACK PARAMETERS                               #
+# --------------------------------------------------------------------------  #  
+@mark.utils
+@mark.unpack_parameters
+def test_unpack_parameters():
+    X = np.random.rand(5)
+    bias, weights = unpack_parameters(X)
+    assert bias == X[0], "Bias not unpacked correctly"
+    assert np.array_equal(weights, X[1:]), "weights not unpacked correctly"
+    X = np.random.rand(5,3)
+    bias, weights = unpack_parameters(X)
+    assert bias.shape == (3,), "Bias not unpacked correctly"
+    assert np.array_equal(bias, X[0,:]), "Bias not unpacked correctly "
+    assert weights.shape == (4,3), "Weights not unpacked correctly"
+    assert np.array_equal(weights, X[1:,:]), "Weights not unpacked correctly"
 
 
 

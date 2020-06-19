@@ -44,13 +44,17 @@ def check_coo(X):
         if isspmatrix_coo(X):
             X = X.tocsr()
     return X    
-
-
-def one_hot_encode(y):
-    """One hot encodes a multiclass target variable of shape (n_samples,)"""
-    encoder = LabelBinarizer()
-    return encoder.fit_transform(y)
-
+# --------------------------------------------------------------------------- #
+def unpack_parameters(theta):
+    """Unpacks the parameters theta and returns bias and weights."""
+    if np.ndim(theta) == 1:
+        bias = theta[0]
+        weights = theta[1:]
+    else:
+        bias = theta[0,:]
+        weights = theta[1:,:]
+    return bias, weights
+# --------------------------------------------------------------------------- #
 def encode_labels(y):
     """Encodes labels to have values from 0 to n_classes - 1
     
@@ -139,7 +143,7 @@ class DataProcessor(ABC, BaseEstimator):
         The seed for pseudo randomization.
     
     """
-    def __init__(self, val_size=0.3, random_state=None):        
+    def __init__(self, val_size=0, random_state=None):        
         self.val_size = val_size
         self.random_state = random_state
 
@@ -178,51 +182,77 @@ class RegressionDataProcessor(DataProcessor):
         """Prepares data for regression."""
 
         X_train, y_train = check_X_y(X, y)
-        X_train = add_bias_term(X_train)
+        X_train = AddBiasTerm().fit_transform(X_train)
         
         d = {}
         d['n_features_'] = X_train.shape[1]
         d['X_train_'] = X_train
-        d['y_train_orig_'] = y_train
         d['y_train_'] = y_train
         if self.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
                         stratify=False, test_size=self.val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
-            d['y_train_orig_'] = y_train
             d['y_train_'] = y_train
             d['X_val_'] = X_val
-            d['y_val_orig_'] = y_val
             d['y_val_'] = y_val
         return d
 
 # --------------------------------------------------------------------------- #
-class ClassificationDataProcessor(DataProcessor):
-    """Prepares data for classification."""
+class LogisticRegressionDataProcessor(DataProcessor):
+    """Prepares data for regression."""
 
     def transform(self, X, y):
-        """Prepares data for classification."""
+        """Prepares data for regression."""
 
         X_train, y_train = check_X_y(X, y)
-        X_train = add_bias_term(X_train)
-        y_train = encode_labels(y_train)
+        X_train = AddBiasTerm().fit_transform(X_train)
+        
         d = {}
         d['n_features_'] = X_train.shape[1]
-        d['n_classes_'] = len(np.unique(y_train))
         d['X_train_'] = X_train
-        d['y_train_orig_'] = y_train
-        d['y_train_'] = one_hot_encode(y_train) if d['n_classes_'] > 2 else y_train
+        d['y_train_'] = y_train
+        if self.val_size:
+            X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
+                        stratify=False, test_size=self.val_size, 
+                        random_state=self.random_state)
+            d['X_train_'] = X_train
+            d['y_train_'] = y_train
+            d['X_val_'] = X_val
+            d['y_val_'] = y_val
+        return d
+# --------------------------------------------------------------------------- #
+class MulticlassDataProcessor(DataProcessor):
+    """Prepares data for multi-class classification."""
+
+    def transform(self, X, y):
+        """Prepares data for multi-class classification."""
+
+        n_classes = len(np.unique(y_train))
+        if n_classes < 3:
+            msg = "This data processor is for multi-class settings with classes\
+                >2. Please use the LogisticRegressionDataProcessor instead."
+            raise Exception(msg)
+
+        X_train, y_train = check_X_y(X, y)
+        X_train = AddBiasTerm().fit_transform(X_train)
+        y_train_enc = encode_labels(y_train)
+        d = {}
+        d['n_features_'] = X_train.shape[1]
+        d['n_classes_'] = n_classes
+        d['X_train_'] = X_train
+        d['y_train_'] = y_train
+        d['y_train_enc'] = encode_labels(y_train) 
         if self.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
                         stratify=True, test_size=self.val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
-            d['y_train_orig_'] = y_train
-            d['y_train_'] = one_hot_encode(y_train) if d['n_classes_'] > 2 else y_train
+            d['y_train_'] = y_train
+            d['y_train_enc_'] = encode_labels(y_train) 
             d['X_val_'] = X_val
-            d['y_val_orig_'] = y_val
-            d['y_val_'] = one_hot_encode(y_val) if d['n_classes_'] > 2 else y_val
+            d['y_val_'] = y_val
+            d['y_val_enc_'] = encode_labels(y_val) 
         return d                               
 
 # --------------------------------------------------------------------------- #

@@ -282,10 +282,11 @@ class Observer(ABC, BaseEstimator):
 class PerformanceObserver(Observer):
     """Base class for performance observers."""
 
-    def __init__(self, metric='train_cost', scorer=None, 
+    def __init__(self, val_size=0.3, metric='train_cost', scorer=None, 
                  epsilon=1e-3, patience=5): 
         super(PerformanceObserver, self).__init__()       
         self.name = "Performance Base Observer"
+        self.val_size= val_size
         self.metric = metric        
         self.scorer = scorer
         self.epsilon = epsilon
@@ -311,7 +312,10 @@ class PerformanceObserver(Observer):
         df = pd.DataFrame(data=d)
         return df
        
-    def _validate(self):        
+    def _validate(self):     
+        if 'val' in self.metric and self.val_size == 0.0:   
+            msg = "The val_size parameter must be greater than zero if the metric is {m}".format(m=self.metric)
+            raise ValueError(msg)
         validate_zero_to_one(param=self.epsilon, param_name='epsilon',
                              left='closed', right='closed')       
         validate_int(param=self.patience, param_name='patience',

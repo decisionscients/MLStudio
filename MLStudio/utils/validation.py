@@ -96,35 +96,19 @@ def validate_array_like(param, param_name=""):
         raise TypeError(msg)
     else:
         return True             
-
 # --------------------------------------------------------------------------  #
-def validate_gradient_check(param, param_name="gradient_check"):     
-    from mlstudio.supervised.observers.debugging import GradientCheck  
-    if not isinstance(param, (bool, GradientCheck)):
-        msg = "The gradient_check parameter must be boolean or a\
-            valid GradientCheck object."        
+def validate_observers(param, param_name='observers'):
+    from mlstudio.supervised.observers.base import Observer
+    if not isinstance(param, dict):
+        msg = "The observer parameter must be a dictionary where each entry's \
+            key is the name of the observer and the value is the observer object."
         raise TypeError(msg)
-    else:
-        return True     
-# --------------------------------------------------------------------------  #
-def validate_learning_rate_schedule(schedule):  
-    from mlstudio.supervised.observers.learning_rate import LearningRateSchedule  
-    valid_learning_rate_schedules = [cls.__name__ for cls in LearningRateSchedule.__subclasses__()]
-    if not isinstance(schedule, LearningRateSchedule):
-        msg = "{s} is an invalid LearningRateSchedule object. \
-            The valid LearningRateSchedule classes include : \
-            {v}".format(s=schedule, v=str(valid_learning_rate_schedules))
-        raise TypeError(msg)
-    else:
-        return True         
-# --------------------------------------------------------------------------  #
-def validate_performance(performance):    
-    from mlstudio.supervised.observers.monitor import Performance    
-    if not isinstance(performance, Performance):
-        msg = "A valid Performance Observer object is required."
-        raise TypeError(msg)
-    else:
-        return True        
+    for name, observer in param.items():
+        if not isinstance(observer, Observer):
+            msg = name + " is not a valid Observer object."
+            raise TypeError(msg)
+    return True
+    
 # --------------------------------------------------------------------------  #
 def validate_scorer(scorer):    
     from mlstudio.supervised.core.scorers import Scorer
@@ -145,14 +129,7 @@ def validate_activation(activation):
         raise TypeError(msg)
     else:
         return True
-# --------------------------------------------------------------------------  #
-def validate_monitor(monitor):    
-    from mlstudio.supervised.observers.history import Performance        
-    if not isinstance(monitor, Performance):
-        msg = "The monitor parameter must be a valid Performance object."
-        raise TypeError(msg)
-    else:
-        return True 
+
 # --------------------------------------------------------------------------  #
 def validate_objective(objective):    
     from mlstudio.supervised.core.objectives import Objective
