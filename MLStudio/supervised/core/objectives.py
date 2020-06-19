@@ -414,12 +414,10 @@ class Adjiman(Benchmark):
         """Computes the gradient of the objective function."""
         dfdx = -(1/(theta[1]**2+1))*((theta[1]**2+1)*np.sin(theta[0])*np.sin(theta[1])+1)
         dfdy = 2*theta[0]*theta[1] /(theta[1]**2+1)**2 + np.cos(theta[0])*np.cos(theta[1])
-        g = {}
-        g['bias'] = dfdx
-        g['weights'] = dfdy        
+        df = np.array([dfdx, dfdy])
         # Check gradient scale 
-        g = self._check_gradient_scale(g)                
-        return g
+        df = self._check_gradient_scale(df)                
+        return df
 
 # --------------------------------------------------------------------------  #
 class BartelsConn(Benchmark):

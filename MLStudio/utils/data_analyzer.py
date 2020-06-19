@@ -23,11 +23,6 @@ import numpy as np
 import pandas as pd
 from scipy.stats import skew, kurtosis
 # --------------------------------------------------------------------------- #
-def compute_gradient_norm(X):
-    """Computes norm of gradient with separate bias and weights."""
-    g = np.concatenate(X['bias'], X['weights'])
-    return np.linalg.norm(g)
-# --------------------------------------------------------------------------- #
 def standardized_residuals(residuals):
     """Computes standardized residuals."""
     residuals = residuals.ravel()

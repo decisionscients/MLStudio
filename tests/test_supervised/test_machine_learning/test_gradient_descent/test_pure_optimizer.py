@@ -34,6 +34,15 @@ from mlstudio.supervised.observers.learning_rate import PowerSchedule
 from mlstudio.supervised.observers.learning_rate import BottouSchedule
 from mlstudio.supervised.observers.learning_rate import Improvement
 from mlstudio.supervised.observers.monitor import Performance
+from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
+from mlstudio.supervised.core.optimizers import Momentum
+from mlstudio.supervised.core.optimizers import Nesterov
+from mlstudio.supervised.core.optimizers import Adagrad
+from mlstudio.supervised.core.optimizers import Adadelta
+from mlstudio.supervised.core.optimizers import RMSprop
+from mlstudio.supervised.core.optimizers import Adam, AdaMax, Nadam
+from mlstudio.supervised.core.optimizers import AMSGrad, AdamW, QHAdam
+from mlstudio.supervised.core.optimizers import QuasiHyperbolicMomentum
 from mlstudio.supervised.core.objectives import Adjiman, BartelsConn
 from mlstudio.supervised.core.objectives import Himmelblau, Leon
 from mlstudio.supervised.core.objectives import Rosenbrock, Branin02
@@ -44,16 +53,36 @@ from mlstudio.supervised.core.objectives import Wikipedia
 #                       TEST OBJECTIVE FUNCTIONS                              #
 # --------------------------------------------------------------------------  #
 @mark.gradient_descent
-@mark.optimizer
+@mark.pure_optimizer
 class PureOptimizerObjectiveTests:
 
     objectives = [Adjiman(), BartelsConn(), Himmelblau(), Leon(), Rosenbrock(), Branin02(),
                   StyblinskiTank(), ThreeHumpCamel(), Ursem01(), Wikipedia()]
-    
-    objectives = [Adjiman()]
 
-    def pure_optimizer_core_test(self):
-        for objective in objectives:
-            est = GradientDescentPureOptimizer(objective=objective)
-            est.fit()
+    optimizers = [GradientDescentOptimizer(), Momentum(), Nesterov(),
+                  Adagrad(), Adadelta(), RMSprop(), Adam(), AdaMax(), Nadam(),
+                  AMSGrad(), AdamW(), QHAdam(), QuasiHyperbolicMomentum()]
+
+    def test_pure_optimizer_core(self):
+        epochs = 500
+        for objective in self.objectives:
+            objective_min_norm = np.linalg.norm(objective.minimum)
+            for optimizer in self.optimizers:
+                est = GradientDescentPureOptimizer(epochs=epochs, 
+                                                   optimizer=optimizer,
+                                                   objective=objective)
+                est.fit()
+                bb = est.blackbox_
+                solution_norm = np.linalg.norm(bb.epoch_log.get('theta')[-1])
+                assert len(bb.epoch_log.get('epoch')) == epochs, "Epoch log wrong length"
+                assert len(bb.epoch_log.get('theta')) == epochs, "Epoch log wrong length"
+                assert len(bb.epoch_log.get('train_cost')) == epochs, "Epoch log wrong length"
+                assert len(bb.epoch_log.get('learning_rate')) == epochs, "Epoch log wrong length"
+                msg = "\nPoor solution for objective = {o}, optimizer = {p}\n       min_norm = {m}, solution_norm = {s}".format(o = objective.__class__.__name__,
+                                                                                  p = optimizer.__class__.__name__,
+                                                                                  m = str(objective_min_norm),
+                                                                                  s = str(solution_norm))
+                if solution_norm - objective_min_norm > 50:
+                    print(msg)
+
     

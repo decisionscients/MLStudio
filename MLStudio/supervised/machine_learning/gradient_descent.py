@@ -29,23 +29,23 @@ import pandas as pd
 from scipy import sparse
 from sklearn.base import BaseEstimator
 
-from mlstudio.supervised.core.objectives import Adjiman
+from mlstudio.supervised.core.objectives import MSE, CrossEntropy, Adjiman
+from mlstudio.supervised.core.objectives import CategoricalCrossEntropy
 from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
 from mlstudio.supervised.observers.base import Observer, ObserverList
 from mlstudio.supervised.observers.monitor import BlackBox
-from mlstudio.utils.data_analyzer import compute_gradient_norm
 # =========================================================================== #
 #                       GRADIENT DESCENT ABSTRACT                             #
 # =========================================================================== #        
 class GradientDescentAbstract(ABC,BaseEstimator):
     """Gradient Descent abstract base class."""
-    def __init__(self, learning_rate=0.01, epochs=1000, objective=None,
+
+    def __init__(self, learning_rate=0.01, epochs=1000,
                  theta_init=None, optimizer=None,  observers=None,
                  verbose=False, random_state=None):
 
         self.learning_rate = learning_rate
         self.epochs = epochs
-        self.objective  = objective
         self.theta_init = theta_init
         self.optimizer = optimizer
         self.observers = observers
@@ -76,13 +76,19 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._converged = x       
 
     # ----------------------------------------------------------------------- #
+    @abstractmethod
+    def _set_objective(self):
+        pass
+    # ----------------------------------------------------------------------- #
     def _copy_mutable_parameters(self):
         """Makes deepcopies of mutable parameters and makes them private members."""
 
         # Observers
         self.observers = self.observers or {}
-        self._observers = copy.deepcopy(self.observers) if self.observers\
-            else self.observers
+        self._observers = {}
+        if self.observers:
+            for name, observer in self.observers.items():
+                self._observers[name] = copy.deepcopy(observer)            
 
         # The Optimizer algorithm
         if self.optimizer:
@@ -90,11 +96,6 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         else:
             self._optimizer = GradientDescentOptimizer()
 
-        # The objective function to be minimized.
-        if self.objective:
-            self._objective = copy.deepcopy(self.objective)
-        else:
-            self._objective = MSE()
     # ----------------------------------------------------------------------- #
     def _create_observer_attributes(self):
         """Adds each observer to model as an attribute."""
@@ -121,6 +122,7 @@ class GradientDescentAbstract(ABC,BaseEstimator):
     def _compile(self):        
         """Obtains, initializes object dependencies and registers observers."""
 
+        self._set_objective()        
         self._copy_mutable_parameters()
         self._create_observer_attributes()
         self._create_observer_list()
@@ -133,9 +135,9 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         d['learning_rate'] = self._eta
         d['theta'] = self._theta
         d['train_cost'] = self._objective(self._theta)
-        if self._gradient:
+        if self._gradient is not None:
             d['gradient'] = self._gradient
-            d['gradient_norm'] = compute_gradient_norm(self._gradient)
+            d['gradient_norm'] = np.linalg.norm(self._gradient)
         self._current_state = d
     # ----------------------------------------------------------------------- #
     def _on_train_begin(self):
@@ -213,18 +215,22 @@ class GradientDescentPureOptimizer(GradientDescentAbstract):
     """Performs pure optimization of an objective function."""
 
     def __init__(self, learning_rate=0.01, epochs=1000, objective=None,
-                 theta_init=None, optimizer=None,  observers=None,
+                 theta_init=None, optimizer=None,  observers=None, 
                  verbose=False, random_state=None):
         super(GradientDescentPureOptimizer, self).__init__(
             learning_rate = learning_rate,
             epochs = epochs,
-            objective  = objective,
             theta_init = theta_init,
             optimizer = optimizer,
             observers = observers,
             verbose = verbose,
             random_state = random_state
         )
+        self.objective = objective
+
+    # ----------------------------------------------------------------------- #        
+    def _set_objective(self):
+        self._objective = self.objective
 
     # ----------------------------------------------------------------------- #
     def _init_weights(self):
