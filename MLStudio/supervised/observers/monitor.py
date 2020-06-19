@@ -71,7 +71,7 @@ class BlackBox(Observer):
             Dictionary containing batch statistics, such as batch size, current
             weights and training cost.
         """
-        self.total_batches = batch
+        self.total_batches += 1
         for k,v in log.items():
             self.batch_log.setdefault(k,[]).append(v)        
 

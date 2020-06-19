@@ -501,7 +501,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
         except:
             regularizer_title = ""
         
-        return task + ' by ' + self.variant + optimizer + \
+        return task + ' by ' + self.variant + optimizer_title + \
             regularizer_title
 
     # ----------------------------------------------------------------------- #    

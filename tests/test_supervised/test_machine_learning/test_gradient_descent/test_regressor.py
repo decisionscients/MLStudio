@@ -64,6 +64,7 @@ class RegressorTests:
         msg = "Score is not close to sklearn's score. MLS score = {m}, \
             Sklearn score = {s}".format(m=str(mls_score), s=str(skl_score))
         assert np.isclose(mls_score, skl_score, rtol=0.01), "Score not close to sklearn's score"
+        est.summary()
 
 
 

@@ -20,6 +20,10 @@
 # =========================================================================== #
 """Text-based visualizations."""
 from abc import ABC, abstractmethod
+from collections import OrderedDict
+import itertools 
+import numpy as np
+import pandas as pd
 from tabulate import tabulate
 
 from mlstudio.utils.format import proper
@@ -86,9 +90,9 @@ class OptimizationPerformance(Summary):
                     + ' ' + proper(performance[1]) 
                 d['label'] = label
                 if performance[1] == 'score' and hasattr(self.model, 'scorer'):                    
-                    d['data'] = str(np.round(result[key],4)) + " " + self.model.scorer.name
+                    d['data'] = str(np.round(result[key],4)[-1]) + " " + self.model.scorer.name
                 else:
-                    d['data'] = str(np.round(result[key],4)) 
+                    d['data'] = str(np.round(result[key],4)[-1]) 
                 print_data.append(d) 
 
         # Print performance statistics
@@ -170,7 +174,7 @@ class OptimizationFeatures(Summary):
         if self.features is None:
             self.features = []
             for i in np.arange(len(self.model.coef_)):
-                features.append("Feature_" + str(i))
+                self.features.append("Feature_" + str(i))
 
         for k, v in zip(self.features, self.model.coef_):
             theta[k]=str(np.round(v,4))  
@@ -226,8 +230,9 @@ class OptimizationReport:
 def get_performance_observer(model):
     """Obtains performance observer if it was used."""
     observers = model.observers
-    for name, observer in observers.items():
-        if isinstance(observer, Performance):
-            return observer
+    if observers:
+        for name, observer in observers.items():
+            if isinstance(observer, Performance):
+                return observer
     return None        
 
