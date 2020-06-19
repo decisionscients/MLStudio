@@ -32,7 +32,7 @@ class Regularizer(ABC, BaseEstimator, TransformerMixin):
         self._zero_bias_term = ZeroBiasTerm()
 
     @abstractmethod
-    def __call__(self, theta):
+    def __call__(self, theta, m):
         """Computes regularization to be added to cost function.
 
         Parameters
@@ -46,7 +46,7 @@ class Regularizer(ABC, BaseEstimator, TransformerMixin):
         pass
 
     @abstractmethod
-    def gradient(self, theta):
+    def gradient(self, theta, m):
         """Computes the regularization gradient.
 
         Parameters
@@ -67,11 +67,11 @@ class L1(Regularizer):
         self.alpha = alpha
         self.name = "Lasso (L1) Regularizer"
     
-    def __call__(self, theta):
+    def __call__(self, theta, m):
         theta = self._zero_bias_term.fit_transform(theta)
         return self.alpha * np.sum(np.abs(theta))
 
-    def gradient(self, theta):        
+    def gradient(self, theta, m):        
         theta = self._zero_bias_term.fit_transform(theta)        
         return self.alpha * np.sign(theta)        
     
@@ -83,11 +83,11 @@ class L2(Regularizer):
         self.alpha = alpha
         self.name = "Ridge (L2) Regularizer"
     
-    def __call__(self, theta):
+    def __call__(self, theta, m):
         theta = self._zero_bias_term.fit_transform(theta)
         return self.alpha * np.sum(np.square(theta))
 
-    def gradient(self, theta):
+    def gradient(self, theta, m):
         theta = self._zero_bias_term.fit_transform(theta)
         return self.alpha * theta
 # --------------------------------------------------------------------------  #
@@ -100,14 +100,14 @@ class L1_L2(Regularizer):
         self.ratio = ratio
         self.name = "Elasticnet (L1_L2) Regularizer"
 
-    def __call__(self, theta):
+    def __call__(self, theta, m):
         theta = self._zero_bias_term.fit_transform(theta)
         l1_contr = self.ratio * np.sum(np.abs(theta))
         l2_contr = (1 - self.ratio) * np.sum(np.square(theta))
         return self.alpha * (l1_contr + l2_contr)
 
-    def gradient(self, theta):
+    def gradient(self, theta, m):
         theta = self._zero_bias_term.fit_transform(theta)
         l1_contr = self.ratio * np.sign(theta)
-        l2_contr = (1 - self.ratio) * theta
+        l2_contr = (1 - self.ratio)  * theta
         return self.alpha * (l1_contr + l2_contr) 
