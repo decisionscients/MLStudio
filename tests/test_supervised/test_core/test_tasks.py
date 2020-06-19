@@ -25,39 +25,58 @@ import pytest
 from pytest import mark
 
 from scipy.special import expit, softmax
+from sklearn.linear_model import LinearRegression as skl_linear_regression
+from sklearn.linear_model import LogisticRegression as skl_logistic_regression
 
 from mlstudio.supervised.core.tasks import LinearRegression, LogisticRegression
 from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
+from mlstudio.utils.data_manager import AddBiasTerm
 # --------------------------------------------------------------------------  #
 @mark.tasks
 @mark.linear_regression
 class LinearRegressionTaskTests:
 
-    def test_linear_regression_output(self, make_regression_data):
-        theta = {}        
-        X, y, theta['weights'] = make_regression_data
-        theta['bias'] = np.array([0])
+    def test_linear_regression_output(self, make_regression_data):        
+        X, y = make_regression_data
+        # Obtain sklearn parameters and solution
+        skl = skl_linear_regression()
+        skl.fit(X,y)
+        bias = np.atleast_1d(skl.intercept_)
+        coef = skl.coef_    
+        theta = np.concatenate((bias, coef))    
+        y_pred_skl = skl.predict(X)
+        # Add bias term to data
+        X = AddBiasTerm().fit_transform(X) 
+        # Compute solution
         t = LinearRegression()
         y_pred = t.compute_output(theta, X)        
-        assert np.allclose(y_pred, y), "Compute output inaccurate"
+        assert np.allclose(y_pred_skl, y_pred), "Compute output inaccurate"
         y_pred = t.predict(theta, X)        
-        assert np.allclose(y_pred, y), "Predict inaccurate"
+        assert np.allclose(y_pred_skl, y_pred), "Predict inaccurate"
 
 # --------------------------------------------------------------------------  #
 @mark.tasks
 @mark.logistic_regression
 class LogisticRegressionTaskTests:
 
-    def test_logistic_regression_output(self, get_logistic_regression_data):
-        theta = {}        
-        X, y = get_logistic_regression_data
-        theta['weights'] = np.random.default_rng().uniform(low=0, high=20, size=X.shape[1])
-        theta['bias'] = np.array([0])
+    def test_logistic_regression_output(self, make_classification_data):
+        X, y = make_classification_data
+        # Obtain sklearn parameters and solution
+        skl = skl_logistic_regression(penalty='none')
+        skl.fit(X,y)
+        bias = np.atleast_1d(skl.intercept_)
+        coef = skl.coef_    
+        theta = np.concatenate((bias, coef[0]))    
+        y_prob_skl = skl.predict_proba(X)[:,1]
+        y_pred_skl = skl.predict(X)
+        # Add bias term to data
+        X = AddBiasTerm().fit_transform(X) 
+        # Compute solution
         t = LogisticRegression()
         y_pred = t.compute_output(theta, X)        
-        assert y_pred.shape == y.shape, "Compute output wrong shape"
+        assert np.allclose(y_prob_skl, y_pred), "Compute output inaccurate"
         y_pred = t.predict(theta, X)        
-        assert y_pred.shape == y.shape, "Compute predict wrong shape"
+        assert np.allclose(y_pred_skl, y_pred), "Predict inaccurate"
 
 # --------------------------------------------------------------------------  #
 @mark.tasks
@@ -65,13 +84,21 @@ class LogisticRegressionTaskTests:
 class SoftmaxRegressionTaskTests:
 
     def test_softmax_regression_output(self, make_multiclass_data):
-        theta = {}        
         X, y = make_multiclass_data
-        theta['weights'] = np.random.default_rng().uniform(low=0, high=20, size=(X.shape[1],y.shape[1]))
-        theta['bias'] = np.random.default_rng().uniform(low=0, high=20, size=y.shape[1])
+        # Obtain sklearn parameters and solution
+        skl = skl_logistic_regression(penalty='none')
+        skl.fit(X,y)
+        bias = np.atleast_2d(skl.intercept_)
+        coef = skl.coef_    
+        theta = np.concatenate((bias, coef.T), axis=0)    
+        y_prob_skl = skl.predict_proba(X)
+        y_pred_skl = skl.predict(X)
+        # Add bias term to data
+        X = AddBiasTerm().fit_transform(X) 
+        # Compute solution
         t = MultinomialLogisticRegression()
         y_pred = t.compute_output(theta, X)        
-        assert y_pred.shape == y.shape, "Compute output wrong shape"
+        assert np.allclose(y_prob_skl, y_pred), "Compute output inaccurate"
         y_pred = t.predict(theta, X)        
-        assert y_pred.shape == (y.shape[0],), "Compute predict wrong shape"
+        assert np.allclose(y_pred_skl, y_pred), "Predict inaccurate"
 

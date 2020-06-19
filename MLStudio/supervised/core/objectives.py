@@ -255,7 +255,7 @@ class CrossEntropy(Cost):
         # Number of samples in the dataset
         m = X.shape[0]        
         # Compute derivatives w.r.t weights and bias
-        gradient_total =  X.T.dot(y-y_out)         
+        gradient_total =  X.T.dot(y_out-y)         
         # Apply regularization to the weights (not bias) in gradient
         if self.regularizer:
             gradient_total += self.regularizer.gradient(theta)                
@@ -297,7 +297,7 @@ class CategoricalCrossEntropy(Cost):
         # Prevent division by zero
         y_out = np.clip(y_out, 1e-15, 1-1e-15)    
         # Compute cross-entropy  
-        H = -np.sum(y * np.log(y_out), axis=1)
+        H = -np.sum(y * np.log(y_out))
         # Add regularizer of weights 
         if self.regularizer:
             H += self.regularizer(theta) 

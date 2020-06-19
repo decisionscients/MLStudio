@@ -23,6 +23,8 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 from sklearn.base import BaseEstimator
+
+from mlstudio.utils.validation import validate_range
 # --------------------------------------------------------------------------  #
 # Functions adapted from the following sources.
 # Reference https://en.wikipedia.org/wiki/Activation_function 
@@ -43,9 +45,11 @@ class Sigmoid(Activation):
 
     def __call__(self, x):
         if np.all(x >= 0):            
-            return 1 / (1 + np.exp(-x))
+            s = 1 / (1 + np.exp(-x))
         else:
-            return np.exp(x) / (1 + np.exp(x))    
+            s =  np.exp(x) / (1 + np.exp(x))    
+        return s
+        
 
     def gradient(self, x):
         return self.__call__(x) * (1 - self.__call__(x))
@@ -54,7 +58,8 @@ class Softmax(Activation):
     def __call__(self, x):
         # Subtract the max to avoid underflow or overflow errors 
         e_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
-        return e_x / np.sum(e_x, axis=-1, keepdims=True)
+        s = e_x / np.sum(e_x, axis=-1, keepdims=True)
+        return s
 
     def gradient(self, x):
         p = self.__call__(x)
