@@ -23,8 +23,8 @@ from collections import OrderedDict
 import os
 from pathlib import Path
 import sys
-homedir = str(Path(__file__).parents[3])
-demodir = str(Path(__file__).parents[1])
+homedir = str(Path(__file__).parents[4])
+demodir = str(Path(__file__).parents[2])
 sys.path.append(homedir)
 
 import pandas as pd
@@ -35,9 +35,8 @@ from mlstudio.supervised.machine_learning.gradient_descent import GradientDescen
 from mlstudio.supervised.core.scorers import R2
 from mlstudio.supervised.core.objectives import MSE
 from mlstudio.utils.data_manager import StandardScaler, data_split
-from mlstudio.supervised.observers.debugging import GradientCheck
 from mlstudio.visual.animations import animate_optimization_regression
-from mlstudio.visual.plots import plot_cost_scores
+
 
 def get_data():
     """Obtains the Ames housing price data for modeling."""
@@ -62,16 +61,13 @@ def train_models(X, y):
     """Trains batch, stochastic and minibatch gradient descent."""    
     bgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, 
                                    random_state=50,scorer=R2(),
-                                   objective=MSE(),
-                                   observers=[GradientCheck()])
+                                   objective=MSE())
     sgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, 
                                    batch_size=1, random_state=50, scorer=R2(),
-                                   objective=MSE(),
-                                   observers=[GradientCheck()])
+                                   objective=MSE())
     mbgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, 
                                     batch_size=64, random_state=50, scorer=R2(),
-                                    objective=MSE(),
-                                    observers=[GradientCheck()])
+                                    objective=MSE())
     bgd.fit(X,y)
     sgd.fit(X,y)
     mbgd.fit(X,y)
@@ -95,37 +91,6 @@ def plot_optimization(estimators, max_frames=None, filepath=None, show=True):
     animate_optimization_regression(estimators=estimators, max_frames=max_frames, 
                                     filepath=filepath, show=show)
 
-def plot_results(estimators, X_train, X_test, y_train, y_test, filepath=None, show=None):
-    """Renders training error and validation scores for models vis-a-vis sklearn."""
-    # Get Sklearn's SGDRegressor estimation
-    skl = SGDRegressor(penalty=None, max_iter=500, random_state=50)
-    skl.fit(X_train, y_train)    
-
-    # Add SGDRegressor to dict of estimators
-    estimators['Scikit-learn SGD Regressor'] = skl
-    
-    # Extract cost data from the model blackboxes            
-    cost_plot_data = OrderedDict()
-    for name, estimator in estimators.items():
-        if hasattr(estimator, 'blackbox_'):
-            cost_plot_data[name] = estimator.blackbox_.epoch_log.get('train_cost')[-1]
-    
-    # Obtain score data by scoring each estimator
-    score_plot_data = OrderedDict()
-    for name, estimator in estimators.items():
-        score_plot_data[name] = estimator.score(X_test, y_test)
-
-    # Format plot data
-    plot_data = OrderedDict()
-    plot_data['cost'] = cost_plot_data
-    plot_data['score'] = score_plot_data
-
-    # Add plot type to plot filepath
-    filepath = append_filepath(filepath, "test_results")
-
-    # Render plot
-    plot_cost_scores(data=plot_data, filepath=filepath, show=show)
-
 def regression_demo(max_frames=None, filepath=None, show=True):
     """Regression demo main processing function.
     
@@ -143,11 +108,12 @@ def regression_demo(max_frames=None, filepath=None, show=True):
     estimators = train_models(X_train, y_train)
     plot_optimization(estimators=estimators, max_frames=max_frames, 
                       filepath=filepath, show=show)
-    plot_results(estimators=estimators, X_train=X_train, X_test=X_test, 
-                 y_train=y_train, y_test=y_test, filepath=filepath, 
-                 show=show)
 
-filepath = os.path.join(demodir, 'figures/regression_demo.html')
-regression_demo(max_frames=100, filepath=filepath)
+def main():
+    filepath = os.path.join(demodir, 'figures/regression_demo.html')
+    regression_demo(max_frames=100, filepath=filepath)
+
+if __name__ == "__main__":
+    main()
 #%%
 
