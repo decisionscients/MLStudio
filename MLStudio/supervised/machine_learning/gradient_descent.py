@@ -123,11 +123,11 @@ class GradientDescentAbstract(ABC,BaseEstimator):
 
         # Observers. Note we pull of the val_size from the Performance
         # observer if it exists. The val_size will be used by the data
-        # preparation method.
-        self._observers = self.observers or {}   
+        # preparation method.           
         self._val_size = 0.0     
-        if self._observers:
-            for name, observer in self._observers.items():
+        self._observers = {}
+        if self.observers:
+            for name, observer in self.observers.items():                
                 self._observers[name] = copy.deepcopy(observer)     
                 if isinstance(observer, Performance):
                     self._val_size = observer.val_size       
@@ -138,13 +138,6 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         else:
             self._optimizer = GradientDescentOptimizer()
 
-    # ----------------------------------------------------------------------- #
-    def _create_observer_attributes(self):
-        """Adds each observer to model as an attribute."""
-        # First, add any additional observers that should be attributes        
-        self._observers['blackbox_'] = BlackBox() 
-        for name, observer in self._observers.items():
-            setattr(self, name, observer)
     # ----------------------------------------------------------------------- #
     def _create_observer_list(self):
         """Adds all observers to the observer list that gets notified."""
@@ -170,7 +163,6 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._set_objective()        
         self._copy_mutable_parameters()
         self._obtain_implicit_dependencies()
-        self._create_observer_attributes()
         self._create_observer_list()
 
     # ----------------------------------------------------------------------- #
@@ -215,9 +207,9 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         
         """
         log = log or {}
-        self.n_iter_ = self._epoch 
-        self._get_results()
+        self.n_iter_ = self._epoch         
         self._observer_list.on_train_end()
+        self._get_results()
     # ----------------------------------------------------------------------- #
     def _on_epoch_begin(self, log=None):
         """Initializes all data, objects, and dependencies.
@@ -304,20 +296,22 @@ class GradientDescentAbstract(ABC,BaseEstimator):
 
     # ----------------------------------------------------------------------- #
     def _get_results(self):
-        self.theta_ = self._theta
-        self.intercept_, self.coef_ = unpack_parameters(self._theta)        
-        self.final_theta_ = self._theta
-        self.final_intercept_, self.final_coef_ = \
-                        unpack_parameters(self.final_theta_)
-
-        # If the Performance observer was used and the 'best_or_final' 
-        # parameter was set to 'best', override the parameters with the 
-        # best parameters returned from the Performance observer.
+        # Determine if best or final weights should be stored.
+        borf = 'final'
         for observer in self._observers.values():
-            if isinstance(observer, Performance):                
-                if observer.best_or_final == 'best':
-                    self.theta_ = observer.best_results.get('theta')[-1]
-                    self.intercept_, self.coef_ = unpack_parameters(self.theta_)
+            if isinstance(observer, Performance):
+                borf = observer.best_or_final
+        
+        # Format results
+        if borf == 'best':
+            self.final_theta_ = self._theta
+            self.final_intercept_, self.final_coef_ = unpack_parameters(self.final_theta_)
+            self.theta_ = self.best_results_.get('theta')
+            self.intercept_, self.coef_ = unpack_parameters(self.theta_)
+        else:
+            self.theta_ = self._theta
+            self.intercept_, self.coef_ = unpack_parameters(self.theta_)
+
 
 # =========================================================================== #
 #                    GRADIENT DESCENT PURE OPTIMIZER                          #
@@ -342,6 +336,10 @@ class GradientDescentPureOptimizer(GradientDescentAbstract):
     # ----------------------------------------------------------------------- #        
     def _set_objective(self):
         self._objective = self.objective
+
+    # ----------------------------------------------------------------------- #        
+    def _obtain_implicit_dependencies(self):
+        pass
 
     # ----------------------------------------------------------------------- #
     def _init_weights(self):
@@ -470,6 +468,11 @@ class GradientDescentEstimator(GradientDescentAbstract):
             random_state = random_state    
         )
         self.batch_size = batch_size               
+
+    # ----------------------------------------------------------------------- #                
+    @property
+    def task(self):
+        return self._task
 
     # ----------------------------------------------------------------------- #                
     @property
@@ -644,7 +647,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
     # ----------------------------------------------------------------------- #    
     def _score(self, X, y):
         """Calculates scores during as the beginning of each training epoch."""        
-        y_pred = self._task.predict(self._theta, X)
+        y_pred = self._task.predict(self.theta_, X)
         if self._scorer is None:
             raise Exception("Unable to compute score. No scorer object provided.")
         return self._scorer(y, y_pred)
@@ -665,7 +668,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
         -------
         score based upon the scorer object.
         
-        """        
+        """
         y_pred = self.predict(X)        
         if self._scorer is None:
             raise Exception("Unable to compute score. No scorer object provided.")        

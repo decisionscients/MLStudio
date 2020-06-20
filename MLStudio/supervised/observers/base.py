@@ -393,7 +393,7 @@ class PerformanceObserver(Observer):
         self._iter_no_improvement = 0            
         self._stabilized = False
         self._baseline = current 
-        self._best_epoch = log.get('epoch')        
+        self._best_epoch = log
 
     def _process_no_improvement(self, log=None):
         """Sets values of parameters and attributes if no improved."""    
@@ -455,8 +455,8 @@ class PerformanceObserver(Observer):
         ----------        
         log: dict
             Dictionary containing the data, cost, batch size and current weights
-        """    
-        self._best_results = self._best_epochs_log[-1]
+        """           
+        self.model.best_results_ = self._best_epochs_log[-1]
         self._critical_points = np.where(self._stability_log)[0].tolist()
-        self._critical_points = [self._best_epochs_log[i] for i in self._critical_points] 
+        self.model.critical_points_ = [self._best_epochs_log[i] for i in self._critical_points] 
         

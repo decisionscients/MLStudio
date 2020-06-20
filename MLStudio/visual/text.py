@@ -70,10 +70,11 @@ class OptimizationPerformance(Summary):
 
     def _extract_data(self):
         """Extracts required data from the model."""
-        bb = self.model.blackbox_
-        po = get_performance_observer(self.model)
+        bb = self.model.blackbox_        
         final_data = bb.epoch_log
-        best_data = po.best_result if po else None
+        best_data = None
+        if hasattr(self.model, 'best_results_'):
+            best_data = self.model.best_results_
         return final_data, best_data
 
     def _report(self, result, best_or_final):
@@ -115,13 +116,16 @@ class OptimizationCriticalPoints(Summary):
     to not stabilized.
     """
     def _extract_data(self):
-        return get_performance_observer(self.model)
+        critical_points = None
+        if hasattr(self.model, 'critical_points_'):
+            critical_points = self.model.critical_points_
+        return critical_points
 
     def report(self):
-        po = self._extract_data()
-        if po:
+        critical_points = self._extract_data()
+        if critical_points:        
             cp = []
-            for p in po.critical_points:
+            for p in critical_points:
                 d = {}
                 for k,v in p.items():
                     d[proper(k)] = v

@@ -62,7 +62,7 @@ class Regularizer(ABC, BaseEstimator, TransformerMixin):
 # --------------------------------------------------------------------------  #
 class L1(Regularizer):
     """ Regularizer for Lasso Regression """
-    def __init__(self, alpha=0.1):
+    def __init__(self, alpha=0.01):
         super(L1, self).__init__()
         self.alpha = alpha
         self.name = "Lasso (L1) Regularizer"

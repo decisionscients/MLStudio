@@ -20,6 +20,7 @@
 # =========================================================================== #
 """Gradient descent optimization algorithms."""
 from abc import ABC, abstractmethod
+import math
 
 import numpy as np
 from sklearn.base import BaseEstimator  
@@ -82,7 +83,7 @@ class Momentum(Optimizer):
         self._velocity = 0
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):             
-        grad = gradient(theta)
+        grad = gradient(theta, **kwargs)
         self._velocity = self.gamma * self._velocity + learning_rate * grad
         theta = theta - self._velocity
         return theta, grad
@@ -98,7 +99,7 @@ class Nesterov(Optimizer):
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):
         next_position = theta - self.gamma * self._velocity        
-        grad = gradient(next_position)
+        grad = gradient(next_position, **kwargs)
         self._velocity = self.gamma * self._velocity + learning_rate * grad
         theta = theta - self._velocity
         return theta, grad
@@ -113,10 +114,11 @@ class Adagrad(Optimizer):
         self.gradients = 0
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):
-        grad = gradient(theta)
+        grad = gradient(theta, **kwargs)
         # Create effective learning rate
         self.gradients = self.gradients + np.square(grad)     
-        elr = learning_rate / np.sqrt(self.epsilon + self.gradients)        
+        self.gradients = self.gradients + np.array(self.epsilon, ndmin=1)        
+        elr = learning_rate / np.sqrt(np.array(self.gradients, ndmin=1))        
         # Convert to diagonal matrix
         Gt = np.diag(elr)
         theta = theta - Gt.dot(grad)        
@@ -134,17 +136,17 @@ class Adadelta(Optimizer):
         self.avg_sqr_delta_theta = 0
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):                
-        grad = gradient(theta)     
+        grad = gradient(theta, **kwargs)     
 
         self.avg_sqr_gradient = self.gamma * self.avg_sqr_gradient + \
             (1 - self.gamma) * np.square(grad)            
-        rms_grad = np.sqrt(np.square(self.avg_sqr_gradient) + self.epsilon)
+        rms_grad = np.sqrt(np.array(np.square(np.array(self.avg_sqr_gradient, ndmin=1)) + np.array(self.epsilon, ndmin=1), ndmin=1))
         
         delta_theta = -learning_rate / rms_grad  * grad            
 
         self.avg_sqr_delta_theta = self.gamma * self.avg_sqr_delta_theta + \
-            (1 - self.gamma) * np.square(delta_theta)
-        rms_delta_theta = np.sqrt(np.square(self.avg_sqr_delta_theta) + self.epsilon)
+            (1 - self.gamma) * np.square(np.array(delta_theta, ndmin=1))
+        rms_delta_theta = np.sqrt(np.array(np.square(np.array(self.avg_sqr_delta_theta, ndmin=1)) + np.array(self.epsilon, ndmin=1),ndmin=1))
 
         delta_theta = - (rms_delta_theta / rms_grad).dot(grad)
 
@@ -163,10 +165,10 @@ class RMSprop(Optimizer):
         self.avg_sqr_delta_theta = 0
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):                
-        grad = gradient(theta)        
+        grad = gradient(theta, **kwargs)        
         self.avg_sqr_gradient = self.gamma * self.avg_sqr_gradient + \
             0.1 * np.square(grad)
-        rms_grad = np.sqrt(np.square(self.avg_sqr_gradient) + self.epsilon)
+        rms_grad = np.sqrt(np.array(np.square(np.array(self.avg_sqr_gradient, ndmin=1)) + np.array(self.epsilon, ndmin=1),ndmin=1))
         theta = theta - (learning_rate / rms_grad) * grad
         
         return theta, grad
@@ -187,14 +189,14 @@ class Adam(Optimizer):
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):                
         self.t += 1
-        grad = gradient(theta)        
+        grad = gradient(theta, **kwargs)        
         self.m = self.beta_one * self.m + (1 - self.beta_one) * grad
         self.v = self.beta_two * self.v + (1 - self.beta_two) * np.square(grad)
         # Bias corrected moment estimates
         m_hat = self.m / (1 - self.beta_one**self.t)
         v_hat = self.v / (1 - self.beta_two**self.t)
 
-        theta = theta - learning_rate / (np.sqrt(v_hat) + self.epsilon) * m_hat        
+        theta = theta - learning_rate / (np.sqrt(float(np.array(v_hat,ndmin=1)) + np.array(self.epsilon,ndmin=1))) * m_hat        
         
         return theta, grad        
 
@@ -212,7 +214,7 @@ class AdaMax(Optimizer):
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):                
         self.t += 1
-        grad = gradient(theta)                
+        grad = gradient(theta, **kwargs)                
         self.m = self.beta_one * self.m + (1 - self.beta_one) * grad
         m_hat = self.m / (1 - self.beta_one**self.t)
         self.u = np.maximum(self.beta_two * self.u, np.linalg.norm(grad,1))    
@@ -235,7 +237,7 @@ class Nadam(Optimizer):
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
-        grad = gradient(theta)        
+        grad = gradient(theta, **kwargs)        
         self.m = self.beta_one * self.m + (1 - self.beta_one) * grad   
         self.v = self.beta_two * self.v + (1 - self.beta_two) * np.square(grad)
         # Bias corrected moment estimates
@@ -243,7 +245,7 @@ class Nadam(Optimizer):
         v_hat = self.v / (1 - self.beta_two**self.t)
      
         # Nadam update
-        theta = theta - (learning_rate / (np.sqrt(v_hat) + self.epsilon)) * \
+        theta = theta - (learning_rate / (np.sqrt(np.array(v_hat,ndmin=1)) + self.epsilon)) * \
             (self.beta_one * m_hat + ((1-self.beta_one)* grad)/(1-self.beta_one**self.t))
 
         return theta, grad                                    
@@ -264,11 +266,11 @@ class AMSGrad(Optimizer):
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
-        grad = gradient(theta)        
+        grad = gradient(theta, **kwargs)        
         self.m = self.beta_one * self.m + (1 - self.beta_one) * grad
         self.v = self.beta_two * self.v + (1 - self.beta_two) * np.square(grad)
-        self.v_hat = np.maximum(self.v_hat, self.v)
-        theta = theta - (learning_rate / (np.sqrt(self.v_hat) + self.epsilon)) * self.m
+        self.v_hat = np.array(np.maximum(self.v_hat, self.v),ndmin=1)
+        theta = theta - (learning_rate / (np.sqrt(float(np.array(self.v_hat,ndmin=1)) + np.array(self.epsilon, ndmin=1)))) * self.m
         
         return theta, grad                        
 
@@ -289,11 +291,11 @@ class AdamW(Optimizer):
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
-        grad = gradient(theta)        
+        grad = gradient(theta, **kwargs)        
         self.m = self.beta_one * self.m + (1 - self.beta_one) * grad
         self.v = self.beta_two * self.v + (1 - self.beta_two) * np.square(grad)
-        self.v_hat = np.maximum(self.v_hat, self.v)
-        theta = theta - (learning_rate / (np.sqrt(self.v_hat + self.epsilon))) * \
+        self.v_hat = np.array(np.maximum(self.v_hat, self.v))
+        theta = theta - (learning_rate / (np.sqrt(np.array(self.v_hat,ndmin=1)) + np.array(self.epsilon, ndmin=1))) * \
             self.m + self.decay_rate * theta
         
         return theta, grad          
@@ -317,12 +319,12 @@ class QHAdam(Optimizer):
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
-        grad = gradient(theta)        
+        grad = gradient(theta, **kwargs)        
         self.m = self.beta_one * self.m + (1 - self.beta_one) * grad
         self.v = self.beta_two * self.v + (1 - self.beta_two) * np.square(grad)
         self.v_hat = np.maximum(self.v_hat, self.v)
         theta = theta - learning_rate * (((1-self.v1)*grad + self.v1 * self.m) /\
-            (np.sqrt(1-self.v2)*np.square(grad)+self.v2*self.v+self.epsilon))
+            (np.sqrt(np.array(1-self.v2,ndmin=1))*np.square(np.array(grad,ndmin=1))+self.v2*self.v+self.epsilon))
         
         return theta, grad                  
 
@@ -340,7 +342,7 @@ class AggMo(Optimizer):
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
-        grad = gradient(theta)       
+        grad = gradient(theta, **kwargs)       
         if self.v == 0:
             self.v = {}            
             for beta in self.betas:
@@ -369,7 +371,7 @@ class QuasiHyperbolicMomentum(Optimizer):
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
-        grad = gradient(theta)
+        grad = gradient(theta, **kwargs)
         self.m = self.beta * self.m + (1 - self.beta) * grad
         theta = theta - learning_rate * ((1-self.v) * grad + self.v * self.m)
         

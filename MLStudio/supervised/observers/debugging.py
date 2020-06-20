@@ -26,8 +26,7 @@ import pandas as pd
 from scipy.sparse import issparse
 from mlstudio.supervised.observers.base import Observer
 from mlstudio.supervised.core.objectives import Cost
-from mlstudio.supervised.core.regularizers import Nill
-from mlstudio.utils.data_manager import is_valid_array_size
+from mlstudio.utils.validation import is_valid_array_size
 
 # --------------------------------------------------------------------------- #
 #                              GRADIENT CHECK                                 #
@@ -40,6 +39,7 @@ class GradientCheck(Observer):
         self.epsilon = epsilon
         self.iterations = iterations
         self.verbose = verbose
+        self.name = "GradientCheck"
         
     def on_train_begin(self, log=None):        
         """Initializes gradient check parameters.
@@ -126,35 +126,34 @@ class GradientCheck(Observer):
             Dictionary containing training cost, (and if metric=score, 
             validation cost)  
 
-        """
-        if self.model.gradient_check:
-            if log.get('epoch') % self.iterations == 0:                                         
-                if isinstance(self._objective, Cost):
-                    grad, grad_approx = self._check_cost_functions(log)
-                else:
-                    grad, grad_approx = self._check_benchmark_functions(log)               
+        """        
+        if log.get('epoch') % self.iterations == 0:                                         
+            if isinstance(self._objective, Cost):
+                grad, grad_approx = self._check_cost_functions(log)
+            else:
+                grad, grad_approx = self._check_benchmark_functions(log)               
 
-                grad = np.array(grad)
-                grad_approx = np.array(grad_approx)
+            grad = np.array(grad)
+            grad_approx = np.array(grad_approx)
 
-                # Check norms and bail if gradients are rediculous.
-                if is_valid_array_size(grad) and is_valid_array_size(grad_approx):
-                    # Evaluate
-                    numerator = np.linalg.norm(grad-grad_approx)
-                    denominator = np.linalg.norm(grad) + np.linalg.norm(grad_approx)
-                    difference = numerator / denominator
-                    result = difference < self.epsilon
+            # Check norms and bail if gradients are rediculous.
+            if is_valid_array_size(grad) and is_valid_array_size(grad_approx):
+                # Evaluate
+                numerator = np.linalg.norm(grad-grad_approx)
+                denominator = np.linalg.norm(grad) + np.linalg.norm(grad_approx)
+                difference = numerator / denominator
+                result = difference < self.epsilon
 
-                    # Update results
-                    self._n += 1
-                    self._iteration.append(self._n)
-                    self._theta.append(log.get('theta'))
-                    self._gradients.append(grad)
-                    self._approximations.append(grad_approx)
-                    self._differences.append(difference)                
-                    self._results.append(result)
-                else:
-                    return
+                # Update results
+                self._n += 1
+                self._iteration.append(self._n)
+                self._theta.append(log.get('theta'))
+                self._gradients.append(grad)
+                self._approximations.append(grad_approx)
+                self._differences.append(difference)                
+                self._results.append(result)
+            else:
+                return
 
     def _print(self, results):
         """Prints results."""
@@ -180,8 +179,7 @@ class GradientCheck(Observer):
                 a=self._differences[p]))                
         msg = "Gradient check failed for " + self._objective.name 
         if hasattr(self._objective, 'regularization'):
-            if not isinstance(self._objective.regularization, Nill):        
-                msg = msg + ' with ' + self._objective.regularization.name 
+            msg = msg + ' with ' + self._objective.regularization.name 
         raise Exception(msg)        
 
     def on_train_end(self, log=None):

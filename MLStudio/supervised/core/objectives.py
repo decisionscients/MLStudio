@@ -369,7 +369,7 @@ class Benchmark(Objective):
    
     
     @abstractmethod
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""
         pass
     
@@ -400,11 +400,11 @@ class Adjiman(Benchmark):
         y = {'min': -5, 'max': 5}
         return x, y
     
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""
         return np.cos(theta[0]) * np.sin(theta[1]) - (theta[0] / (theta[1]**2 + 1))
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         dfdx = -(1/(theta[1]**2+1))*((theta[1]**2+1)*np.sin(theta[0])*np.sin(theta[1])+1)
         dfdy = 2*theta[0]*theta[1] /(theta[1]**2+1)**2 + np.cos(theta[0])*np.cos(theta[1])
@@ -436,14 +436,14 @@ class BartelsConn(Benchmark):
         y = {'min': -500, 'max': 500}
         return x, y
     
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""
         a = abs(theta[0]**2 + theta[1]**2 + theta[0] * theta[1])
         b = abs(np.sin(theta[0]))
         c = abs(np.cos(theta[1]))
         return a + b + c
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         a = (2 * theta[0] + theta[1]) * np.sign(theta[0]**2 + theta[0] * theta[1] + theta[1]**2)
         b = np.cos(theta[0]) * np.sign(np.sin(theta[0]))
@@ -480,11 +480,11 @@ class Himmelblau(Benchmark):
         y = {'min': -5, 'max': 5}
         return x, y    
 
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""
         return (theta[0]**2 + theta[1] - 11)**2 + (theta[0]+theta[1]**2-7)**2
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         dfdx = 4*theta[0]*(theta[0]**2+theta[1]-11)+2*theta[0]+2*theta[1]**2-14
         dfdy = 2*theta[0]**2 + 4*theta[1] * (theta[0]+theta[1]**2-7)+2*theta[1]-22
@@ -518,11 +518,11 @@ class Leon(Benchmark):
         y = {'min': -2, 'max': 2}
         return x, y            
 
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""
         return 100 * (theta[1] - theta[0]**2)**2 + (1 - theta[0])**2
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         dfdx = -400*(-theta[0]**2+theta[1]) + 2*theta[0] - 2
         dfdy = -200*theta[0]**2 + 200 * theta[1]
@@ -559,13 +559,13 @@ class Rosenbrock(Benchmark):
         return x, y            
 
     
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""
         a = 1
         b = 100
         return b*(theta[1]-theta[0]**2)**2+(a-theta[0])**2
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         dfdx = -400*theta[0]*(-theta[0]**2+theta[1])+2*theta[0]-2
         dfdy = -200*theta[0]**2 + 200 * theta[1]
@@ -598,13 +598,13 @@ class Branin02(Benchmark):
         y = {'min': -5, 'max': 15}
         return x, y
     
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""        
         return (-1.275*theta[0]**2/np.pi**2 + 5*theta[0]/np.pi + theta[1]-6)**2\
             + (10-5/4*np.pi) * np.cos(theta[0]) * np.cos(theta[1]) \
                 + np.log(theta[0]**2+theta[1]**2+1) + 10
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         # dfdx
         a = 1/(4*np.pi**4*(theta[0]**2+theta[1]**2+1))
@@ -654,15 +654,15 @@ class StyblinskiTank(Benchmark):
         return x, y            
 
     
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""   
         a = 0
-        for i in range(len(theta)):
+        for i in range(len(theta, **kwargs)):
             a += theta[i]**4 - 16 * theta[i]**2 + 5 * theta[i]
 
         return 1/2 * a
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         dfdx = 2*theta[0]**3 - 16 * theta[0] + 5/2
         dfdy = 2*theta[1]**3 - 16*theta[1] + 5/2
@@ -696,11 +696,11 @@ class SumSquares(Benchmark):
         y = {'min': -10, 'max': 10}
         return x, y
     
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""        
         return np.sum(theta[0]**2 + theta[1]**2)
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         dfdx = 2 * theta[0]
         dfdy = 2 * theta[1]
@@ -733,11 +733,11 @@ class ThreeHumpCamel(Benchmark):
         y = {'min': -2, 'max': 2}
         return x, y
     
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""        
         return 2*theta[0]**2 - 1.05*theta[0]**4 + ((theta[0]**6)/6)+theta[0]*theta[1]+theta[1]**2
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         dfdx = theta[0]**5-((21*theta[0]**3)/5)+4*theta[0]+theta[1]
         dfdy = theta[0]+2*theta[1]
@@ -770,11 +770,11 @@ class Ursem01(Benchmark):
         y = {'min': -2, 'max': 2.5}
         return x, y
     
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""        
         return -np.sin(2*theta[0] - 0.5 * np.pi) - 3 * np.cos(theta[1]) - 0.5 * theta[0]
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         dfdx = -2 * np.sin(2 * theta[0]) - 0.5
         dfdy = 3 * np.sin(theta[1])
@@ -807,11 +807,11 @@ class Wikipedia(Benchmark):
         y = {'min': -1, 'max': 1}
         return x, y
     
-    def __call__(self, theta):
+    def __call__(self, theta, **kwargs):
         """Computes the objective function value"""        
         return np.sin(1/2*theta[0]**2 - 0.25 * theta[1]**2 + 3) * np.cos(2*theta[0]+1-np.exp(theta[1]))
 
-    def gradient(self, theta):
+    def gradient(self, theta, **kwargs):
         """Computes the gradient of the objective function."""
         a = (theta[0] * np.cos(2*theta[0]-np.exp(theta[1])+1))
         b = np.cos((theta[0]**2)/2-(theta[1]**2)/4+3)

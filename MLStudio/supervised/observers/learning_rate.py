@@ -541,7 +541,7 @@ class Improvement(LearningRateSchedule):
             Dictionary containing training cost, (and if metric=score, 
             validation cost)  
         """
-        super(Improvement, self).on_epoch_begin(epoch, log)        
+        super(Improvement, self).on_epoch_end(epoch, log)        
         log = log or {}                
         
         self._observer.on_epoch_end(epoch, log)

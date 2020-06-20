@@ -32,6 +32,10 @@ from mlstudio.utils.validation import validate_zero_to_one
 class BlackBox(Observer):
     """Repository for data obtained during optimization."""
 
+    def __init__(self):
+        super(BlackBox, self).__init__()
+        self.name = "BlackBox"
+
     def on_train_begin(self, log=None):
         """Sets instance variables at the beginning of training.
         
@@ -44,7 +48,7 @@ class BlackBox(Observer):
         self.total_batches = 0
         self.start = datetime.datetime.now()
         self.epoch_log = {}
-        self.batch_log = {}
+        self.batch_log = {}        
 
     def on_train_end(self, log=None):        
         """Sets instance variables at end of training.
@@ -100,6 +104,10 @@ class BlackBox(Observer):
 # --------------------------------------------------------------------------- #              
 class Progress(Observer):
     """Class that reports progress at designated points during training."""
+
+    def __init__(self):
+        super(Progress, self).__init__()
+        self.name = "Progress"    
     
     def on_epoch_begin(self, epoch, log=None):
         """Reports progress at the end of each epoch.
