@@ -100,7 +100,6 @@ def animate_optimization(estimators, max_frames=None, filepath=None, show=True):
         ym, yM = y['min'], y['max']
         # Extract model data for plotting gradient descent models         
         theta = model.blackbox_.epoch_log.get('theta')
-        print(theta)
         # Obtain step number for slicing if max_frames is provided.
         step = math.floor(len(theta) / max_frames) if max_frames else None
         # Clip thetas to plotting range 

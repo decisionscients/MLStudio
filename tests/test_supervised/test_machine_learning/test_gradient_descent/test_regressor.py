@@ -52,12 +52,11 @@ from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 from mlstudio.supervised.core.scorers import R2
 # --------------------------------------------------------------------------  #
 count = 0
-observers = [{'performance': Performance()}, 
-                {'early_stop': Performance(mode='active')}]
+observers = [Performance(), Performance(mode='active')]
 scorers = [R2()]
-learning_rates = [TimeDecay(), StepDecay(), ExponentialDecay(), ExponentialStepDecay(),
-                    PolynomialDecay(), PolynomialStepDecay(), PowerSchedule(),
-                    BottouSchedule(), Improvement()]
+# learning_rates = [TimeDecay(), StepDecay(), ExponentialDecay(), ExponentialStepDecay(),
+#                     PolynomialDecay(), PolynomialStepDecay(), PowerSchedule(),
+#                     BottouSchedule(), Improvement()]
 objectives = [MSE(), MSE(regularizer=L1(alpha=0.01)), 
                         MSE(regularizer=L2(alpha=0.01)), 
                         MSE(regularizer=L1_L2(alpha=0.01, ratio=0.5))]
@@ -67,28 +66,29 @@ objectives = [MSE(), MSE(regularizer=L1(alpha=0.01)),
 #     QuasiHyperbolicMomentum()
 # ]
 
-scenarios = [[observer, scorer, learning_rate, objective] for observer in observers
-                                                                for scorer in scorers
-                                                                for learning_rate in learning_rates
-                                                                for objective in objectives
+scenarios = [[observer, scorer, objective] for observer in observers
+                                           for scorer in scorers
+                                           for objective in objectives
         ]
 
 estimators = [GradientDescentRegressor(observers=scenario[0], scorer=scenario[1],
-                                    learning_rate=scenario[2], objective=scenario[3]) for scenario in scenarios]
+                                       objective=scenario[2]) for scenario in scenarios]
 @mark.gd
-@mark.regressor_skl_check
+@mark.regressor_skl
 @parametrize_with_checks(estimators)
 def test_regression_sklearn(estimator, check):    
-    observers = [o.name for o in estimator.observers.values()]
-    learning_rate = estimator.learning_rate.name
+    try:
+        observer = [o.name for o in estimator.observers]
+    except:
+        observer = [estimator.observers.name]
+    #learning_rate = estimator.learning_rate.name
     objective = estimator.objective.name
     regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\
         None
     # optimizer = estimator.optimizer.name
-    msg = "Checking scenario : observers : {o}, learning_rate : {l}, objective : {ob},\
+    msg = "Checking scenario : observers : {o}, objective : {ob},\
             regularizer : {r}".format(
-                o=str(observers), l=str(learning_rate),
-                ob=str(objective), r=str(regularizer))
+                o=str(observer), ob=str(objective), r=str(regularizer))
     print(msg)        
     check(estimator)
 
@@ -98,13 +98,16 @@ def test_regressor(get_regression_data_split):
     X_train, X_test, y_train, y_test = get_regression_data_split
     for estimator in estimators:
         # Extract scenario options
-        observers = [o.name for o in estimator.observers.values()]
-        learning_rate = estimator.learning_rate.name
+        try:
+            observer = [o.name for o in estimator.observers]
+        except:
+            observer = [estimator.observers.name]
+#        learning_rate = estimator.learning_rate.name
         objective = estimator.objective.name
         regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\
             None        
-        msg = "Checking scenario: observers : {o}, learning_rate : {l}, objective : {ob},\
-            regularizer : {r}".format(o=str(observers), l=str(learning_rate),
+        msg = "Checking scenario: observers : {o}, objective : {ob},\
+            regularizer : {r}".format(o=str(observer), 
             ob=str(objective), r=str(regularizer))
         print(msg)                     
         # Fit the model

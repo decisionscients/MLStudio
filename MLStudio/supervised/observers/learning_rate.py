@@ -78,7 +78,7 @@ class LearningRateSchedule(Observer):
         self._validate()
 
     def on_epoch_end(self, epoch, log=None):
-        super(LearningRateSchedule, self).on_epoch_begin(epoch=epoch, log=log)        
+        super(LearningRateSchedule, self).on_epoch_begin(epoch=epoch, log=log)   
         self.model.eta = max(self.min_learning_rate,\
             self._compute_learning_rate(epoch=epoch, log=log))
     
@@ -528,8 +528,10 @@ class Improvement(LearningRateSchedule):
         self._observer.on_train_begin()        
 
     def _compute_learning_rate(self, epoch, log):
-        learning_rate = log.get('learning_rate')
-        return learning_rate * self.decay_factor
+        if self._observer.stabilized:   
+            return log.get('learning_rate') * self.decay_factor
+        else:
+            return log.get('learning_rate')
 
     def on_epoch_end(self, epoch, log=None):
         """Determines whether convergence has been achieved.
@@ -540,11 +542,8 @@ class Improvement(LearningRateSchedule):
         log : dict
             Dictionary containing training cost, (and if metric=score, 
             validation cost)  
-        """
-        super(Improvement, self).on_epoch_end(epoch, log)        
-        log = log or {}                
-        
+        """        
+        log = log or {}                        
         self._observer.on_epoch_end(epoch, log)
-        if self._observer.stabilized:                        
-            self.model.eta = max(self.min_learning_rate,\
-                self._compute_learning_rate(epoch=epoch, log=log))            
+        super(Improvement, self).on_epoch_end(epoch, log)        
+           

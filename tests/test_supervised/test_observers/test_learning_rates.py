@@ -757,7 +757,7 @@ class BottouScheduleTests:
 
 @mark.observer
 @mark.lrs
-@mark.improvement_decay
+@mark.improvement
 class ImprovementTests:
 
     def _get_expected_results(self, filepath):
@@ -818,15 +818,16 @@ class ImprovementTests:
                         decay_factor=0.5, epsilon=0.01, patience=2)
         observer = {'learning_rate_schedule': lrs}                  
         # Instantiate mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)                                
+        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)       
+        est.eta = 0.1                         
         lrs.set_model(est)
         # Simulate training 
         lrs.on_train_begin()
         act_results = []
         lr = 0.1
-        for i in range(10):
+        for i in range(10):            
             log = {'train_cost':cost[i], 'learning_rate': lrs.model.eta}    
-            lrs.on_epoch_end(epoch=i, log=log)    
+            lrs.on_epoch_end(epoch=i, log=log)                
             act_results.append(lrs.model.eta)
         # Compare two arrays
         act_res_len = len(act_results)

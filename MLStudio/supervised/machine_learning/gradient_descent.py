@@ -124,13 +124,16 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         # Observers. Note we pull of the val_size from the Performance
         # observer if it exists. The val_size will be used by the data
         # preparation method.           
-        self._val_size = 0.0     
-        self._observers = {}
-        if self.observers:
-            for name, observer in self.observers.items():                
-                self._observers[name] = copy.deepcopy(observer)     
-                if isinstance(observer, Performance):
-                    self._val_size = observer.val_size       
+        self._val_size = 0.0
+        try:             
+            self._observers = []
+            if self.observers:            
+                for observer in self.observers:                
+                    self._observers.append(copy.deepcopy(observer))     
+                    if isinstance(observer, Performance):
+                        self._val_size = observer.val_size
+        except:
+            self._observers = [copy.deepcopy(self.observers)]       
 
         # The Optimizer algorithm
         if self.optimizer:
@@ -147,15 +150,15 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         """Adds all observers to the observer list that gets notified."""
         # Add any additional default observers to observer dictionary
         if self.verbose:
-            self._observers['progress'] = Progress()
+            self._observers.append(Progress())
 
         if isinstance(self._learning_rate, Observer):
-            self._observers['learning_rate'] = self._learning_rate
+            self._observers.append(self._learning_rate)
 
-        self._observers['blackbox'] = self.blackbox_
+        self._observers.append(self.blackbox_)
 
         self._observer_list = ObserverList()                
-        for observer in self._observers.values():
+        for observer in self._observers:
             self._observer_list.append(observer)
 
         # Publish model parameters and instance on observer objects.
@@ -186,7 +189,6 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._epoch = 0      
         self._batch = 0 
         self._theta = None
-        self._theta_new = None
         self._gradient = None
         self._current_state = {}
         self._converged = False    
@@ -243,7 +245,6 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         """
         log = log or {}
         self._observer_list.on_epoch_end(epoch=self._epoch, log=self._current_state)
-        self._theta = self._theta_new        
         self._epoch += 1
 
     # ----------------------------------------------------------------------- #            
@@ -305,7 +306,7 @@ class GradientDescentAbstract(ABC,BaseEstimator):
     def _get_results(self):
         # Determine if best or final weights should be stored.
         borf = 'final'
-        for observer in self._observers.values():
+        for observer in self._observers:
             if isinstance(observer, Performance):
                 borf = observer.best_or_final
         
@@ -448,10 +449,8 @@ class GradientDescentEstimator(GradientDescentAbstract):
         The optimization algorithm to use. If None, the generic 
         GradientDescentOptimizer will be used.
 
-    observers : dict
-        A dictionary of observers. The observers will be added to the 
-        estimator as attributes. The keys in the observers dictionary will 
-        serve as the attribute names for future reference. 
+    observers : list
+        A list of observer objects.
 
     verbose : Bool or Int
         If False, the parameter is ignored. If an integer is provided, this 
@@ -542,12 +541,14 @@ class GradientDescentEstimator(GradientDescentAbstract):
             assert self.theta_init.shape == (self.X_train_.shape[1],), \
                 "Initial parameters theta must have shape (n_features+1,)."
             self._theta = self.theta_init
+            self._theta
         else:
             # Random normal initialization for weights.
             rng = np.random.RandomState(self.random_state)                
             self._theta = rng.randn(self.X_train_.shape[1]) 
             # Set the bias initialization to zero
             self._theta[0] = 0
+            self._theta = self._theta
 
     # ----------------------------------------------------------------------- #
     def _set_current_state(self):
@@ -618,7 +619,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
                        'train_cost': cost}
 
                 # Compute gradient and update parameters 
-                self._theta_new, self._gradient = self._optimizer(gradient=self._objective.gradient, \
+                self._theta, self._gradient = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.copy(self._theta),  X=X_batch, y=y_batch,\
                         y_out=y_out)                       
 

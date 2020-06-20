@@ -32,9 +32,12 @@ import numpy as np
 from sklearn.linear_model import SGDRegressor
 
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.core.scorers import R2
+from mlstudio.supervised.core.objectives import MSE
 from mlstudio.utils.data_manager import StandardScaler, data_split
+from mlstudio.supervised.observers.debugging import GradientCheck
 from mlstudio.visual.animations import animate_optimization_regression
-from mlstudio.visual.static import plot_cost_scores
+from mlstudio.visual.plots import plot_cost_scores
 
 def get_data():
     """Obtains the Ames housing price data for modeling."""
@@ -57,9 +60,18 @@ def get_data():
 
 def train_models(X, y):
     """Trains batch, stochastic and minibatch gradient descent."""    
-    bgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, random_state=50)
-    sgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, batch_size=1, random_state=50)
-    mbgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, batch_size=64, random_state=50)
+    bgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, 
+                                   random_state=50,scorer=R2(),
+                                   objective=MSE(),
+                                   observers=[GradientCheck()])
+    sgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, 
+                                   batch_size=1, random_state=50, scorer=R2(),
+                                   objective=MSE(),
+                                   observers=[GradientCheck()])
+    mbgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, 
+                                    batch_size=64, random_state=50, scorer=R2(),
+                                    objective=MSE(),
+                                    observers=[GradientCheck()])
     bgd.fit(X,y)
     sgd.fit(X,y)
     mbgd.fit(X,y)
@@ -136,7 +148,6 @@ def regression_demo(max_frames=None, filepath=None, show=True):
                  show=show)
 
 filepath = os.path.join(demodir, 'figures/regression_demo.html')
-regression_demo(filepath=filepath)
 regression_demo(max_frames=100, filepath=filepath)
 #%%
 

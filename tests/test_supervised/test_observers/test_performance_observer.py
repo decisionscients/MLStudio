@@ -112,18 +112,17 @@ class PerformanceTests:
         # Gather expected results in numpy format
         exp_improvement = exp_results['sig'].to_numpy()
         exp_stability = exp_results['stable'].to_numpy()
-        exp_best_epochs = exp_results['best'].to_numpy()
+        
 
         # Gather actual results and convert to numpy format
-        df = observer.get_performance_data()
-        act_improvement = df['Improvement'].to_numpy()
-        act_stability = df['Stability'].to_numpy()
-        act_best_epochs = df['Best Epochs'].to_numpy()
+        log = observer.performance_log_
+        act_improvement = log['significant_improvement']
+        act_stability = log['stabilized']
+        
 
         # Compare expected and actual results
         assert np.array_equal(exp_improvement, act_improvement), "Improvement errors: \nExp {e} \nAct {a}".format(\
             e=str(exp_improvement), a=str(act_improvement))
         assert np.array_equal(exp_stability, act_stability), "Performance errors"
-        assert np.array_equal(exp_best_epochs, act_best_epochs), "Best epochs errors"
-
-        print(tabulate(df, headers="keys"))
+        
+        print(tabulate(log, headers="keys"))

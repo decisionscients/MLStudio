@@ -196,7 +196,7 @@ class Adam(Optimizer):
         m_hat = self.m / (1 - self.beta_one**self.t)
         v_hat = self.v / (1 - self.beta_two**self.t)
 
-        theta = theta - learning_rate / (np.sqrt(float(np.array(v_hat,ndmin=1)) + np.array(self.epsilon,ndmin=1))) * m_hat        
+        theta = theta - learning_rate / (np.sqrt(np.array(v_hat)) + np.array(self.epsilon)) * m_hat        
         
         return theta, grad        
 
@@ -270,7 +270,7 @@ class AMSGrad(Optimizer):
         self.m = self.beta_one * self.m + (1 - self.beta_one) * grad
         self.v = self.beta_two * self.v + (1 - self.beta_two) * np.square(grad)
         self.v_hat = np.array(np.maximum(self.v_hat, self.v),ndmin=1)
-        theta = theta - (learning_rate / (np.sqrt(float(np.array(self.v_hat,ndmin=1)) + np.array(self.epsilon, ndmin=1)))) * self.m
+        theta = theta - (learning_rate / (np.sqrt(np.array(self.v_hat)) + np.array(self.epsilon))) * self.m
         
         return theta, grad                        
 
