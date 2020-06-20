@@ -139,6 +139,10 @@ class GradientDescentAbstract(ABC,BaseEstimator):
             self._optimizer = GradientDescentOptimizer()
 
     # ----------------------------------------------------------------------- #
+    def _create_observer_attributes(self):            
+        self.blackbox_ = BlackBox()
+
+    # ----------------------------------------------------------------------- #
     def _create_observer_list(self):
         """Adds all observers to the observer list that gets notified."""
         # Add any additional default observers to observer dictionary
@@ -147,6 +151,8 @@ class GradientDescentAbstract(ABC,BaseEstimator):
 
         if isinstance(self._learning_rate, Observer):
             self._observers['learning_rate'] = self._learning_rate
+
+        self._observers['blackbox'] = self.blackbox_
 
         self._observer_list = ObserverList()                
         for observer in self._observers.values():
@@ -163,6 +169,7 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._set_objective()        
         self._copy_mutable_parameters()
         self._obtain_implicit_dependencies()
+        self._create_observer_attributes()
         self._create_observer_list()
 
     # ----------------------------------------------------------------------- #

@@ -290,27 +290,11 @@ class PerformanceObserver(Observer):
         self.metric = metric        
         self.scorer = scorer
         self.epsilon = epsilon
-        self.patience = patience        
+        self.patience = patience     
 
     @property
     def stabilized(self):
-        return self._stabilized
-
-    @property
-    def best_results(self):
-        return self._best_results
-
-    @property
-    def critical_points(self):
-        return self._critical_points
-
-    def get_performance_data(self):
-        d = {'Epoch': self._epoch_log, 'Performance': self._performance_log,
-             'Baseline': self._baseline_log, 'Relative Change': self._relative_change_log,
-             'Improvement': self._improvement_log,'Iters No Change': self._iter_no_improvement_log,
-             'Stability': self._stability_log, 'Best Epochs': self._best_epochs_log}
-        df = pd.DataFrame(data=d)
-        return df
+        return self._stabilized   
        
     def _validate(self):     
         if 'val' in self.metric and self.val_size == 0.0:   
@@ -334,9 +318,11 @@ class PerformanceObserver(Observer):
         # Private variables
         self._baseline = None        
         self._iter_no_improvement = 0
-        self._better = None   
+        self._better = None
+        self._prior_state = False   
         self._stabilized = False
         self._significant_improvement = False
+        self._critical_points = []
 
         # Implicit dependencies
         if 'score' in self.metric:
@@ -356,25 +342,24 @@ class PerformanceObserver(Observer):
         validate_int(param=self.patience, param_name='patience')
 
         # log data
-        self._epoch_log = []
-        self._performance_log = []
-        self._baseline_log = []
-        self._relative_change_log = []
-        self._improvement_log = []
-        self._iter_no_improvement_log = []
-        self._stability_log = []
-        self._best_epochs_log = []                       
+        self.performance_log_ = {}
 
     def _update_log(self, current, log):
         """Creates log dictionary of lists of performance results."""
-        self._epoch_log.append(log.get('epoch'))
-        self._performance_log.append(log.get(self.metric))
-        self._baseline_log.append(self._baseline)
-        self._relative_change_log.append(self._relative_change)
-        self._improvement_log.append(self._significant_improvement)
-        self._iter_no_improvement_log.append(self._iter_no_improvement)
-        self._stability_log.append(self._stabilized)
-        self._best_epochs_log.append(self._best_epoch)
+        log['baseline']= self._baseline
+        log['relative_change'] = self._relative_change
+        log['significant_improvement'] = self._significant_improvement
+        log['iter_no_improvement']= self._iter_no_improvement
+        log['stabilized'] = self._stabilized
+        for k,v in log.items():
+            self.performance_log_.setdefault(k,[]).append(v)
+        return log
+
+    def _is_critical_point(self, log):
+        """Adds log to critical points if state change."""
+        if self._prior_state != self._stabilized:
+            self._critical_points.append(log)
+            self._prior_state = self._stabilized
 
     def _metric_improved(self, current):
         """Returns true if the direction and magnitude of change indicates improvement"""
@@ -393,7 +378,7 @@ class PerformanceObserver(Observer):
         self._iter_no_improvement = 0            
         self._stabilized = False
         self._baseline = current 
-        self._best_epoch = log
+        self._best_results = log
 
     def _process_no_improvement(self, log=None):
         """Sets values of parameters and attributes if no improved."""    
@@ -444,19 +429,10 @@ class PerformanceObserver(Observer):
             else:
                 self._process_no_improvement()
 
-        # Log results
-        self._update_log(current, log)
+        # Log results and critical points
+        log = self._update_log(current, log)
+        self._is_critical_point(log)
 
 
-    def on_train_end(self, log=None):
-        """Logic executed at the end of training.
-        
-        Parameters
-        ----------        
-        log: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """           
-        self.model.best_results_ = self._best_epochs_log[-1]
-        self._critical_points = np.where(self._stability_log)[0].tolist()
-        self.model.critical_points_ = [self._best_epochs_log[i] for i in self._critical_points] 
+
         

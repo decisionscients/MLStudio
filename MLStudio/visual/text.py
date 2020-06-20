@@ -70,18 +70,19 @@ class OptimizationPerformance(Summary):
 
     def _extract_data(self):
         """Extracts required data from the model."""
-        bb = self.model.blackbox_        
-        final_data = bb.epoch_log
-        best_data = None
-        if hasattr(self.model, 'best_results_'):
-            best_data = self.model.best_results_
-        return final_data, best_data
+        final_results = self.model.final_results_ or {}
+        best_results = self.model.best_results_ or {}
+        return final_results, best_results 
 
     def _report(self, result, best_or_final):
         datasets = {'train': 'Training', 'val': 'Validation'}
         keys = ['train', 'val']
         metrics = ['cost', 'score']
         print_data = []
+        # If printing 'best_results', extract the epoch
+        if best_or_final == 'best':
+            d = {'label': 'Best Epoch', 'data' : str(result.get('epoch'))}
+            print_data.append(d)
         # Format labels and data for printing from result parameter
         for performance in list(itertools.product(keys, metrics)):
             d = {}
@@ -91,9 +92,9 @@ class OptimizationPerformance(Summary):
                     + ' ' + proper(performance[1]) 
                 d['label'] = label
                 if performance[1] == 'score' and hasattr(self.model, 'scorer'):                    
-                    d['data'] = str(np.round(result[key],4)[-1]) + " " + self.model.scorer.name
+                    d['data'] = str(np.round(result.get(key),4)) + " " + self.model.scorer.name
                 else:
-                    d['data'] = str(np.round(result[key],4)[-1]) 
+                    d['data'] = str(np.round(result.get(key),4)) 
                 print_data.append(d) 
 
         # Print performance statistics
@@ -104,10 +105,10 @@ class OptimizationPerformance(Summary):
         self._printer.print_dictionary(performance_summary, title)        
 
     def report(self):
-        final_data, best_data = self._extract_data()
-        self._report(final_data, 'final')
-        if best_data:
-            self._report(best_data, 'best')
+        final_results, best_results  = self._extract_data()
+        self._report(final_results, 'final')
+        if best_results:
+            self._report(best_results, 'best')
 
 class OptimizationCriticalPoints(Summary):
     """Prints statistics at critical points during the optimization.
@@ -147,7 +148,8 @@ class OptimizationHyperparameters(Summary):
         def get_params(o):
             params = o.get_params()
             for k, v in params.items():
-                if isinstance(v, (str, bool, int, float, np.ndarray, np.generic, list)) or v is None:
+                if isinstance(v, (str, dict, bool, int, float, np.ndarray, \
+                    np.generic, list)) or v is None:
                     k = o.__class__.__name__ + '__' + k
                     hyperparameters[k] = str(v)
                 else:
@@ -211,8 +213,11 @@ class OptimizationReport:
 
     def report(self):
 
-        default_reports = ['summary', 'performance', 'critical_points', 
+        valid_reports = ['summary', 'performance', 'critical_points', 
                            'features', 'hyperparameters']
+
+        default_reports = ['summary', 'performance', 
+                           'features', 'hyperparameters']                           
 
         reports = {'summary': OptimizationSummary(model=self.model), 
                    'performance': OptimizationPerformance(model=self.model),

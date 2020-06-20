@@ -60,8 +60,10 @@ class BlackBox(Observer):
         """
         self.end = datetime.datetime.now()
         self.duration = (self.end-self.start).total_seconds() 
-        if self.model.verbose:
-            self.report()
+        final_results = {}
+        for k, v in self.epoch_log.items():
+            final_results[k] = v[-1]
+        self.model.final_results_ = final_results
 
     def on_batch_end(self, batch, log=None):
         """Updates data and statistics relevant to the training batch.
@@ -191,7 +193,7 @@ class Performance(PerformanceObserver):
     """
 
     def __init__(self, mode='passive', val_size=0.3, metric='train_cost', 
-                 scorer=None,  epsilon=0.01, patience=5, best_or_final='best'): 
+                 scorer=None,  epsilon=0.001, patience=5, best_or_final='best'): 
         super(Performance, self).__init__(                   
             val_size = val_size,
             metric = metric,        
@@ -218,4 +220,16 @@ class Performance(PerformanceObserver):
         if self._stabilized and self.mode == 'active':
             self.model.converged = True       
 
+    def on_train_end(self, log=None):
+        """Logic executed at the end of training.
+
+        Updates the model with the best results and the critical points.
+        
+        Parameters
+        ----------        
+        log: dict
+            Dictionary containing the data, cost, batch size and current weights
+        """           
+        self.model.best_results_ = self._best_results        
+        self.model.critical_points_ = self._critical_points
 

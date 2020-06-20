@@ -502,7 +502,7 @@ class Improvement(LearningRateSchedule):
     """
 
     def __init__(self, initial_learning_rate=0.1, min_learning_rate=1e-4,
-                 decay_factor=0.5, metric='train_cost',  epsilon=0.01, 
+                 decay_factor=0.5, metric='train_cost',  epsilon=0.001, 
                  patience=10):
         super(Improvement, self).__init__(
             initial_learning_rate=initial_learning_rate,
