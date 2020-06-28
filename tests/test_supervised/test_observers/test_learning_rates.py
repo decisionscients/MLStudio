@@ -52,23 +52,23 @@ class StepDecayTests:
     def test_step_decay_validation(self):
         # Validate initial learning rate
         with pytest.raises(TypeError):
-            lrs = StepDecay(initial_learning_rate='h')
+            lrs = StepDecay(eta0='h')
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = StepDecay(initial_learning_rate=0)
+            lrs = StepDecay(eta0=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = StepDecay(initial_learning_rate=1)
+            lrs = StepDecay(eta0=1)
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = StepDecay(min_learning_rate=None)
+            lrs = StepDecay(eta_min=None)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = StepDecay(min_learning_rate=0)
+            lrs = StepDecay(eta_min=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = StepDecay(min_learning_rate=1)
+            lrs = StepDecay(eta_min=1)
             lrs.on_train_begin()      
         # Validate decay_factor
         with pytest.raises(TypeError):
@@ -97,7 +97,7 @@ class StepDecayTests:
         filepath = os.path.join(testdatadir, "test_learning_rate_schedules_step_decay.xlsx")
         exp_results = self._get_expected_results(filepath)
         # Instantiate learning rate schedule and create it as an observer
-        lrs = StepDecay(initial_learning_rate=0.1, min_learning_rate=0.01,
+        lrs = StepDecay(eta0=0.1, eta_min=0.01,
                         decay_factor=0.5, decay_steps=5)
         observer = {'learning_rate_schedule': lrs}              
         # Instantiate and fit mock estimator
@@ -127,23 +127,23 @@ class TimeDecayTests:
     def test_time_decay_validation(self):
         # Validate initial learning rate
         with pytest.raises(TypeError):
-            lrs = TimeDecay(initial_learning_rate='h')
+            lrs = TimeDecay(eta0='h')
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = TimeDecay(initial_learning_rate=0, decay_factor=0.5)
+            lrs = TimeDecay(eta0=0, decay_factor=0.5)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = TimeDecay(initial_learning_rate=1, decay_factor=0.5)
+            lrs = TimeDecay(eta0=1, decay_factor=0.5)
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = TimeDecay(min_learning_rate=None, decay_factor=0.5)
+            lrs = TimeDecay(eta_min=None, decay_factor=0.5)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = TimeDecay(min_learning_rate=0, decay_factor=0.5)
+            lrs = TimeDecay(eta_min=0, decay_factor=0.5)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = TimeDecay(min_learning_rate=1, decay_factor=0.5)
+            lrs = TimeDecay(eta_min=1, decay_factor=0.5)
             lrs.on_train_begin()      
         # Validate decay_factor
         with pytest.raises(TypeError):
@@ -163,7 +163,7 @@ class TimeDecayTests:
         filepath = os.path.join(testdatadir, "test_learning_rate_schedules_time_decay.xlsx")
         exp_results = self._get_expected_results(filepath)
         # Instantiate learning rate schedule and create it as an observer
-        lrs = TimeDecay(initial_learning_rate=0.1, min_learning_rate=0.02,
+        lrs = TimeDecay(eta0=0.1, eta_min=0.02,
                         decay_factor=0.5)
         observer = {'learning_rate_schedule': lrs}              
         # Instantiate and fit mock estimator
@@ -193,23 +193,23 @@ class SqrtTimeDecayTests:
     def test_sqrt_time_decay_validation(self):
         # Validate initial learning rate
         with pytest.raises(TypeError):
-            lrs = SqrtTimeDecay(initial_learning_rate='h')
+            lrs = SqrtTimeDecay(eta0='h')
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = SqrtTimeDecay(initial_learning_rate=0)
+            lrs = SqrtTimeDecay(eta0=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = SqrtTimeDecay(initial_learning_rate=1)
+            lrs = SqrtTimeDecay(eta0=1)
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = SqrtTimeDecay(min_learning_rate=None)
+            lrs = SqrtTimeDecay(eta_min=None)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = SqrtTimeDecay(min_learning_rate=0)
+            lrs = SqrtTimeDecay(eta_min=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = SqrtTimeDecay(min_learning_rate=1)
+            lrs = SqrtTimeDecay(eta_min=1)
             lrs.on_train_begin()      
         # Validate decay_factor
         with pytest.raises(TypeError):
@@ -229,7 +229,7 @@ class SqrtTimeDecayTests:
         filepath = os.path.join(testdatadir, "test_learning_rate_schedules_sqrt_time_decay.xlsx")
         exp_results = self._get_expected_results(filepath)
         # Instantiate learning rate schedule and create it as an observer
-        lrs = SqrtTimeDecay(initial_learning_rate=0.1, min_learning_rate=0.045,
+        lrs = SqrtTimeDecay(eta0=0.1, eta_min=0.045,
                         decay_factor=0.5)
         observer = {'learning_rate_schedule': lrs}              
         # Instantiate and fit mock estimator
@@ -259,23 +259,23 @@ class ExponentialDecayTests:
     def test_exponential_decay_validation(self):
         # Validate initial learning rate
         with pytest.raises(TypeError):
-            lrs = ExponentialDecay(initial_learning_rate='h')
+            lrs = ExponentialDecay(eta0='h')
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialDecay(initial_learning_rate=0)
+            lrs = ExponentialDecay(eta0=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialDecay(initial_learning_rate=1)
+            lrs = ExponentialDecay(eta0=1)
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = ExponentialDecay(min_learning_rate=None)
+            lrs = ExponentialDecay(eta_min=None)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialDecay(min_learning_rate=0)
+            lrs = ExponentialDecay(eta_min=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialDecay(min_learning_rate=1)
+            lrs = ExponentialDecay(eta_min=1)
             lrs.on_train_begin()      
         # Validate decay_factor
         with pytest.raises(TypeError):
@@ -294,7 +294,7 @@ class ExponentialDecayTests:
         filepath = os.path.join(testdatadir, "test_learning_rate_schedules_exponential_decay.xlsx")
         exp_results = self._get_expected_results(filepath)
         # Instantiate learning rate schedule and create it as an observer
-        lrs = ExponentialDecay(initial_learning_rate=0.1, min_learning_rate=0.05,
+        lrs = ExponentialDecay(eta0=0.1, eta_min=0.05,
                         decay_factor=0.1)
         observer = {'learning_rate_schedule': lrs}              
         # Instantiate and fit mock estimator
@@ -325,28 +325,28 @@ class ExponentialStepDecayTests:
         est = get_mock_estimator
         # Validate initial learning rate
         with pytest.raises(TypeError):            
-            lrs = ExponentialStepDecay(initial_learning_rate='h')
+            lrs = ExponentialStepDecay(eta0='h')
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialStepDecay(initial_learning_rate=0)
+            lrs = ExponentialStepDecay(eta0=0)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialStepDecay(initial_learning_rate=1)
+            lrs = ExponentialStepDecay(eta0=1)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = ExponentialStepDecay(min_learning_rate=None)
+            lrs = ExponentialStepDecay(eta_min=None)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialStepDecay(min_learning_rate=0)
+            lrs = ExponentialStepDecay(eta_min=0)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialStepDecay(min_learning_rate=1)
+            lrs = ExponentialStepDecay(eta_min=1)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()      
         # Validate decay_factor
@@ -378,7 +378,7 @@ class ExponentialStepDecayTests:
         filepath = os.path.join(testdatadir, "test_learning_rate_schedules_exponential_step_decay.xlsx")
         exp_results = self._get_expected_results(filepath)
         # Instantiate learning rate schedule and create it as an observer
-        lrs = ExponentialStepDecay(initial_learning_rate=0.1, min_learning_rate=0.01,
+        lrs = ExponentialStepDecay(eta0=0.1, eta_min=0.01,
                         decay_factor=0.5, decay_steps=5)
         observer = {'learning_rate_schedule': lrs}              
         # Instantiate and fit mock estimator
@@ -409,28 +409,28 @@ class ExponentialStepDecayStaircaseTests:
         est = get_mock_estimator
         # Validate initial learning rate
         with pytest.raises(TypeError):            
-            lrs = ExponentialStepDecay(initial_learning_rate='h')
+            lrs = ExponentialStepDecay(eta0='h')
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialStepDecay(initial_learning_rate=0)
+            lrs = ExponentialStepDecay(eta0=0)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialStepDecay(initial_learning_rate=1)
+            lrs = ExponentialStepDecay(eta0=1)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = ExponentialStepDecay(min_learning_rate=None)
+            lrs = ExponentialStepDecay(eta_min=None)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialStepDecay(min_learning_rate=0)
+            lrs = ExponentialStepDecay(eta_min=0)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = ExponentialStepDecay(min_learning_rate=1)
+            lrs = ExponentialStepDecay(eta_min=1)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()      
         # Validate decay_factor
@@ -462,7 +462,7 @@ class ExponentialStepDecayStaircaseTests:
         filepath = os.path.join(testdatadir, "test_learning_rate_schedules_exponential_step_decay_staircase.xlsx")
         exp_results = self._get_expected_results(filepath)
         # Instantiate learning rate schedule and create it as an observer
-        lrs = ExponentialStepDecay(initial_learning_rate=0.1, min_learning_rate=0.02,
+        lrs = ExponentialStepDecay(eta0=0.1, eta_min=0.02,
                         decay_factor=0.5, decay_steps=5, staircase=True)
         observer = {'learning_rate_schedule': lrs}              
         # Instantiate and fit mock estimator
@@ -492,23 +492,23 @@ class PolynomialDecayTests:
     def test_polynomial_decay_validation(self):
         # Validate initial learning rate
         with pytest.raises(TypeError):
-            lrs = PolynomialDecay(initial_learning_rate='h')
+            lrs = PolynomialDecay(eta0='h')
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PolynomialDecay(initial_learning_rate=0)
+            lrs = PolynomialDecay(eta0=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PolynomialDecay(initial_learning_rate=1)
+            lrs = PolynomialDecay(eta0=1)
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = PolynomialDecay(min_learning_rate=None)
+            lrs = PolynomialDecay(eta_min=None)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PolynomialDecay(min_learning_rate=0)
+            lrs = PolynomialDecay(eta_min=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PolynomialDecay(min_learning_rate=1)
+            lrs = PolynomialDecay(eta_min=1)
             lrs.on_train_begin()      
         # Validate power
         with pytest.raises(TypeError):
@@ -527,7 +527,7 @@ class PolynomialDecayTests:
         filepath = os.path.join(testdatadir, "test_learning_rate_schedules_polynomial_decay.xlsx")
         exp_results = self._get_expected_results(filepath)
         # Instantiate learning rate schedule and create it as an observer
-        lrs = PolynomialDecay(initial_learning_rate=0.1, min_learning_rate=0.025,
+        lrs = PolynomialDecay(eta0=0.1, eta_min=0.025,
                         power=0.95)
         observer = {'learning_rate_schedule': lrs}              
         # Instantiate and fit mock estimator
@@ -557,23 +557,23 @@ class PolynomialStepDecayTests:
     def test_polynomial_step_decay_validation(self):
         # Validate initial learning rate
         with pytest.raises(TypeError):
-            lrs = PolynomialStepDecay(initial_learning_rate='h')
+            lrs = PolynomialStepDecay(eta0='h')
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PolynomialStepDecay(initial_learning_rate=0)
+            lrs = PolynomialStepDecay(eta0=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PolynomialStepDecay(initial_learning_rate=1)
+            lrs = PolynomialStepDecay(eta0=1)
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = PolynomialStepDecay(min_learning_rate=None)
+            lrs = PolynomialStepDecay(eta_min=None)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PolynomialStepDecay(min_learning_rate=0)
+            lrs = PolynomialStepDecay(eta_min=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PolynomialStepDecay(min_learning_rate=1)
+            lrs = PolynomialStepDecay(eta_min=1)
             lrs.on_train_begin()      
         # Validate power
         with pytest.raises(TypeError):
@@ -599,7 +599,7 @@ class PolynomialStepDecayTests:
         filepath = os.path.join(testdatadir, "test_learning_rate_schedules_polynomial_step_decay.xlsx")
         exp_results = self._get_expected_results(filepath)
         # Instantiate learning rate schedule and create it as an observer
-        lrs = PolynomialStepDecay(initial_learning_rate=0.1, min_learning_rate=0.001,
+        lrs = PolynomialStepDecay(eta0=0.1, eta_min=0.001,
                         power=0.5, decay_steps=5)
         observer = {'learning_rate_schedule': lrs}              
         # Instantiate and fit mock estimator
@@ -629,23 +629,23 @@ class PowerScheduleTests:
     def test_power_decay_validation(self):
         # Validate initial learning rate
         with pytest.raises(TypeError):
-            lrs = PowerSchedule(initial_learning_rate='h')
+            lrs = PowerSchedule(eta0='h')
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PowerSchedule(initial_learning_rate=0)
+            lrs = PowerSchedule(eta0=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PowerSchedule(initial_learning_rate=1)
+            lrs = PowerSchedule(eta0=1)
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = PowerSchedule(min_learning_rate=None)
+            lrs = PowerSchedule(eta_min=None)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PowerSchedule(min_learning_rate=0)
+            lrs = PowerSchedule(eta_min=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = PowerSchedule(min_learning_rate=1)
+            lrs = PowerSchedule(eta_min=1)
             lrs.on_train_begin()      
         # Validate power
         with pytest.raises(TypeError):
@@ -671,7 +671,7 @@ class PowerScheduleTests:
         filepath = os.path.join(testdatadir, "test_learning_rate_schedules_power.xlsx")
         exp_results = self._get_expected_results(filepath)
         # Instantiate learning rate schedule and create it as an observer
-        lrs = PowerSchedule(initial_learning_rate=0.1, min_learning_rate=0.04,
+        lrs = PowerSchedule(eta0=0.1, eta_min=0.04,
                         power=0.95, decay_steps=5)
         observer = {'learning_rate_schedule': lrs}              
         # Instantiate and fit mock estimator
@@ -701,23 +701,23 @@ class BottouScheduleTests:
     def test_bottou_decay_validation(self):
         # Validate initial learning rate
         with pytest.raises(TypeError):
-            lrs = BottouSchedule(initial_learning_rate='h')
+            lrs = BottouSchedule(eta0='h')
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = BottouSchedule(initial_learning_rate=0)
+            lrs = BottouSchedule(eta0=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = BottouSchedule(initial_learning_rate=1)
+            lrs = BottouSchedule(eta0=1)
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = BottouSchedule(min_learning_rate=None)
+            lrs = BottouSchedule(eta_min=None)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = BottouSchedule(min_learning_rate=0)
+            lrs = BottouSchedule(eta_min=0)
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = BottouSchedule(min_learning_rate=1)
+            lrs = BottouSchedule(eta_min=1)
             lrs.on_train_begin()      
         # Validate decay_factor
         with pytest.raises(TypeError):
@@ -737,7 +737,7 @@ class BottouScheduleTests:
         filepath = os.path.join(testdatadir, "test_learning_rate_schedules_bottou.xlsx")
         exp_results = self._get_expected_results(filepath)
         # Instantiate learning rate schedule and create it as an observer
-        lrs = BottouSchedule(initial_learning_rate=0.1, min_learning_rate=0.07,
+        lrs = BottouSchedule(eta0=0.1, eta_min=0.07,
                         decay_factor=0.5)
         observer = {'learning_rate_schedule': lrs}              
         # Instantiate and fit mock estimator
@@ -768,28 +768,28 @@ class ImprovementTests:
         est = get_mock_estimator        
         # Validate initial learning rate
         with pytest.raises(TypeError):
-            lrs = Improvement(initial_learning_rate='h')
+            lrs = Improvement(eta0='h')
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = Improvement(initial_learning_rate=0)
+            lrs = Improvement(eta0=0)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = Improvement(initial_learning_rate=1)
+            lrs = Improvement(eta0=1)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = Improvement(min_learning_rate=None)
+            lrs = Improvement(eta_min=None)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = Improvement(min_learning_rate=0)
+            lrs = Improvement(eta_min=0)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = Improvement(min_learning_rate=1)
+            lrs = Improvement(eta_min=1)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()      
         # Validate decay_factor
@@ -814,7 +814,7 @@ class ImprovementTests:
         cost = exp_results['cost'].values
         exp_results = exp_results['lr'].values
         # Instantiate learning rate schedule and create it as an observer
-        lrs = Improvement(initial_learning_rate=0.1, min_learning_rate=0.002,
+        lrs = Improvement(eta0=0.1, eta_min=0.002,
                         decay_factor=0.5, epsilon=0.01, patience=2)
         observer = {'learning_rate_schedule': lrs}                  
         # Instantiate mock estimator

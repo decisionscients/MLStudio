@@ -26,14 +26,13 @@ from math import ceil, floor
 
 import numpy as np
 from numpy.random import RandomState
+import pandas as pd
 from scipy.sparse import isspmatrix_coo, issparse, csr_matrix, hstack
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils import shuffle, check_array
 from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 
 from mlstudio.utils.validation import check_X_y
-
-import pandas as pd
 # --------------------------------------------------------------------------- #
 #                           DATA PREPARATION                                  #
 # --------------------------------------------------------------------------- #
@@ -146,9 +145,10 @@ class DataProcessor(ABC, BaseEstimator):
         The seed for pseudo randomization.
     
     """
-    def __init__(self, val_size=0, random_state=None):        
-        self.val_size = val_size
+    def __init__(self, estimator, random_state=None):        
+        self.estimator = estimator
         self.random_state = random_state
+
 
     def fit(self, X, y=None):
         """Returns self."""
@@ -183,22 +183,26 @@ class RegressionDataProcessor(DataProcessor):
 
     def transform(self, X, y):
         """Prepares data for regression."""
-
         X_train, y_train = check_X_y(X, y)
         X_train = AddBiasTerm().fit_transform(X_train)
-        
+        # Initialize data dictionary and n_features (including bias term)
         d = {}
-        d['n_features_'] = X_train.shape[1]
-        d['X_train_'] = X_train
-        d['y_train_'] = y_train
-        if self.val_size:
+        d['n_features_'] = X_train.shape[1]        
+        # Return training and validation data if val_size is truthy
+        if self.estimator.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=False, test_size=self.val_size, 
+                        stratify=False, test_size=val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train
             d['X_val_'] = X_val
-            d['y_val_'] = y_val
+            d['y_val_'] = y_val            
+        # Otherwise return just training data
+        else:             
+            d['n_features_'] = X_train.shape[1]
+            d['X_train_'] = X_train
+            d['y_train_'] = y_train
+
         return d
 
 # --------------------------------------------------------------------------- #
@@ -207,22 +211,27 @@ class LogisticRegressionDataProcessor(DataProcessor):
 
     def transform(self, X, y):
         """Prepares data for regression."""
-
+        # Check the data and add bias term
         X_train, y_train = check_X_y(X, y)
         X_train = AddBiasTerm().fit_transform(X_train)
-        
+        # Initialize data dictionary and n_features (including bias term)
         d = {}
-        d['n_features_'] = X_train.shape[1]
-        d['X_train_'] = X_train
-        d['y_train_'] = y_train
-        if self.val_size:
+        d['n_features_'] = X_train.shape[1]        
+        # Return stratified training and validation data if val_size is truthy
+        if self.estimator.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=False, test_size=self.val_size, 
+                        stratify=True, test_size=val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train
             d['X_val_'] = X_val
-            d['y_val_'] = y_val
+            d['y_val_'] = y_val            
+        # Otherwise return just training data
+        else:             
+            d['n_features_'] = X_train.shape[1]
+            d['X_train_'] = X_train
+            d['y_train_'] = y_train
+
         return d
 # --------------------------------------------------------------------------- #
 class MulticlassDataProcessor(DataProcessor):
@@ -230,32 +239,32 @@ class MulticlassDataProcessor(DataProcessor):
 
     def transform(self, X, y):
         """Prepares data for multi-class classification."""
-
-        n_classes = len(np.unique(y_train))
-        if n_classes < 3:
+        if len(np.unique(y)) < 3:
             msg = "This data processor is for multi-class settings with classes\
                 >2. Please use the LogisticRegressionDataProcessor instead."
             raise Exception(msg)
 
+        # Check the data, add bias term, and encode y to values [0,n_classes - 1]
         X_train, y_train = check_X_y(X, y)
         X_train = AddBiasTerm().fit_transform(X_train)
-        y_train_enc = encode_labels(y_train)
+        y_train = encode_labels(y_train)
+        # Initialize data dict, n_features (including bias term) and n_classes
         d = {}
-        d['n_features_'] = X_train.shape[1]
-        d['n_classes_'] = n_classes
-        d['X_train_'] = X_train
-        d['y_train_'] = y_train
-        d['y_train_enc'] = encode_labels(y_train) 
-        if self.val_size:
+        d['n_features_'] = X_train.shape[1]  
+        d['n_classes_'] = len(np.unique(y_train))
+        # Return stratified training and validation data if val_size is truthy
+        if self.estimator.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=True, test_size=self.val_size, 
+                        stratify=True, test_size=val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
-            d['y_train_'] = y_train
-            d['y_train_enc_'] = encode_labels(y_train) 
+            d['y_train_'] = y_train            
             d['X_val_'] = X_val
             d['y_val_'] = y_val
-            d['y_val_enc_'] = encode_labels(y_val) 
+        # Otherwise return training data
+        else:
+            d['X_train_'] = X_train
+            d['y_train_'] = y_train        
         return d                               
 
 # --------------------------------------------------------------------------- #

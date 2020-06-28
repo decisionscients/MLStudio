@@ -32,6 +32,7 @@ import plotly.graph_objects as go
 import plotly.io as pio 
 import plotly.offline as py
 from plotly.subplots import make_subplots
+import seaborn as sns
 
 from mlstudio.utils.file_manager import check_directory
 

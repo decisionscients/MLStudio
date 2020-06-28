@@ -282,13 +282,12 @@ class Observer(ABC, BaseEstimator):
 class PerformanceObserver(Observer):
     """Base class for performance observers."""
 
-    def __init__(self, val_size=0.3, metric='train_cost', scorer=None, 
-                 epsilon=1e-3, patience=5): 
+    def __init__(self, val_size=0.3, metric='train_cost', epsilon=1e-3, 
+                 patience=5): 
         super(PerformanceObserver, self).__init__()       
         self.name = "Performance Base Observer"
         self.val_size= val_size
-        self.metric = metric        
-        self.scorer = scorer
+        self.metric = metric                
         self.epsilon = epsilon
         self.patience = patience     
 
@@ -318,20 +317,20 @@ class PerformanceObserver(Observer):
         # Private variables
         self._baseline = None        
         self._iter_no_improvement = 0
-        self._better = None
-        self._prior_state = False   
         self._stabilized = False
         self._significant_improvement = False
         self._critical_points = []
 
-        # Implicit dependencies
+        # If the metric is a score, determine what constitutes a better score. 
+        # This can be obtained from the scorer object on the model. Otherwise, 
+        # we will assume a greater score is better. This is consistent with 
+        # default scorers for regression (R2) and classification (accuracy). 
         if 'score' in self.metric:
-            try:                
-                self._scorer = self.model.scorer
-                self._better = self._scorer.better
+            try:
+                self._better = self.model.scorer.better
             except:
-                e = self.name + " requires a scorer object for 'score' metrics."
-                raise TypeError(e)
+                self._better = np.greater
+        # Otherwise, the metric is cost and a better value is a lower value
         else:
             self._better = np.less
 
@@ -355,12 +354,6 @@ class PerformanceObserver(Observer):
             self.performance_log_.setdefault(k,[]).append(v)
         return log
 
-    def _is_critical_point(self, log):
-        """Adds log to critical points if state change."""
-        if self._prior_state != self._stabilized:
-            self._critical_points.append(log)
-            self._prior_state = self._stabilized
-
     def _metric_improved(self, current):
         """Returns true if the direction and magnitude of change indicates improvement"""
         # Determine if change is in the right direction.
@@ -380,11 +373,15 @@ class PerformanceObserver(Observer):
         self._baseline = current 
         self._best_results = log
 
-    def _process_no_improvement(self, log=None):
+    def _process_no_improvement(self, current, log=None):
         """Sets values of parameters and attributes if no improved."""    
         self._iter_no_improvement += 1  
-        if self._iter_no_improvement >= self.patience:
-            self._stabilized = True               
+        if self._iter_no_improvement == self.patience:
+            self._stabilized = True
+            self._iter_no_improvement = 0
+            self._baseline = current
+        else:
+            self._stabilized = False               
 
     def _get_current_value(self, log):
         """Obtain the designated metric from the log."""
@@ -427,11 +424,11 @@ class PerformanceObserver(Observer):
             if self._significant_improvement:
                 self._process_improvement(current, log)
             else:
-                self._process_no_improvement()
+                self._process_no_improvement(current, log)
 
         # Log results and critical points
         log = self._update_log(current, log)
-        self._is_critical_point(log)
+        self._critical_points.append(log)
 
 
 

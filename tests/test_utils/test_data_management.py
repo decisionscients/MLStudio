@@ -24,8 +24,8 @@ import numpy as np
 import pytest
 from pytest import mark
 from scipy.sparse import csr_matrix
+from sklearn.datasets import make_classification
 
-from mlstudio.datasets import load_urls
 from mlstudio.utils.data_manager import MinMaxScaler, data_split, GradientScaler
 from mlstudio.utils.data_manager import encode_labels
 from mlstudio.utils.data_manager import AddBiasTerm, ZeroBiasTerm, unpack_parameters
@@ -178,7 +178,7 @@ def test_minmax_scaler():
 @mark.data_manager
 @mark.data_split  
 def test_data_split():
-    X, y = load_urls()
+    X, y = make_classification(n_classes=4, n_informative=3)
     X_train, X_test, y_train, y_test = data_split(X,y, stratify=True)
     n_train = y_train.shape[0]
     n_test = y_test.shape[0]
@@ -186,7 +186,7 @@ def test_data_split():
     test_values, test_counts = np.unique(y_test, return_counts=True)
     train_proportions = train_counts / n_train
     test_proportions = test_counts / n_test
-    assert np.allclose(train_proportions, test_proportions, rtol=1e-2), "Data split stratification problem "
+    assert np.allclose(train_proportions, test_proportions, rtol=0.1), "Data split stratification problem "
 
 # --------------------------------------------------------------------------  #
 #                        TEST UNPACK PARAMETERS                               #

@@ -27,7 +27,7 @@ import pandas as pd
 from tabulate import tabulate
 
 from mlstudio.utils.format import proper
-from mlstudio.supervised.observers.monitor import Performance
+from mlstudio.supervised.observers.early_stop import Performance
 from mlstudio.utils.print import Printer
 
 class Summary(ABC):
@@ -162,22 +162,17 @@ class OptimizationHyperparameters(Summary):
 class OptimizationFeatures(Summary):
     """Reports the parameters with feature names if the feature names are available."""
 
-    def __init__(self, model, features=None):
+    def __init__(self, model):
         super(OptimizationFeatures, self).__init__(
             model = model
-        )    
-        self.features = features
+        )            
 
     def report(self):
         theta = OrderedDict()
         theta['Intercept'] = str(np.round(self.model.intercept_, 4))      
 
-        if self.features is None:
-            # Try to get the features from the object
-            self.features = self.model.features_
-
         # If no features were provided to the estimator, create dummy features.
-        if self.features is None:
+        if self.model.feature_names is None:
             self.features = []
             for i in np.arange(len(self.model.coef_)):
                 self.features.append("Feature_" + str(i))
@@ -206,10 +201,9 @@ class OptimizationReport:
                 will be printed.
 
     """
-    def __init__(self, model, reports=None, features=None, ):
+    def __init__(self, model, reports=None):
         self.model = model
         self.reports = reports
-        self.features = features
 
     def report(self):
 
@@ -222,7 +216,7 @@ class OptimizationReport:
         reports = {'summary': OptimizationSummary(model=self.model), 
                    'performance': OptimizationPerformance(model=self.model),
                    'critical_points': OptimizationCriticalPoints(model=self.model), 
-                   'features' : OptimizationFeatures(model=self.model, features=self.features), 
+                   'features' : OptimizationFeatures(model=self.model), 
                    'hyperparameters' : OptimizationHyperparameters(model=self.model)}
 
         if self.reports is None:

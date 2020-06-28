@@ -35,7 +35,7 @@ import pytest
 from pytest import mark
 from tabulate import tabulate
 
-from mlstudio.supervised.observers.monitor import Performance
+from mlstudio.supervised.observers.early_stop import Performance
 
 # --------------------------------------------------------------------------  #
 #                          TEST OBSERVER                                      #
@@ -50,10 +50,6 @@ class PerformanceTests:
             observer.on_train_begin()
         with pytest.raises(TypeError) as v:
             observer = Performance(metric=1)
-            observer.on_train_begin()
-        # Validate scorer        
-        with pytest.raises(TypeError) as v:
-            observer = Performance(metric='val_score', scorer='hair')
             observer.on_train_begin()
         # Validate epsilon
         with pytest.raises(TypeError) as v:
@@ -96,7 +92,7 @@ class PerformanceTests:
         est = Estimator()
         # Obtain and on_train_begin observer
         observer = Performance(mode='passive', metric='train_cost', 
-                               scorer=None, epsilon=0.02, patience=5)
+                               epsilon=0.02, patience=5)
         observer.on_train_begin()
 
         # Register with the observer
@@ -118,11 +114,10 @@ class PerformanceTests:
         log = observer.performance_log_
         act_improvement = log['significant_improvement']
         act_stability = log['stabilized']
-        
 
         # Compare expected and actual results
         assert np.array_equal(exp_improvement, act_improvement), "Improvement errors: \nExp {e} \nAct {a}".format(\
             e=str(exp_improvement), a=str(act_improvement))
-        assert np.array_equal(exp_stability, act_stability), "Performance errors"
+        assert np.array_equal(exp_stability, act_stability), "Stability errors"
         
         print(tabulate(log, headers="keys"))

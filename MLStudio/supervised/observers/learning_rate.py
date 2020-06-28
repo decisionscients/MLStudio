@@ -37,10 +37,11 @@ class LearningRateSchedule(Observer):
     
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate
 
     decay_factor : float (default=0.5) 
@@ -49,21 +50,21 @@ class LearningRateSchedule(Observer):
     """
 
     @abstractmethod
-    def __init__(self, initial_learning_rate=0.1, 
-                       min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, 
+                       eta_min=1e-4,
                        decay_factor=0.5):    
         super(LearningRateSchedule, self).__init__()
-        self.initial_learning_rate = initial_learning_rate
-        self.min_learning_rate = min_learning_rate  
+        self.eta0 = eta0
+        self.eta_min = eta_min  
         self.decay_factor = decay_factor        
 
     def _validate(self):
         """Performs validation of hyperparameters."""
-        validate_zero_to_one(param=self.initial_learning_rate, 
-                             param_name='initial_learning_rate', 
+        validate_zero_to_one(param=self.eta0, 
+                             param_name='eta0', 
                              left='open', right='open')
-        validate_zero_to_one(param=self.min_learning_rate, 
-                             param_name='min_learning_rate', 
+        validate_zero_to_one(param=self.eta_min, 
+                             param_name='eta_min', 
                              left='open', right='open')
         validate_zero_to_one(param=self.decay_factor, 
                              param_name='decay_factor',
@@ -76,10 +77,11 @@ class LearningRateSchedule(Observer):
     def on_train_begin(self, log=None):
         super(LearningRateSchedule, self).on_train_begin(log)        
         self._validate()
+        self.model.eta = self.eta0
 
     def on_epoch_end(self, epoch, log=None):
         super(LearningRateSchedule, self).on_epoch_begin(epoch=epoch, log=log)   
-        self.model.eta = max(self.min_learning_rate,\
+        self.model.eta = max(self.eta_min,\
             self._compute_learning_rate(epoch=epoch, log=log))
     
         
@@ -91,10 +93,11 @@ class StepDecay(LearningRateSchedule):
     
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate        
          
     decay_factor : float (default= 0.5)
@@ -107,13 +110,13 @@ class StepDecay(LearningRateSchedule):
 
     """
 
-    def __init__(self, initial_learning_rate=0.1, 
-                       min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, 
+                       eta_min=1e-4,
                        decay_factor=0.5,
                        decay_steps=10):        
         super(StepDecay, self).__init__(
-            initial_learning_rate=initial_learning_rate,
-            min_learning_rate=min_learning_rate,
+            eta0=eta0,
+            eta_min=eta_min,
             decay_factor=decay_factor)              
 
         self.name = "Step Decay Learning Rate Schedule"
@@ -128,7 +131,7 @@ class StepDecay(LearningRateSchedule):
 
     def _compute_learning_rate(self, epoch, log):        
         exponent = (1 + epoch) // self._steps
-        return self.initial_learning_rate * \
+        return self.eta0 * \
             np.power(self.decay_factor, exponent)
 
     def on_train_begin(self, log=None):
@@ -143,10 +146,11 @@ class TimeDecay(LearningRateSchedule):
 
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate        
 
     decay_factor : float or 'optimal' (default= 'optimal')
@@ -155,22 +159,22 @@ class TimeDecay(LearningRateSchedule):
 
     """
 
-    def __init__(self, initial_learning_rate=0.1, 
-                       min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, 
+                       eta_min=1e-4,
                        decay_factor='optimal'):        
         super(TimeDecay, self).__init__(
-            initial_learning_rate=initial_learning_rate,
-            min_learning_rate=min_learning_rate,
+            eta0=eta0,
+            eta_min=eta_min,
             decay_factor=decay_factor)
 
         self.name = "Time Decay Learning Rate Schedule"              
 
     def _compute_optimal_decay_factor(self):
-        return 1 - (self.initial_learning_rate - self.min_learning_rate)\
+        return 1 - (self.eta0 - self.eta_min)\
             / self.model.epochs
 
     def _compute_learning_rate(self, epoch, log):
-        return self.initial_learning_rate / \
+        return self.eta0 / \
             (1 + self.decay_factor * epoch)
 
     def on_train_begin(self, log=None):
@@ -185,27 +189,28 @@ class SqrtTimeDecay(LearningRateSchedule):
 
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate        
 
     decay_factor : float (default= 0.5)
         The factor used as to decay the learning rate.
     """
-    def __init__(self, initial_learning_rate=0.1, 
-                       min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, 
+                       eta_min=1e-4,
                        decay_factor=0.5):        
         super(SqrtTimeDecay, self).__init__(
-            initial_learning_rate=initial_learning_rate,
-            min_learning_rate=min_learning_rate,
+            eta0=eta0,
+            eta_min=eta_min,
             decay_factor=decay_factor)              
 
         self.name = "Sqrt Time Decay Learning Rate Schedule"
 
     def _compute_learning_rate(self, epoch, log):
-        return self.initial_learning_rate / \
+        return self.eta0 / \
             (1 + self.decay_factor * np.sqrt(epoch))       
                
 
@@ -217,28 +222,29 @@ class ExponentialDecay(LearningRateSchedule):
 
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate        
 
     decay_factor : float (default= 0.1)
         The decay factor used in the exponent for the learning rate computation
     """
 
-    def __init__(self, initial_learning_rate=0.1, 
-                       min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, 
+                       eta_min=1e-4,
                        decay_factor=0.1):        
         super(ExponentialDecay, self).__init__(
-            initial_learning_rate=initial_learning_rate,
-            min_learning_rate=min_learning_rate,
+            eta0=eta0,
+            eta_min=eta_min,
             decay_factor=decay_factor)
 
         self.name = "Exponential Decay Learning Rate Schedule"
 
     def _compute_learning_rate(self, epoch, log):
-        return self.initial_learning_rate * \
+        return self.eta0 * \
             np.exp(-self.decay_factor * epoch)
 
 # --------------------------------------------------------------------------  #
@@ -248,10 +254,11 @@ class ExponentialStepDecay(LearningRateSchedule):
 
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate        
 
      decay_factor : float (default= 0.96)
@@ -266,11 +273,11 @@ class ExponentialStepDecay(LearningRateSchedule):
         rate follows a staircase function. 
     """
 
-    def __init__(self, initial_learning_rate=0.1, min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, eta_min=1e-4,
                        decay_factor=0.96, decay_steps=100, staircase=False):   
         super(ExponentialStepDecay, self).__init__(
-            initial_learning_rate=initial_learning_rate,
-            min_learning_rate=min_learning_rate,            
+            eta0=eta0,
+            eta_min=eta_min,            
             decay_factor=decay_factor)    
         self.name = "Exponential Schedule Learning Rate Schedule"
         self.decay_steps = decay_steps
@@ -286,7 +293,7 @@ class ExponentialStepDecay(LearningRateSchedule):
     def _compute_learning_rate(self, epoch, log):
         exponent =  epoch // self._decay_step_length if self.staircase else \
             epoch / self._decay_step_length
-        return self.initial_learning_rate * np.power(self.decay_factor, \
+        return self.eta0 * np.power(self.decay_factor, \
             exponent)
 
     def on_train_begin(self, log=None):
@@ -301,22 +308,23 @@ class PolynomialDecay(LearningRateSchedule):
 
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate        
 
     power : float (default=1)
         The power to which the polynomial is decayed 
     """
 
-    def __init__(self, initial_learning_rate=0.1, 
-                       min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, 
+                       eta_min=1e-4,
                        power=1.0):        
         super(PolynomialDecay, self).__init__(
-            initial_learning_rate=initial_learning_rate,
-            min_learning_rate=min_learning_rate)   
+            eta0=eta0,
+            eta_min=eta_min)   
 
         self.name = "Polynomial Decay Learning Rate Schedule"
         self.power = power
@@ -330,7 +338,7 @@ class PolynomialDecay(LearningRateSchedule):
 
     def _compute_learning_rate(self, epoch, log):
         decay = (1 - (epoch / float(self.model.epochs))) ** self.power                
-        return self.initial_learning_rate * decay
+        return self.eta0 * decay
 
 # --------------------------------------------------------------------------  #
 class PolynomialStepDecay(LearningRateSchedule):
@@ -339,10 +347,11 @@ class PolynomialStepDecay(LearningRateSchedule):
 
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate        
 
     decay_steps : int (default=100)
@@ -353,13 +362,13 @@ class PolynomialStepDecay(LearningRateSchedule):
         The power to which the polynomial is decayed 
     """
 
-    def __init__(self, initial_learning_rate=0.1, 
-                       min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, 
+                       eta_min=1e-4,
                        decay_steps=100,
                        power=1.0):        
         super(PolynomialStepDecay, self).__init__(
-            initial_learning_rate=initial_learning_rate,
-            min_learning_rate=min_learning_rate)   
+            eta0=eta0,
+            eta_min=eta_min)   
 
         self.name = "Polynomial Decay Learning Rate Schedule"
         self.decay_steps = decay_steps
@@ -379,9 +388,9 @@ class PolynomialStepDecay(LearningRateSchedule):
 
     def _compute_learning_rate(self, epoch, log):
         step = min(epoch, self.decay_steps)
-        return (self.initial_learning_rate - self.min_learning_rate) *\
+        return (self.eta0 - self.eta_min) *\
             (1 - step / self.decay_steps) ** self.power +\
-                self.min_learning_rate
+                self.eta_min
 
     def on_train_begin(self, log=None):
         super(PolynomialStepDecay, self).on_train_begin(log=log)
@@ -395,10 +404,11 @@ class PowerSchedule(LearningRateSchedule):
 
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate        
 
     decay_steps : int (default=100)
@@ -408,13 +418,13 @@ class PowerSchedule(LearningRateSchedule):
     power : float (default=1)
         The power to which the polynomial is decayed 
     """
-    def __init__(self, initial_learning_rate=0.1, 
-                       min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, 
+                       eta_min=1e-4,
                        decay_steps=100,
                        power=1.0):            
         super(PowerSchedule, self).__init__(
-            initial_learning_rate=initial_learning_rate,
-            min_learning_rate=min_learning_rate)
+            eta0=eta0,
+            eta_min=eta_min)
         self.name = "Power Schedule Learning Rate Schedule"              
         self.decay_steps = decay_steps
         self.power = power        
@@ -431,7 +441,7 @@ class PowerSchedule(LearningRateSchedule):
                      minimum=1, left='open', right='open') 
 
     def _compute_learning_rate(self, epoch, log):
-        return self.initial_learning_rate / (1 + epoch/self.decay_steps)**self.power
+        return self.eta0 / (1 + epoch/self.decay_steps)**self.power
 
 # --------------------------------------------------------------------------  #
 class BottouSchedule(LearningRateSchedule):
@@ -440,10 +450,11 @@ class BottouSchedule(LearningRateSchedule):
     
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate        
 
     decay_factor : float (default=0.5)
@@ -451,18 +462,18 @@ class BottouSchedule(LearningRateSchedule):
     
     """
 
-    def __init__(self, initial_learning_rate=0.1, 
-                       min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, 
+                       eta_min=1e-4,
                        decay_factor=0.5):    
         super(BottouSchedule, self).__init__(
-            initial_learning_rate=initial_learning_rate,
-            min_learning_rate=min_learning_rate,
+            eta0=eta0,
+            eta_min=eta_min,
             decay_factor=decay_factor)
         
         self.name = "Bottou Schedule Learning Rate Schedule"
 
     def _compute_learning_rate(self, epoch, log):
-        return self.initial_learning_rate * (1 + self.initial_learning_rate * \
+        return self.eta0 * (1 + self.eta0 * \
             self.decay_factor * epoch)**(-1)
 
 # --------------------------------------------------------------------------- #
@@ -473,10 +484,11 @@ class Improvement(LearningRateSchedule):
 
     Parameters
     ----------
-    initial_learning_rate : float (default=0.1)
-        The initial learning rate that is decayed during optimization
+    eta0 : float (default=0.1)
+        The initial learning rate that is decayed during optimization. This 
+        will override the eta0 parameter on the estimator.
 
-    min_learning_rate : float(default=1e-4)
+    eta_min : float(default=1e-4)
         The minimum allowable learning rate
 
     decay_factor : float (default=0.5)
@@ -501,12 +513,12 @@ class Improvement(LearningRateSchedule):
         stop training.    
     """
 
-    def __init__(self, initial_learning_rate=0.1, min_learning_rate=1e-4,
+    def __init__(self, eta0=0.1, eta_min=1e-4,
                  decay_factor=0.5, metric='train_cost',  epsilon=0.001, 
                  patience=10):
         super(Improvement, self).__init__(
-            initial_learning_rate=initial_learning_rate,
-            min_learning_rate=min_learning_rate,
+            eta0=eta0,
+            eta_min=eta_min,
             decay_factor=decay_factor)
 
         self.name = "Improvement Learning Rate Schedule"        

@@ -38,8 +38,8 @@ from mlstudio.supervised.core.tasks import LinearRegression
 from mlstudio.supervised.core.tasks import LogisticRegression
 from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
 from mlstudio.supervised.observers.base import Observer, ObserverList
-from mlstudio.supervised.observers.monitor import BlackBox, Performance, Progress
-from mlstudio.supervised.observers.learning_rate import LearningRateSchedule
+from mlstudio.supervised.observers.early_stop import Performance
+from mlstudio.supervised.observers.history import BlackBox, Progress
 from mlstudio.utils.data_manager import AddBiasTerm, unpack_parameters
 from mlstudio.utils.data_manager import RegressionDataProcessor
 from mlstudio.utils.data_manager import LogisticRegressionDataProcessor
@@ -52,14 +52,14 @@ from mlstudio.visual.text import OptimizationReport
 class GradientDescentAbstract(ABC,BaseEstimator):
     """Gradient Descent abstract base class."""
 
-    def __init__(self, learning_rate=0.01, epochs=1000, 
+    def __init__(self, eta0=0.01, epochs=1000, 
                  theta_init=None, optimizer=None,  observers=None,
                  verbose=False, random_state=None):
 
-        self.learning_rate = learning_rate
+        self.eta0 = eta0
         self.epochs = epochs
         self.theta_init = theta_init
-        self.optimizer = optimizer
+        self.optimizer = optimizer 
         self.observers = observers
         self.verbose = verbose
         self.random_state = random_state
@@ -80,20 +80,35 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._eta = x
         
     @property
+    def val_size(self):
+        return self._val_size
+
+    @val_size.setter
+    def val_size(self, x):
+        self._val_size = x
+
+    @property
     def converged(self):
         return self._converged
 
     @converged.setter
     def converged(self, x):
         self._converged = x       
+
+    @property
+    def feature_names(self):
+        return self._feature_names
+
+    @feature_names.setter
+    def feature_names(self, x):
+        self._feature_names = x
     # ----------------------------------------------------------------------- #
     def _validate_params(self):
         """Performs parameter validation."""
-        # Learning Rate
-        if not isinstance(self.learning_rate, LearningRateSchedule):                    
-            validate_range(param=self.learning_rate, minimum=0,
-                           maximum=1, param_name='learning_rate',
-                           left="open", right="open")        
+        # Initial Learning Rate
+        validate_range(param=self.eta0, minimum=0,
+                       maximum=1, param_name='eta0',
+                       left="open", right="open")        
         # Epochs
         validate_int(param=self.epochs, param_name='epochs')
         # Theta Init
@@ -114,26 +129,11 @@ class GradientDescentAbstract(ABC,BaseEstimator):
     # ----------------------------------------------------------------------- #
     def _copy_mutable_parameters(self):
         """Makes deepcopies of mutable parameters and makes them private members."""
-
-        # Learning Rate
-        if isinstance(self.learning_rate, LearningRateSchedule):
-            self._learning_rate = copy.deepcopy(self.learning_rate)
-        else:
-            self._learning_rate = self.learning_rate
-
-        # Observers. Note we pull of the val_size from the Performance
-        # observer if it exists. The val_size will be used by the data
-        # preparation method.           
-        self._val_size = 0.0
-        try:             
-            self._observers = []
-            if self.observers:            
-                for observer in self.observers:                
-                    self._observers.append(copy.deepcopy(observer))     
-                    if isinstance(observer, Performance):
-                        self._val_size = observer.val_size
-        except:
-            self._observers = [copy.deepcopy(self.observers)]       
+        # Copy observers e.g. Learning Rate, Early Stop
+        self._observers = []
+        if self.observers:
+            for observer in self.observers:
+                self._observers.append(copy.deepcopy(observer))     
 
         # The Optimizer algorithm
         if self.optimizer:
@@ -148,15 +148,12 @@ class GradientDescentAbstract(ABC,BaseEstimator):
     # ----------------------------------------------------------------------- #
     def _create_observer_list(self):
         """Adds all observers to the observer list that gets notified."""
+        self._observers.append(self.blackbox_)
         # Add any additional default observers to observer dictionary
         if self.verbose:
             self._observers.append(Progress())
 
-        if isinstance(self._learning_rate, Observer):
-            self._observers.append(self._learning_rate)
-
-        self._observers.append(self.blackbox_)
-
+        # Create private list of observers
         self._observer_list = ObserverList()                
         for observer in self._observers:
             self._observer_list.append(observer)
@@ -188,21 +185,23 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._compile()    
         self._epoch = 0      
         self._batch = 0 
+        self._val_size = 0
         self._theta = None
         self._gradient = None
         self._current_state = {}
         self._converged = False    
         self._final_result = None
         self._best_result = None
-        if log:            
-            self._prepare_training_data(log.get('X'), log.get('y'))
-        self._init_weights()
-        try:
-            self._eta = self.learning_rate.initial_learning_rate
-        except:
-            self._eta = self.learning_rate
-        
+        self._feature_names = None
+        # Initialize learning rate
+        self._eta = copy(self.eta0)
+        # Initialize training on observers
         self._observer_list.on_train_begin()
+        # Prepares data and adds to estimator as attributes.
+        if log:            
+            self._prepare_data(log.get('X'), log.get('y'))
+        # Weights are initialized based upon the number of features in the dataset 
+        self._init_weights()
 
     # ----------------------------------------------------------------------- #
     def _on_train_end(self, log=None):
@@ -291,7 +290,7 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         """Takes snapshot of current state and performance."""
         pass           
     # ----------------------------------------------------------------------- #
-    def _prepare_training_data(self):
+    def _prepare_data(self):
         pass
     # ----------------------------------------------------------------------- #
     @abstractmethod
@@ -327,11 +326,11 @@ class GradientDescentAbstract(ABC,BaseEstimator):
 class GradientDescentPureOptimizer(GradientDescentAbstract):
     """Performs pure optimization of an objective function."""
 
-    def __init__(self, learning_rate=0.01, epochs=1000, objective=None,
+    def __init__(self, eta0=0.01, epochs=1000, objective=None,
                  theta_init=None, optimizer=None,  observers=None, 
                  verbose=False, random_state=None):
         super(GradientDescentPureOptimizer, self).__init__(
-            learning_rate = learning_rate,
+            eta0 = eta0,
             epochs = epochs,
             theta_init = theta_init,
             optimizer = optimizer,
@@ -425,8 +424,8 @@ class GradientDescentEstimator(GradientDescentAbstract):
 
     Parameters
     ----------
-    learning_rate : float or LearningRateSchedule observer
-        This can be a float in (0,1) or a LearningRateSchedule object
+    eta0 : float
+        The initial learning rate on open interval (0,1) 
 
     epochs : int
         The number of epochs to execute
@@ -461,11 +460,11 @@ class GradientDescentEstimator(GradientDescentAbstract):
         occurs.
     
     """
-    def __init__(self, learning_rate=0.01, epochs=1000, batch_size=None, 
+    def __init__(self, eta0=0.01, epochs=1000, batch_size=None, 
                  theta_init=None, optimizer=None, observers=None, 
                  verbose=False, random_state=None):
         super(GradientDescentEstimator, self).__init__(
-            learning_rate = learning_rate,
+            eta0 = eta0,
             epochs = epochs,
             theta_init = theta_init,
             optimizer = optimizer,
@@ -514,7 +513,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
             regularizer_title
 
     # ----------------------------------------------------------------------- #    
-    def _prepare_training_data(self, X, y):
+    def _prepare_data(self, X, y):
         """Prepares X and y data for training.
         
         X and y data is prepared and if a Performance observer with a 
@@ -683,7 +682,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
         return self._scorer(y, y_pred)    
 
     # ----------------------------------------------------------------------- #    
-    def summary(self, reports=None, features=None):  
+    def summary(self, reports=None):  
         """Prints and optimization report. 
 
         Parameters
@@ -705,7 +704,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
         features : list of str
             A list containing the names of the features in the data set. 
         """
-        optimization = OptimizationReport(model=self, reports=reports, features=features)
+        optimization = OptimizationReport(model=self, reports=reports)
         optimization.report()
                     
 # =========================================================================== #
@@ -713,12 +712,12 @@ class GradientDescentEstimator(GradientDescentAbstract):
 # =========================================================================== # 
 class GradientDescentRegressor(GradientDescentEstimator):
     """Gradient descent base class for all estimators."""
-    def __init__(self, learning_rate=0.01, epochs=1000, batch_size=None, 
+    def __init__(self, eta0=0.01, epochs=1000, batch_size=None, 
                  objective=None, theta_init=None, optimizer=None,  
                  scorer=None, observers=None, verbose=False, 
                  random_state=None):
         super(GradientDescentRegressor, self).__init__(
-            learning_rate = learning_rate,
+            eta0 = eta0,
             epochs = epochs,
             theta_init = theta_init,
             optimizer = optimizer,            
@@ -727,7 +726,7 @@ class GradientDescentRegressor(GradientDescentEstimator):
             random_state = random_state,    
             batch_size=batch_size
         )
-        self.scorer = scorer
+        self.scorer = scorer 
         self.objective  = objective
 
     # ----------------------------------------------------------------------- #
@@ -740,7 +739,7 @@ class GradientDescentRegressor(GradientDescentEstimator):
     def _copy_mutable_parameters(self, log=None):
         super(GradientDescentEstimator, self)._copy_mutable_parameters()
         self._scorer = copy.deepcopy(self.scorer) if self.scorer else \
-            self.scorer
+            R2()
 
     # ----------------------------------------------------------------------- #    
     def _obtain_implicit_dependencies(self):
@@ -749,7 +748,7 @@ class GradientDescentRegressor(GradientDescentEstimator):
         self._task = LinearRegression()
 
         # Instantiates the regression data processor for the 
-        # _prepare_training_data method 
+        # _prepare_data method 
         self._data_processor = RegressionDataProcessor(val_size=self._val_size, 
                                             random_state=self.random_state)          
 

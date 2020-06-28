@@ -33,7 +33,7 @@ from mlstudio.supervised.observers.learning_rate import PolynomialStepDecay
 from mlstudio.supervised.observers.learning_rate import PowerSchedule
 from mlstudio.supervised.observers.learning_rate import BottouSchedule
 from mlstudio.supervised.observers.learning_rate import Improvement
-from mlstudio.supervised.observers.monitor import Performance
+from mlstudio.supervised.observers.early_stop import Performance
 from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
 from mlstudio.supervised.core.optimizers import Momentum
 from mlstudio.supervised.core.optimizers import Nesterov
