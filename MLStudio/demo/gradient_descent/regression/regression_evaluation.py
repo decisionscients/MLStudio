@@ -44,6 +44,7 @@ from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 from mlstudio.supervised.core.scorers import R2
 from mlstudio.supervised.observers.early_stop import Performance
 from mlstudio.utils.data_manager import StandardScaler, data_split
+from mlstudio.utils.file_manager import save_fig
 def get_data():
     X, y = make_regression(n_samples=100, n_features=10, 
                            n_informative=5, bias=0.5, effective_rank=8, 
@@ -75,8 +76,8 @@ def get_sgdregressor_results(X,y, algorithm):
     return scores, times
 
 def get_mlstudio_results(X, y, algorithm, batch_size):
-    params = {'learning_rate': [0.1, 0.01, 0.001],              
-              'observers': [Performance(mode='active', metric='val_score', epsilon=0.01)],
+    params = {'eta0': [0.1, 0.01, 0.001],              
+              'observers': [[Performance(mode='active', metric='val_score', epsilon=0.01)]],
               'objective': [MSE(regularizer=L1(alpha=0.001)),
                             MSE(regularizer=L1(alpha=0.01)),
                             MSE(regularizer=L1(alpha=0.1)),
@@ -143,8 +144,15 @@ def get_results(X, y):
 
 X, y = get_data()
 scores, times = get_results(X, y)
-sns.barplot(x='Algorithm', y=r'$R^2$', data=scores, ci='sd', palette="Blues_d")
-plt.show()
-sns.barplot(x='Algorithm', y='Fit Times (secs)', data=times, ci='sd', palette="Blues_d")                         
-plt.show()
+fig, axes = plt.subplots(1,2, figsize=(10,5))
+fig.suptitle("Comparison Scikit-Learn vs ML Studio")
+sns.barplot(x='Algorithm', y=r'$R^2$', data=scores, ci='sd', 
+            palette="Blues_d", ax=axes[0])
+axes[0].set_title("Coefficient of Determination Scores")
+sns.barplot(x='Algorithm', y='Fit Times (secs)', data=times, ci='sd', 
+            palette="Blues_d", ax=axes[1]) 
+axes[1].set_title("Fit Times (secs)")
+for ax in fig.axes:     
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=30, ha='right')                   
+plt.draw()
 #%%

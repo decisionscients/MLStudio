@@ -84,10 +84,9 @@ class Performance(PerformanceObserver):
     by this class. 
     """
 
-    def __init__(self, mode='passive', val_size=0.3, metric='train_cost', 
+    def __init__(self, mode='passive', val_size=0.3, metric='val_score', 
                  epsilon=0.001, patience=5, best_or_final='best'): 
         super(Performance, self).__init__(                   
-            val_size = val_size,
             metric = metric,
             epsilon = epsilon,
             patience = patience
@@ -95,6 +94,18 @@ class Performance(PerformanceObserver):
         self.name = "Performance EarlyStop Observer"
         self.mode = mode       
         self.best_or_final = best_or_final 
+        self.val_size = val_size
+
+    def on_train_begin(self, log=None):
+        """Logic executed at the beginning of training.
+        
+        Parameters
+        ----------
+        log: dict
+            Currently not used
+        """
+        super(Performance, self).on_train_begin(log=log)
+        self.model.val_size = self.val_size                          
 
     def on_epoch_end(self, epoch, log=None):
         """Logic executed at the end of each epoch.

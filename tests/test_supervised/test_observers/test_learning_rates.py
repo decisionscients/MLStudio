@@ -99,13 +99,13 @@ class StepDecayTests:
         # Instantiate learning rate schedule and create it as an observer
         lrs = StepDecay(eta0=0.1, eta_min=0.01,
                         decay_factor=0.5, decay_steps=5)
-        observer = {'learning_rate_schedule': lrs}              
+        observers=[lrs]
         # Instantiate and fit mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)
+        est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate history
         epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('learning_rate')
+        act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -165,13 +165,13 @@ class TimeDecayTests:
         # Instantiate learning rate schedule and create it as an observer
         lrs = TimeDecay(eta0=0.1, eta_min=0.02,
                         decay_factor=0.5)
-        observer = {'learning_rate_schedule': lrs}              
+        observers = [lrs]              
         # Instantiate and fit mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)
+        est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate history
         epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('learning_rate')
+        act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -231,13 +231,13 @@ class SqrtTimeDecayTests:
         # Instantiate learning rate schedule and create it as an observer
         lrs = SqrtTimeDecay(eta0=0.1, eta_min=0.045,
                         decay_factor=0.5)
-        observer = {'learning_rate_schedule': lrs}              
+        observers=[lrs]
         # Instantiate and fit mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)
+        est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate history
         epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('learning_rate')
+        act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -296,13 +296,13 @@ class ExponentialDecayTests:
         # Instantiate learning rate schedule and create it as an observer
         lrs = ExponentialDecay(eta0=0.1, eta_min=0.05,
                         decay_factor=0.1)
-        observer = {'learning_rate_schedule': lrs}              
+        observers=[lrs]
         # Instantiate and fit mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)
+        est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate history
         epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('learning_rate')
+        act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -380,13 +380,13 @@ class ExponentialStepDecayTests:
         # Instantiate learning rate schedule and create it as an observer
         lrs = ExponentialStepDecay(eta0=0.1, eta_min=0.01,
                         decay_factor=0.5, decay_steps=5)
-        observer = {'learning_rate_schedule': lrs}              
+        observers=[lrs]
         # Instantiate and fit mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)
+        est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate history
         epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('learning_rate')
+        act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -464,13 +464,13 @@ class ExponentialStepDecayStaircaseTests:
         # Instantiate learning rate schedule and create it as an observer
         lrs = ExponentialStepDecay(eta0=0.1, eta_min=0.02,
                         decay_factor=0.5, decay_steps=5, staircase=True)
-        observer = {'learning_rate_schedule': lrs}              
+        observers=[lrs]
         # Instantiate and fit mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)
+        est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate history
         epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('learning_rate')
+        act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -529,13 +529,13 @@ class PolynomialDecayTests:
         # Instantiate learning rate schedule and create it as an observer
         lrs = PolynomialDecay(eta0=0.1, eta_min=0.025,
                         power=0.95)
-        observer = {'learning_rate_schedule': lrs}              
+        observers=[lrs]
         # Instantiate and fit mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)
+        est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate history
         epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('learning_rate')
+        act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -601,13 +601,13 @@ class PolynomialStepDecayTests:
         # Instantiate learning rate schedule and create it as an observer
         lrs = PolynomialStepDecay(eta0=0.1, eta_min=0.001,
                         power=0.5, decay_steps=5)
-        observer = {'learning_rate_schedule': lrs}              
+        observers=[lrs]
         # Instantiate and fit mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)
+        est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate history
         epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('learning_rate')
+        act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -673,13 +673,13 @@ class PowerScheduleTests:
         # Instantiate learning rate schedule and create it as an observer
         lrs = PowerSchedule(eta0=0.1, eta_min=0.04,
                         power=0.95, decay_steps=5)
-        observer = {'learning_rate_schedule': lrs}              
+        observers=[lrs]
         # Instantiate and fit mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)
+        est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate history
         epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('learning_rate')
+        act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -739,13 +739,13 @@ class BottouScheduleTests:
         # Instantiate learning rate schedule and create it as an observer
         lrs = BottouSchedule(eta0=0.1, eta_min=0.07,
                         decay_factor=0.5)
-        observer = {'learning_rate_schedule': lrs}              
+        observers=[lrs]
         # Instantiate and fit mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)
+        est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate history
         epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('learning_rate')
+        act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -814,19 +814,18 @@ class ImprovementTests:
         cost = exp_results['cost'].values
         exp_results = exp_results['lr'].values
         # Instantiate learning rate schedule and create it as an observer
-        lrs = Improvement(eta0=0.1, eta_min=0.002,
+        lrs = Improvement(eta0=0.1, eta_min=0.007,
                         decay_factor=0.5, epsilon=0.01, patience=2)
-        observer = {'learning_rate_schedule': lrs}                  
+        observers=[lrs]    
         # Instantiate mock estimator
-        est = Estimator(epochs=10, learning_rate=0.1, observers=observer)       
-        est.eta = 0.1                         
+        est = Estimator(epochs=20, eta0=0.1, observers=observers)       
         lrs.set_model(est)
         # Simulate training 
         lrs.on_train_begin()
         act_results = []
         lr = 0.1
-        for i in range(10):            
-            log = {'train_cost':cost[i], 'learning_rate': lrs.model.eta}    
+        for i in range(20):            
+            log = {'train_cost':cost[i], 'eta': lrs.model.eta}    
             lrs.on_epoch_end(epoch=i, log=log)                
             act_results.append(lrs.model.eta)
         # Compare two arrays

@@ -194,7 +194,7 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._best_result = None
         self._feature_names = None
         # Initialize learning rate
-        self._eta = copy(self.eta0)
+        self._eta = copy.copy(self.eta0)
         # Initialize training on observers
         self._observer_list.on_train_begin()
         # Prepares data and adds to estimator as attributes.
@@ -365,7 +365,7 @@ class GradientDescentPureOptimizer(GradientDescentAbstract):
         """Takes snapshot of current state and performance."""        
         s = {}
         s['epoch'] = self._epoch
-        s['learning_rate'] = self._eta
+        s['eta'] = self._eta
         s['theta'] = self._theta
         s['train_cost'] = self._objective(self._theta)
         s['gradient'] = self._gradient
@@ -554,14 +554,14 @@ class GradientDescentEstimator(GradientDescentAbstract):
         """Takes snapshot of current state and performance."""
         s= {}
         s['epoch'] = self._epoch      
-        s['learning_rate'] = self._eta    
+        s['eta'] = self._eta    
         s['theta'] = self._theta 
         
         # Compute training costs 
         y_out = self._task.compute_output(self._theta, self.X_train_)
         s['train_cost'] = self._objective(self._theta, self.y_train_, y_out)
         # If there is a scoring object, compute scores
-        if self.scorer:
+        if self._scorer:
             y_pred = self._task.predict(self._theta, self.X_train_)
             s['train_score'] = self._scorer(self.y_train_, y_pred)
 
@@ -570,7 +570,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
             if self.X_val_.shape[0] > 0:
                 y_out_val = self._task.compute_output(self._theta, self.X_val_)
                 s['val_cost'] = self._objective(self._theta, self.y_val_, y_out_val)        
-                if self.scorer:
+                if self._scorer:
                     y_pred_val = self._task.predict(self._theta, self.X_val_)
                     s['val_score'] = self._scorer(self.y_val_, y_pred_val)
 
@@ -749,8 +749,8 @@ class GradientDescentRegressor(GradientDescentEstimator):
 
         # Instantiates the regression data processor for the 
         # _prepare_data method 
-        self._data_processor = RegressionDataProcessor(val_size=self._val_size, 
-                                            random_state=self.random_state)          
+        self._data_processor = RegressionDataProcessor(estimator=self,
+                                random_state=self.random_state)          
 
 
         

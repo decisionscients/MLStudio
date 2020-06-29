@@ -22,6 +22,7 @@
 from abc import abstractmethod
 import math
 import numpy as np
+from tabulate import tabulate
 
 from mlstudio.supervised.observers.base import Observer, PerformanceObserver
 from mlstudio.supervised.core.scorers import MSE
@@ -535,15 +536,15 @@ class Improvement(LearningRateSchedule):
             Contains no information
         """
         super(Improvement, self).on_train_begin(log)
-        self._observer = PerformanceObserver(metric=self.metric, scorer=self.model.scorer, \
+        self._observer = PerformanceObserver(metric=self.metric, \
             epsilon=self.epsilon, patience=self.patience)    
         self._observer.on_train_begin()        
 
     def _compute_learning_rate(self, epoch, log):
-        if self._observer.stabilized:   
-            return log.get('learning_rate') * self.decay_factor
-        else:
-            return log.get('learning_rate')
+        lr = log.get('eta') * self.decay_factor \
+            if self._observer.stabilized else log.get('eta')
+        return lr
+
 
     def on_epoch_end(self, epoch, log=None):
         """Determines whether convergence has been achieved.
@@ -558,4 +559,5 @@ class Improvement(LearningRateSchedule):
         log = log or {}                        
         self._observer.on_epoch_end(epoch, log)
         super(Improvement, self).on_epoch_end(epoch, log)        
+        
            

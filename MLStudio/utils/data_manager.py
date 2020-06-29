@@ -191,7 +191,7 @@ class RegressionDataProcessor(DataProcessor):
         # Return training and validation data if val_size is truthy
         if self.estimator.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=False, test_size=val_size, 
+                        stratify=False, test_size=self.estimator.val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train
@@ -220,7 +220,7 @@ class LogisticRegressionDataProcessor(DataProcessor):
         # Return stratified training and validation data if val_size is truthy
         if self.estimator.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=True, test_size=val_size, 
+                        stratify=True, test_size=self.estimator.val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train
@@ -255,7 +255,7 @@ class MulticlassDataProcessor(DataProcessor):
         # Return stratified training and validation data if val_size is truthy
         if self.estimator.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=True, test_size=val_size, 
+                        stratify=True, test_size=self.estimator.val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train            

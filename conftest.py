@@ -241,11 +241,11 @@ class MockBlackBox:
 # ---------------------------------------------------------------------------- #  
 class MockEstimator:
     """Mocks gradient descent estimator class."""
-    def __init__(self, learning_rate=0.01, epochs=1000, objective=None, 
+    def __init__(self, eta0=0.01, epochs=1000, objective=None, 
                  theta_init=None, optimizer=None,  
                  observers=None, verbose=False, random_state=None):
 
-        self.learning_rate = learning_rate
+        self.eta0 = eta0
         self.epochs = epochs
         self.objective  = objective
         self.theta_init = theta_init
@@ -256,7 +256,7 @@ class MockEstimator:
         # Initialize attributes and variables required
         self.scorer = MSE()
         self.blackbox_ = MockBlackBox()
-        self._eta = learning_rate
+        self._eta = eta0
     # ----------------------------------------------------------------------- #
     @property
     def eta(self):
@@ -278,14 +278,14 @@ class MockEstimator:
     def fit(self, X=None, y=None):    
 
         # Initialize observers
-        for observer in self.observers.values():
+        for observer in self.observers:
             setattr(observer, 'model', self)
             observer.on_train_begin()
         
         for i in range(self.epochs):
-            for observer in self.observers.values():
+            for observer in self.observers:
                 observer.on_epoch_end(epoch=i, log=None)
-            log = {'epoch': i, 'learning_rate': self._eta}            
+            log = {'epoch': i, 'eta': self._eta}            
             self.blackbox_.on_epoch_end(epoch=i,log=log)            
 
 @fixture(scope="session")

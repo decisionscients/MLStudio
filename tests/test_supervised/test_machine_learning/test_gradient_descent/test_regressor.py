@@ -49,14 +49,14 @@ from mlstudio.supervised.core.optimizers import Adam, AdaMax, Nadam
 from mlstudio.supervised.core.optimizers import AMSGrad, AdamW, QHAdam
 from mlstudio.supervised.core.optimizers import QuasiHyperbolicMomentum
 from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
-from mlstudio.supervised.core.scorers import R2
+from mlstudio.supervised.core import scorers
 # --------------------------------------------------------------------------  #
 count = 0
-observers = [Performance(), Performance(mode='active')]
-scorers = [R2()]
-# learning_rates = [TimeDecay(), StepDecay(), ExponentialDecay(), ExponentialStepDecay(),
-#                     PolynomialDecay(), PolynomialStepDecay(), PowerSchedule(),
-#                     BottouSchedule(), Improvement()]
+observers = [[Performance(mode='passive')], [Performance(mode='active')],
+            [TimeDecay()], [StepDecay()], [ExponentialDecay()], 
+            [ExponentialStepDecay()], [PolynomialDecay()], [PolynomialStepDecay()], 
+            [PowerSchedule()], [BottouSchedule()], [Improvement()]]
+scorer_objects = [scorers.R2(), scorers.MSE()]
 objectives = [MSE(), MSE(regularizer=L1(alpha=0.01)), 
                         MSE(regularizer=L2(alpha=0.01)), 
                         MSE(regularizer=L1_L2(alpha=0.01, ratio=0.5))]
@@ -67,7 +67,7 @@ objectives = [MSE(), MSE(regularizer=L1(alpha=0.01)),
 # ]
 
 scenarios = [[observer, scorer, objective] for observer in observers
-                                           for scorer in scorers
+                                           for scorer in scorer_objects
                                            for objective in objectives
         ]
 
@@ -77,10 +77,7 @@ estimators = [GradientDescentRegressor(observers=scenario[0], scorer=scenario[1]
 @mark.regressor_skl
 @parametrize_with_checks(estimators)
 def test_regression_sklearn(estimator, check):    
-    try:
-        observer = [o.name for o in estimator.observers]
-    except:
-        observer = [estimator.observers.name]
+    observer = [o.name for o in estimator.observers]    
     #learning_rate = estimator.learning_rate.name
     objective = estimator.objective.name
     regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\

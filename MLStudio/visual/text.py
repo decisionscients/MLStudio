@@ -70,8 +70,11 @@ class OptimizationPerformance(Summary):
 
     def _extract_data(self):
         """Extracts required data from the model."""
-        final_results = self.model.final_results_ or {}
-        best_results = self.model.best_results_ or {}
+        final_results = self.model.final_results_
+        try:
+            best_results = self.model.best_results_ 
+        except:
+            best_results = {}
         return final_results, best_results 
 
     def _report(self, result, best_or_final):

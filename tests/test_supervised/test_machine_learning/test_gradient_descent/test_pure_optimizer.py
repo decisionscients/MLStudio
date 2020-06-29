@@ -77,7 +77,7 @@ class PureOptimizerObjectiveTests:
                 assert len(bb.epoch_log.get('epoch')) == epochs, "Epoch log wrong length"
                 assert len(bb.epoch_log.get('theta')) == epochs, "Epoch log wrong length"
                 assert len(bb.epoch_log.get('train_cost')) == epochs, "Epoch log wrong length"
-                assert len(bb.epoch_log.get('learning_rate')) == epochs, "Epoch log wrong length"
+                assert len(bb.epoch_log.get('eta')) == epochs, "Epoch log wrong length"
                 msg = "\nPoor solution for objective = {o}, optimizer = {p}\n       min_norm = {m}, solution_norm = {s}".format(o = objective.__class__.__name__,
                                                                                   p = optimizer.__class__.__name__,
                                                                                   m = str(objective_min_norm),
