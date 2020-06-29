@@ -79,13 +79,22 @@ def save_numpy(a, directory, filename):
         os.makedirs(directory)                
         np.save(file=path, arr=a)        
 
-def save_plotly(a, directory, filename):
+def save_plotly_figure(fig, directory, filename):
     path = os.path.join(os.path.abspath(directory), filename)
     if os.path.exists(directory):
-        py.plot(a, filename=path, auto_open=False, include_mathjax='cdn')
+        py.plot(fig, filename=path, auto_open=False, include_mathjax='cdn')
     else:
         os.makedirs(directory)                
-        py.plot(a, filename=path, auto_open=False, include_mathjax='cdn')
+        py.plot(fig, filename=path, auto_open=False, include_mathjax='cdn')
+
+def save_plotly_animation(fig, directory, filename):
+    path = os.path.join(os.path.abspath(directory), filename)
+    if os.path.exists(directory):    
+        fig.write_html(path, include_plotlyjs='cdn', include_mathjax='cdn')
+    else:
+        os.makedirs(directory)                
+        fig.write_html(path, include_plotlyjs='cdn', include_mathjax='cdn')
+
 
 def get_filename(instance, fileext, element=None):
         """Creates a standard format filename for saving plots."""    

@@ -29,7 +29,7 @@ import plotly.offline as py
 from sklearn.model_selection import ParameterGrid, learning_curve 
 from sklearn.model_selection import validation_curve
 
-from .base import ModelVisualatrix
+from .base import ModelVisualizer
 from mlstudio.supervised.machine_learning.linear_regression import LinearRegression
 from mlstudio.supervised.machine_learning.ols_regression import OLSRegression
 from mlstudio.utils.format import proper
@@ -37,7 +37,7 @@ from mlstudio.utils.format import proper
 # ---------------------------------------------------------------------------- #
 #                             PREDICTION ERROR                                 #
 # ---------------------------------------------------------------------------- #        
-class PredictionError(ModelVisualatrix):        
+class PredictionError(ModelVisualizer):        
     """Plots actual target values against predicted values.
 
     Parameters

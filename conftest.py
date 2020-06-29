@@ -44,6 +44,7 @@ from mlstudio.supervised.core.objectives import StyblinskiTank
 from mlstudio.supervised.observers.learning_rate import TimeDecay
 from mlstudio.supervised.core.scorers import MSE
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentAbstract
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
 from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentPureOptimizer
 
 homedir = str(Path(__file__).parents[0])
@@ -292,7 +293,9 @@ class MockEstimator:
 def get_mock_estimator():
     return MockEstimator            
 
-
+@fixture(scope='session')
+def get_regression_estimator():
+    return GradientDescentRegressor()
 # ---------------------------------------------------------------------------- #
 #                                   TEST PACKAGES                              #
 # ---------------------------------------------------------------------------- #

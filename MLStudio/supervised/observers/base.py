@@ -296,9 +296,6 @@ class PerformanceObserver(Observer):
         return self._stabilized   
        
     def _validate(self):     
-        if 'val' in self.metric and self.val_size == 0.0:   
-            msg = "The val_size parameter must be greater than zero if the metric is {m}".format(m=self.metric)
-            raise ValueError(msg)
         validate_zero_to_one(param=self.epsilon, param_name='epsilon',
                              left='closed', right='closed')       
         validate_int(param=self.patience, param_name='patience',

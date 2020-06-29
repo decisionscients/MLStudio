@@ -18,76 +18,72 @@
 # License : BSD                                                                #
 # Copyright (c) 2020 DecisionScients                                           #
 # ============================================================================ #
-"""Base class for visualizations."""
+"""Base classes for visualizations."""
 import os
 from abc import ABC, abstractmethod
 
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.io as pio 
 from sklearn.base import BaseEstimator
-from sklearn.utils.validation import check_X_y, check_array
+from mlstudio.utils.file_manager import save_plotly_figure, save_plotly_animation
 # --------------------------------------------------------------------------- #
-#                            VISUALATRIX                                      #
+#                         BASE VISUALIZER                                     #
 # --------------------------------------------------------------------------- #
-
-class Visualatrix(ABC, BaseEstimator):
-    """Abstact base class at the top of the visualator object hierarchy
-    
-    This base class defines how the interface and common behaviors for and
-    among the visualizations classes.  
+class BaseVisualizer(ABC, BaseEstimator):
+    """Abstact base class for static visualizations of a single model.
 
     Parameters
     ----------
-    kwargs : dict
-        Keyword arguments including:
+    estimator : An unfitted MLStudio estimator object
+        The estimator object being visualized
 
-        =========   ==========================================
-        Property    Description
-        --------    ------------------------------------------
-        fig         Plotly Figure or FigureWidget object
-        height      specify the height of the figure
-        width       specify the width of the figure
-        template    specify the template for the figure.
-        title       specify the title for the figure.
-        =========   ==========================================
+    title : str (default=None)
+        The title of the visualization. Each subclass will have a default
+        title.
+
+    height : int (default=450)
+        The height of the visualization in pixels
+
+    width : int (default=900)
+        The width of the visualization in pixels
+
+    template : str (default='plotly_white')
+        The plotly template to be used. Valid values include:
+        'ggplot2', 'seaborn', 'simple_white', 'plotly',
+        'plotly_white', 'plotly_dark', 'presentation', 'xgridoff',
+        'ygridoff', 'gridon', 'none'    
+
+    kwargs : dict
+        Additional keyword arguments to be passed to the underlying
+        plotly object.
 
     """
-    _PLOT_DEFAULT_HEIGHT = 450
-    _PLOT_DEFAULT_WIDTH  = 900   
-    _PLOT_DEFAULT_TEMPLATE = "plotly_white"    
-    _PLOT_AVAILABLE_TEMPLATES = ['ggplot2', 'seaborn', 'simple_white', 'plotly',
-         'plotly_white', 'plotly_dark', 'presentation', 'xgridoff',
-         'ygridoff', 'gridon', 'none']    
     
-    def __init__(self, fig=None, **kwargs):        
-        self.fig = fig
-        self.height = kwargs.get('height', self._PLOT_DEFAULT_HEIGHT)
-        self.width = kwargs.get('width', self._PLOT_DEFAULT_WIDTH)
-        self.template = kwargs.get('template', self._PLOT_DEFAULT_TEMPLATE)
-        self.title = kwargs.get('title', None)
+    def __init__(self, estimator, title=None, height=450, width=900, 
+                 template='plotly_white', **kwargs):        
+        self.estimator = estimator
+        self.title = title
+        self.height = height
+        self.width = width
+        self.template = template
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     @abstractmethod
-    def fit(self, X, y=None, **kwargs):
-        """Fits the visualator to the data."""
-        pass    
-
-    def _validate(self, X, y=None, **kwargs):
-        """Validates arguments passed to the fit method.
+    def fit(self, X, y):
+        """Fits the visualizer to the data.
         
         Parameters
         ----------
-        X : array-like of shape (m samples, n features)
-            Object containing typically feature data.
+        X : array-like, shape (n_samples, n_features)
+            Training vector, where n_samples is the number of samples and
+            n_features is the number of features.
 
-        y : array-like of shape (m samples) (Optional)
-            The target variable.
+        y : array-like, shape (n_samples) or (n_samples, n_features)
+            Target relative to X for classification or regression
         """
-        if y is not None:
-            check_X_y(X, y)
-        else:
-            check_array(X)
-        
-
+        self.estimator.fit(X,y)    
     
     def show(self, **kwargs):
         """Renders the visualization"""
@@ -101,48 +97,204 @@ class Visualatrix(ABC, BaseEstimator):
         filepath : str
             Relative filepath including file name and extension
         """
-        directory = os.path.basename(filepath)
-        if not os.path.exists(directory):
-            os.mkdir(directory)
-        self.fig.write_image(filepath)
-
+        directory = os.path.dirname(filepath)
+        filename = os.path.basename(filepath)
+        save_plotly_figure(fig=self.fig, directory=directory, filename=filename)
 
 # --------------------------------------------------------------------------- #
-#                            ModelVisualatrix                                 #
+#                         BASE MULTIVISUALIZER                                #
 # --------------------------------------------------------------------------- #
+class BaseMultiVisualizer(ABC, BaseEstimator):
+    """Abstact base class for static visualizations of multiple models.
 
-class ModelVisualatrix(Visualatrix):
-    """Base class for model visualization classes."""
+    Parameters
+    ----------
+    estimators : list of MLStudio estimator objects
+        The estimators to be visualized
 
-    def __init__(self, estimator, fig=None, **kwargs):
-        super(ModelVisualatrix, self).__init__(fig=fig, **kwargs)
-        self.estimator = estimator
+    title : str (default=None)
+        The title of the visualization. Each subclass will have a default
+        title.
 
-    def _validate(self, X, y=None, **kwargs):
-        """Validates parameters and arguments sent to the fit method.
-        
+    height : int (default=450)
+        The height of the visualization in pixels
+
+    width : int (default=900)
+        The width of the visualization in pixels
+
+    template : str (default='plotly_white')
+        The plotly template to be used. Valid values include:
+        'ggplot2', 'seaborn', 'simple_white', 'plotly',
+        'plotly_white', 'plotly_dark', 'presentation', 'xgridoff',
+        'ygridoff', 'gridon', 'none'    
+
+    kwargs : dict
+        Additional keyword arguments to be passed to the underlying
+        plotly object.
+
+    """
+    
+    def __init__(self, estimators, title=None, height=450, width=900, 
+                 template='plotly_white', **kwargs):        
+        self.estimators = estimators
+        self.title = title
+        self.height = height
+        self.width = width
+        self.template = template
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @abstractmethod
+    def fit(self, X, y):
+        """Fits the visualizer to the data."""
+        self.models_ = []
+        for estimator in self.estimators:
+            self.models_.append(estimator.fit(X, y))
+                
+    
+    def show(self, **kwargs):
+        """Renders the visualization"""
+        self.fig.show()
+
+    def save(self, filepath):
+        """Saves image to filepath
+
         Parameters
         ----------
-        X : array-like of shape (m samples, n features)
-            Object containing typically feature data.
-
-        y : array-like of shape (m samples) (Optional)
-            The target variable.
-
-        Raises
-        ------
-        ValueError : estimator has no 'fit' or 'predict' method.
-
+        filepath : str
+            Relative filepath including file name and extension
         """
-        super(ModelVisualatrix, self)._validate(X, y)
+        directory = os.path.dirname(filepath)
+        filename = os.path.basename(filepath)
+        save_plotly_figure(fig=self.fig, directory=directory, filename=filename)
 
-        # Confirm the estimator has fit and predict methods.
-        if getattr(self.estimator, 'fit', None) and \
-        getattr(self.estimator, 'predict', None):
-            pass
-        else:
-            raise ValueError("The estimator object must have a 'fit' and \
-                a 'predict' method.")
+# --------------------------------------------------------------------------- #
+#                           BASE ANIMATOR                                     #
+# --------------------------------------------------------------------------- #
+class BaseAnimator(ABC, BaseEstimator):
+    """Abstract base class for animations for a single model.
 
-        
-               
+    Parameters
+    ----------
+    estimator : MLStudio estimator object
+        The estimator being visualized
+
+    title : str (default=None)
+        The title of the visualization. Each subclass will have a default
+        title.
+
+    height : int (default=450)
+        The height of the visualization in pixels
+
+    width : int (default=900)
+        The width of the visualization in pixels
+
+    template : str (default='plotly_white')
+        The plotly template to be used. Valid values include:
+        'ggplot2', 'seaborn', 'simple_white', 'plotly',
+        'plotly_white', 'plotly_dark', 'presentation', 'xgridoff',
+        'ygridoff', 'gridon', 'none'    
+
+    kwargs : dict
+        Additional keyword arguments to be passed to the underlying
+        plotly object.
+
+    """    
+    def __init__(self, estimator, title=None, height=450, width=900, 
+                 template='plotly_white', **kwargs):        
+        self.estimator = estimator
+        self.title = title
+        self.height = height
+        self.width = width
+        self.template = template
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @abstractmethod
+    def fit(self, X, y):
+        """Fits the visualizer to the data."""
+        self.estimator.fit(X, y)    
+    
+    def show(self, **kwargs):
+        """Renders the visualization"""
+        pio.renderers.default = "browser"
+        self.fig.show()
+
+    def save(self, filepath):
+        """Saves image to filepath
+
+        Parameters
+        ----------
+        filepath : str
+            Relative filepath including file name and extension
+        """
+        directory = os.path.dirname(filepath)
+        filename = os.path.basename(filepath)
+        save_plotly_animation(fig=self.fig, directory=directory, filename=filename)    
+
+# --------------------------------------------------------------------------- #
+#                           BASE MULTIANIMATOR                                #
+# --------------------------------------------------------------------------- #
+class BaseMultiAnimator(ABC, BaseEstimator):
+    """Abstract base class for animations for a single model.
+
+    Parameters
+    ----------
+    estimators : List
+        A list of MLStudio estimator objects
+
+    title : str (default=None)
+        The title of the visualization. Each subclass will have a default
+        title.
+
+    height : int (default=450)
+        The height of the visualization in pixels
+
+    width : int (default=900)
+        The width of the visualization in pixels
+
+    template : str (default='plotly_white')
+        The plotly template to be used. Valid values include:
+        'ggplot2', 'seaborn', 'simple_white', 'plotly',
+        'plotly_white', 'plotly_dark', 'presentation', 'xgridoff',
+        'ygridoff', 'gridon', 'none'    
+
+    kwargs : dict
+        Additional keyword arguments to be passed to the underlying
+        plotly object.
+
+    """    
+    def __init__(self, estimators, title=None, height=450, width=900, 
+                 template='plotly_white', **kwargs):        
+        self.estimators = estimators
+        self.title = title
+        self.height = height
+        self.width = width
+        self.template = template
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @abstractmethod
+    def fit(self, X, y):
+        """Fits the visualizer to the data."""
+        self.models_ = []
+        for estimator in self.estimators:
+            self.models_.append(estimator.fit(X, y))
+
+    
+    def show(self, **kwargs):
+        """Renders the visualization"""
+        pio.renderers.default = "browser"
+        self.fig.show()
+
+    def save(self, filepath):
+        """Saves image to filepath
+
+        Parameters
+        ----------
+        filepath : str
+            Relative filepath including file name and extension
+        """
+        directory = os.path.dirname(filepath)
+        filename = os.path.basename(filepath)
+        save_plotly_animation(fig=self.fig, directory=directory, filename=filename)           

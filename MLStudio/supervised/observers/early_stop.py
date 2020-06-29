@@ -54,10 +54,6 @@ class Performance(PerformanceObserver):
         the observer collects, analyzes and stores performance data, but
         does not effect the subject's behavior. 
 
-    val_size : float (default=0.3)
-        The proportion of the training set to allocate to the 
-        validation set.
-
     metric : str, optional (default='train_cost')
         Specifies which statistic to metric for evaluation purposes.
 
@@ -84,7 +80,7 @@ class Performance(PerformanceObserver):
     by this class. 
     """
 
-    def __init__(self, mode='passive', val_size=0.3, metric='val_score', 
+    def __init__(self, mode='passive', metric='val_score', 
                  epsilon=0.001, patience=5, best_or_final='best'): 
         super(Performance, self).__init__(                   
             metric = metric,
@@ -94,7 +90,6 @@ class Performance(PerformanceObserver):
         self.name = "Performance EarlyStop Observer"
         self.mode = mode       
         self.best_or_final = best_or_final 
-        self.val_size = val_size
 
     def on_train_begin(self, log=None):
         """Logic executed at the beginning of training.
@@ -105,7 +100,6 @@ class Performance(PerformanceObserver):
             Currently not used
         """
         super(Performance, self).on_train_begin(log=log)
-        self.model.val_size = self.val_size                          
 
     def on_epoch_end(self, epoch, log=None):
         """Logic executed at the end of each epoch.

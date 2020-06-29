@@ -126,7 +126,7 @@ class MSE(Cost):
 
     @property
     def name(self):
-        return "Mean Squared Error Cost Function"        
+        return "Mean Squared Error Cost"        
 
     def __call__(self, theta, y, y_out):
         """Computes the mean squared error cost.
@@ -195,7 +195,7 @@ class CrossEntropy(Cost):
 
     @property
     def name(self):
-        return "Cross Entropy Cost Function"        
+        return "Cross Entropy Cost"        
 
     def __call__(self, theta, y, y_out):
         """Computes cross entropy cost.
@@ -267,7 +267,7 @@ class CategoricalCrossEntropy(Cost):
 
     @property
     def name(self):
-        return "Categorical Cross Entropy Cost Function"        
+        return "Categorical Cross Entropy Cost"        
 
     def __call__(self, theta, y, y_out):
         """Computes categorical cross entropy cost.
@@ -383,7 +383,7 @@ class Adjiman(Benchmark):
 
     @property
     def name(self):
-        return "Adjiman Objective Function"    
+        return "Adjiman Objective"    
 
     @property   
     def start(self):
@@ -419,7 +419,7 @@ class BartelsConn(Benchmark):
 
     @property
     def name(self):
-        return "Bartels Conn Objective Function"
+        return "Bartels Conn Objective"
     
     @property
     def start(self):
@@ -463,7 +463,7 @@ class Himmelblau(Benchmark):
 
     @property
     def name(self):
-        return "Himmelblau Objective Function"     
+        return "Himmelblau Objective"     
 
     @property
     def start(self):
@@ -501,7 +501,7 @@ class Leon(Benchmark):
 
     @property
     def name(self):
-        return "Leon Objective Function"    
+        return "Leon Objective"    
 
     @property
     def start(self):
@@ -541,7 +541,7 @@ class Rosenbrock(Benchmark):
 
     @property
     def name(self):
-        return "Rosenbrock Objective Function"    
+        return "Rosenbrock Objective"    
 
     @property
     def start(self):
@@ -581,7 +581,7 @@ class Branin02(Benchmark):
 
     @property
     def name(self):
-        return "Branin02 Objective Function"    
+        return "Branin02 Objective"    
 
     @property
     def start(self):
@@ -636,7 +636,7 @@ class StyblinskiTank(Benchmark):
 
     @property
     def name(self):
-        return "Styblinski-Tank Objective Function"    
+        return "Styblinski-Tank Objective"    
 
     @property
     def start(self):
@@ -679,7 +679,7 @@ class SumSquares(Benchmark):
 
     @property
     def name(self):
-        return "Sum Squares Objective Function"    
+        return "Sum Squares Objective"    
 
     @property
     def start(self):
@@ -716,7 +716,7 @@ class ThreeHumpCamel(Benchmark):
 
     @property
     def name(self):
-        return "Three Hump Camel Objective Function"    
+        return "Three Hump Camel Objective"    
 
     @property
     def start(self):
@@ -753,7 +753,7 @@ class Ursem01(Benchmark):
 
     @property
     def name(self):
-        return "Ursem01 Objective Function"    
+        return "Ursem01 Objective"    
 
     @property
     def start(self):
@@ -790,7 +790,7 @@ class Wikipedia(Benchmark):
 
     @property
     def name(self):
-        return "Wikipedia Objective Function"    
+        return "Wikipedia Objective"    
 
     @property
     def start(self):

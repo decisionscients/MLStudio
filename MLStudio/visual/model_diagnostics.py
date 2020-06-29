@@ -31,7 +31,7 @@ from sklearn.model_selection import validation_curve
 import statsmodels.api as sm
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
-from .base import ModelVisualatrix
+from .base import ModelVisualizer
 from mlstudio.analysis.model_validation import standardized_residuals
 from mlstudio.analysis.model_validation import studentized_residuals, quantile
 from mlstudio.analysis.model_validation import leverage, cooks_distance
@@ -41,7 +41,7 @@ from mlstudio.utils.format import proper
 # --------------------------------------------------------------------------  #
 #                              RESIDUALS                                      #
 # --------------------------------------------------------------------------  #
-class Residuals(ModelVisualatrix):        
+class Residuals(ModelVisualizer):        
     """Plots residuals versus predicted values.
 
     Parameters
@@ -177,7 +177,7 @@ class Residuals(ModelVisualatrix):
 # --------------------------------------------------------------------------  #
 #                          STANDARDIZED RESIDUALS                             #
 # --------------------------------------------------------------------------  #
-class StandardizedResiduals(ModelVisualatrix):        
+class StandardizedResiduals(ModelVisualizer):        
     """Standardized Residual plot.
 
     Renders a standardized residual plot showing the residuals on the vertical 
@@ -319,7 +319,7 @@ class StandardizedResiduals(ModelVisualatrix):
 # --------------------------------------------------------------------------  #
 #                          STANDARDIZED RESIDUALS                             #
 # --------------------------------------------------------------------------  #
-class StudentizedResiduals(ModelVisualatrix):        
+class StudentizedResiduals(ModelVisualizer):        
     """Studentized Residual plot.
 
     Renders a studentized residual plot showing the residuals on the vertical 
@@ -461,7 +461,7 @@ class StudentizedResiduals(ModelVisualatrix):
 # --------------------------------------------------------------------------  #
 #                            SCALE LOCATION                                   #
 # --------------------------------------------------------------------------  #
-class ScaleLocation(ModelVisualatrix):        
+class ScaleLocation(ModelVisualizer):        
     """Scale location plot.
 
     Renders a scale location plot showing the the square root of the 
@@ -591,7 +591,7 @@ class ScaleLocation(ModelVisualatrix):
 # --------------------------------------------------------------------------  #
 #                               QQNORM                                        #
 # --------------------------------------------------------------------------  #
-class QQPlot(ModelVisualatrix):        
+class QQPlot(ModelVisualizer):        
     """QQ Plot.
 
     The quantile-quantile (QQ) plot is used to show if two data sets come from 
@@ -711,7 +711,7 @@ class QQPlot(ModelVisualatrix):
 # --------------------------------------------------------------------------  #
 #                         RESIDUALS VS LEVERAGE                               #
 # --------------------------------------------------------------------------  #
-class ResidualsLeverage(ModelVisualatrix):        
+class ResidualsLeverage(ModelVisualizer):        
     """Residuals vs Leverage Plot.
 
     The Residuals vs Leverage plot helps to illuminate data points that may
@@ -907,7 +907,7 @@ class ResidualsLeverage(ModelVisualatrix):
 # --------------------------------------------------------------------------  #
 #                             COOKS DISTANCE                                  #
 # --------------------------------------------------------------------------  #
-class CooksDistance(ModelVisualatrix):        
+class CooksDistance(ModelVisualizer):        
     """Cooks Distance.
 
     Cook's distance" is a measure of the influence of each observation on the 
