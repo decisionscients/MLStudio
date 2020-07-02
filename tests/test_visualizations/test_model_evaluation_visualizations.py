@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 # =========================================================================== #
 # Project : MLStudio                                                          #
-# File    : \__init__.py                                                      #
+# File    : \test_model_selection.py                                          #
 # Python  : 3.8.3                                                             #
 # --------------------------------------------------------------------------- #
 # Author  : John James                                                        #
@@ -9,12 +9,30 @@
 # Email   : jjames@nov8.ai                                                    #
 # URL     : https://github.com/nov8ai/MLStudio                                #
 # --------------------------------------------------------------------------- #
-# Created       : Wednesday, March 18th 2020, 5:21:32 am                      #
-# Last Modified : Tuesday, June 30th 2020, 9:08:08 am                         #
+# Created       : Monday, June 29th 2020, 5:02:13 pm                          #
+# Last Modified : Monday, June 29th 2020, 5:02:14 pm                          #
 # Modified By   : John James (jjames@nov8.ai)                                 #
 # --------------------------------------------------------------------------- #
 # License : BSD                                                               #
 # Copyright (c) 2020 nov8.ai                                                  #
 # =========================================================================== #
-COLORS = {'blue': '#005b96', 'green': 'rgb(27,158,119)', 'red': '#B6212D',
-          'transparent': 'rgba(255,255,255,0)'}
+import os
+import numpy as np
+import pytest
+from pytest import mark
+
+from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.visual.model_evaluation import ModelSummary, OptimizationCurve
+# --------------------------------------------------------------------------- #
+@mark.visual
+@mark.model_evaluation
+class ModelEvaluationVisualizationTests:
+
+    def test_model_summary(self, make_regression_data):
+        filepath = "tests/test_visualizations/test_visualization_output/learning_curve.html"         
+        est = GradientDescentRegressor()
+        X, y = make_regression_data
+        plot = ModelSummary(est)
+        plot.fit(X, y)
+        plot.show()
+        plot.save(filepath)

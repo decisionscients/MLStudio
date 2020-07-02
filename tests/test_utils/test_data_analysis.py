@@ -24,6 +24,8 @@ import pytest
 from pytest import mark
 import string
 
+from scipy import stats
+
 from mlstudio.utils.data_analyzer import describe_categorical_array
 from mlstudio.utils.data_analyzer import describe_numeric_array
 # --------------------------------------------------------------------------  #

@@ -499,21 +499,20 @@ class GradientDescentEstimator(GradientDescentAbstract):
     @property
     def description(self):
         """Returns the estimator description."""                   
-        task = self._task.name 
-
+        
         # Optimizer Title
-        optimizer_title = ""       
-        if not isinstance(self._optimizer, GradientDescentOptimizer):
-            optimizer_title = " (" + self._optimizer.__class__.__name__\
-                + " Optimization)"
+        try:
+            optimizer_title = self.optimizer.name
+        except:
+            optimizer_title = ""
         
         # Regularizer Title        
         try: 
-            regularizer_title = " with " + self._objective.regularizer_name
+            regularizer_title = " with " + self.objective.regularizer_name
         except:
             regularizer_title = ""
         
-        return task + ' by ' + self.variant + optimizer_title + \
+        return self.__class__.__name__ + ' using ' + self.variant + optimizer_title + \
             regularizer_title
 
     # ----------------------------------------------------------------------- #    
@@ -536,6 +535,8 @@ class GradientDescentEstimator(GradientDescentAbstract):
                         self.features_ =  v.dtype.names                     
                     except:
                         self.features_ = None  
+        # Set n_features_ as the number of features plus the intercept term
+        self.n_features_ = self.X_train_.shape[1]
 
     # ----------------------------------------------------------------------- #
     def _init_weights(self):

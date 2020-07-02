@@ -18,7 +18,7 @@
 # License : BSD                                                               #
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
-"""Model Validation Plots."""
+"""Model Diagnostic Plots."""
 import math
 import numpy as np
 import pandas as pd

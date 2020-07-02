@@ -21,7 +21,8 @@
 """Data analysis helper functions."""
 import numpy as np
 import pandas as pd
-from scipy.stats import skew, kurtosis
+from scipy.stats import skew, kurtosis, ttest_1samp, t
+
 # --------------------------------------------------------------------------- #
 def standardized_residuals(residuals):
     """Computes standardized residuals."""
@@ -35,6 +36,16 @@ def uniform_order_stat(x):
     n = len(positions)
     u_i = (positions-0.375)/(n+0.25)
     return u_i
+# --------------------------------------------------------------------------- #
+def one_sample_ttest(x, mu=0):
+    "Use scipy.stats ttest_1samp to compute t_statistic and p_value"    
+    return ttest_1samp(x, mu)
+
+# --------------------------------------------------------------------------- #
+def critical_values(x, df, alpha=0.05):
+    """Uses scipy.stats inverse survival function to compute critical values."""
+    return t.isf([alpha], [df])
+
 # --------------------------------------------------------------------------- #
 def z_score(x):
     """Computes z-scores for a series of values."""

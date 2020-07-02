@@ -47,14 +47,14 @@ def check_coo(X):
 def unpack_parameters(theta):
     """Unpacks the parameters theta and returns bias and weights."""
     if np.ndim(theta) == 0:
-        bias = np.array([0])
-        weights = np.array(theta)
+        bias = np.atleast_1d([0])
+        weights = np.atleast_1d(theta)
     elif np.ndim(theta) == 1:
-        bias = theta[0]
-        weights = theta[1:]
+        bias = np.atleast_1d(theta[0])
+        weights = np.atleast_1d(theta[1:])
     else:
-        bias = theta[0,:]
-        weights = theta[1:,:]
+        bias = np.atleast_1d(theta[0,:])
+        weights = np.atleast_1d(theta[1:,:])
     return bias, weights
 # --------------------------------------------------------------------------- #
 def encode_labels(y):

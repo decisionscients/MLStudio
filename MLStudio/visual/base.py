@@ -102,9 +102,9 @@ class BaseVisualizer(ABC, BaseEstimator):
         save_plotly_figure(fig=self.fig, directory=directory, filename=filename)
 
 # --------------------------------------------------------------------------- #
-#                         BASE MULTIVISUALIZER                                #
+#                       BASE MODEL SELECTION VISUALIZER                       #
 # --------------------------------------------------------------------------- #
-class BaseMultiVisualizer(ABC, BaseEstimator):
+class BaseModelSelectioniVisualizer(ABC, BaseEstimator):
     """Abstact base class for static visualizations of multiple models.
 
     Parameters
@@ -233,9 +233,9 @@ class BaseAnimator(ABC, BaseEstimator):
         save_plotly_animation(fig=self.fig, directory=directory, filename=filename)    
 
 # --------------------------------------------------------------------------- #
-#                           BASE MULTIANIMATOR                                #
+#                      BASE MODEL SELECTION ANIMATOR                          #
 # --------------------------------------------------------------------------- #
-class BaseMultiAnimator(ABC, BaseEstimator):
+class BaseModelSelectioniAnimator(ABC, BaseEstimator):
     """Abstract base class for animations for a single model.
 
     Parameters
@@ -298,3 +298,63 @@ class BaseMultiAnimator(ABC, BaseEstimator):
         directory = os.path.dirname(filepath)
         filename = os.path.basename(filepath)
         save_plotly_animation(fig=self.fig, directory=directory, filename=filename)           
+
+# --------------------------------------------------------------------------- #
+#                             BASE SUBPLOT                                    #
+# --------------------------------------------------------------------------- #
+class BaseSubplot(ABC, BaseEstimator):        
+    """Abstract base class for all subplot classes.
+    
+    Subplot classes add traces and updates to a figure object passed as a
+    parameter to the class. These objects do not render plots or animations
+    in and of themselves. The purpose is to create modularization in the
+    way that plots having 2 or more subplots are built.
+
+    Parameters
+    ----------
+    fig : plotly Figure object
+        The object upon which the subplot is built
+
+    row : int
+        The row in which the subplot is to be rendered
+
+    col : int
+        The column in which the subplot is to be rendered
+
+    xaxis_label : str or None (default=None)
+        The label for the xaxis of the subplot
+
+    yaxis_label : str or None (default=None)
+        The label for the yaxis of the subplot        
+
+    kwargs : dict
+        Additional keyword arguments required by subclasses.
+
+    """
+
+    @abstractmethod
+    def __init__(self, fig, row, col, xaxis_label=None, yaxis_label=None,
+                 **kwargs):
+        self.fig = fig
+        self.row = row
+        self.col = col
+        self.xaxis_label = xaxis_label
+        self.yaxis_label = yaxis_label
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @abstractmethod
+    def fit(self, X, y=None):
+        """Adds the traces and updates to the fig object.
+        
+        Parameters
+        ----------
+        X : array-like in 1 dimension 
+            The x-axis data
+
+        y : array-like of 1 dimension (optional)
+            The y-axis data
+
+        """ 
+        pass       
+
