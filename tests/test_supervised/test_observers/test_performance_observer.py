@@ -108,7 +108,7 @@ class PerformanceTests:
 
         # Gather actual results and convert to numpy format
         log = observer.performance_log_
-        act_improvement = log['significant_improvement']
+        act_improvement = log['improved']
         act_stability = log['stabilized']
 
         # Compare expected and actual results

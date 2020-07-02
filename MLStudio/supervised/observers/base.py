@@ -312,28 +312,16 @@ class PerformanceObserver(Observer):
         super(PerformanceObserver, self).on_train_begin(log=log)        
         log = log or {}        
         self._validate()
-        # Private variables
+        
         self._baseline = None        
-        # If the metric is not available in the log, we fallback to 'train_cost'        
-        self._fallback_metric = 'train_cost'
         self._iter_no_improvement = 0
         self._stabilized = False
-        self._significant_improvement = False
-        self._critical_points = []
 
-        # If the metric is a score, determine what constitutes a better
-        # and best score. This can be obtained from the scorer object on 
-        # the model. 
+        # If score metric is designated, obtain what constitutes a better
+        # or best scores from the model's scorer object. 
         if 'score' in self.metric:
-            try:
-                self._best = self.model.scorer.best
-                self._better = self.model.scorer.better
-        # If no scorer object on the estimator, then we will assume a greater 
-        # score is better and the maximum score is best. This is consistent 
-        # with default scorers for regression (R2) and classification (accuracy).                 
-            except:
-                self._best = np.max
-                self._better = np.greater
+            self._best = self.model.scorer.best
+            self._better = self.model.scorer.better
         # Otherwise, the metric is cost and best and better costs are min and
         # less, respectively
         else:
@@ -352,23 +340,17 @@ class PerformanceObserver(Observer):
     def _update_log(self, epoch, log):
         """Creates log dictionary of lists of performance results."""
         log['epoch'] = epoch
-        log['baseline']= self._baseline
-        log['relative_change'] = self._relative_change
-        log['significant_improvement'] = self._significant_improvement
+        log['baseline']= self._baseline        
         log['iter_no_improvement']= self._iter_no_improvement
         log['stabilized'] = self._stabilized
         for k,v in log.items():
             self.performance_log_.setdefault(k,[]).append(v)
-        return log
 
-    def _metric_improved(self, current):
-        """Returns true if the direction and magnitude of change indicates improvement"""        
-        return self._better(current, self._baseline)
-
-    def _significant_relative_change(self, current):   
+    def _improved(self, current):   
         """Returns true if relative change is greater than epsilon."""     
-        self._relative_change = abs(current-self._baseline) / abs(self._baseline)
-        return self._relative_change > self.epsilon                
+        return self._better(current, self._baseline) and \
+            abs(current-self._baseline) / self._baseline > \
+                self.epsilon
 
     def _process_improvement(self, current, log=None):
         """Sets values of parameters and attributes if improved."""
@@ -394,26 +376,11 @@ class PerformanceObserver(Observer):
     def _get_current_value(self, log):
         """Obtain the designated metric or fallback metric from the log."""
         current = log.get(self.metric)
-        if current is None:
-            if self.metric != self._fallback_metric:
-                current = log.get(self._fallback_metric)
-                if current is None:
-                    msg = "Metrics {m} and {fbm} are not available in the log.\
-                        Check dimensions of input data to confirm that there\
-                            is adequate data for the metric.".format(
-                                m=self.metric, fbm=self._fallback_metric
-                            )
-                    raise Exception(msg)
-                else:
-                    msg = "Metric {m} was not available in the log. Using {fbm}\
-                        metric instead.".format(m=self.metric, fbm=self._fallback_metric)
-                    warnings.warn(message=msg, category=RuntimeWarning)
-            else:
-                msg = "Metric {m} was not available in the log. Check dimensions\
-                    of input data to ensure that {m} can be computed.".format(m=self.metric)
-                raise Exception(msg)    
-            
-        return current
+        if current:
+            return current
+        else:
+            msg = self.metric + " not evaluated for this estimator."
+            raise ValueError(msg)                    
 
     def on_epoch_end(self, epoch, log=None):
         """Logic executed at the end of each epoch.
@@ -428,31 +395,25 @@ class PerformanceObserver(Observer):
         """                  
         log = log or {}   
         
-        # Initialize state variables        
-        self._significant_improvement = False
-        self._relative_change = 0
-        
         # Obtain current performance
         current = self._get_current_value(log)
 
         # Handle first iteration as an improvement by default
-        if self._baseline is None:                            
-            self._significant_improvement = True
+        if self._baseline is None:       
+            log['improved'] = True
             self._process_improvement(current, log)    
 
         # Otherwise, evaluate the direction and magnitude of the change        
+        elif self._improved(current):
+            log['improved'] = True
+            self._process_improvement(current, log)
         else:
-            self._significant_improvement = self._metric_improved(current) and \
-                self._significant_relative_change(current)
+            log['improved'] = False
+            self._process_no_improvement(current, log)
 
-            if self._significant_improvement:
-                self._process_improvement(current, log)
-            else:
-                self._process_no_improvement(current, log)
-
-        # Log results and critical points
-        log = self._update_log(epoch, log)
-        self._critical_points.append(log)
+        # Log results 
+        self._update_log(epoch, log)
+        
 
 
 

@@ -103,7 +103,7 @@ def test_regressor(get_regression_data_split):
         objective = estimator.objective.name
         regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\
             None        
-        msg = "Checking scenario: observers : {o}, objective : {ob},\
+        msg = "\nChecking scenario: observers : {o}, objective : {ob},\
             regularizer : {r}".format(o=str(observer), 
             ob=str(objective), r=str(regularizer))
         print(msg)                     

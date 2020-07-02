@@ -183,14 +183,10 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._compile()    
         self._epoch = 0      
         self._batch = 0 
-        self._val_size = 0
         self._theta = None
         self._gradient = None
         self._current_state = {}
         self._converged = False    
-        self._final_result = None
-        self._best_result = None
-        self._feature_names = None
         # Initialize learning rate
         self._eta = copy.copy(self.eta0)
         # Initialize training on observers
@@ -297,21 +293,9 @@ class GradientDescentAbstract(ABC,BaseEstimator):
 
     # ----------------------------------------------------------------------- #
     def _get_results(self):
-        # Determine if best or final weights should be stored.
-        borf = 'final'
-        for observer in self._observers:
-            if isinstance(observer, Performance):
-                borf = observer.best_or_final
-        
-        # Format results
-        if borf == 'best':
-            self.final_theta_ = self._theta
-            self.final_intercept_, self.final_coef_ = unpack_parameters(self.final_theta_)
-            self.theta_ = self.best_results_.get('theta')
-            self.intercept_, self.coef_ = unpack_parameters(self.theta_)
-        else:
-            self.theta_ = self._theta
-            self.intercept_, self.coef_ = unpack_parameters(self.theta_)
+        # Set parameter attributes
+        self.theta_ = self._theta
+        self.intercept_, self.coef_ = unpack_parameters(self.theta_)
 
 
 # =========================================================================== #
@@ -572,12 +556,9 @@ class GradientDescentEstimator(GradientDescentAbstract):
 
         # If we have a validation set, compute validation error and score
         if self.val_size:
-            if self.X_val_.shape[0] > 0:
-                y_out_val = self._task.compute_output(self._theta, self.X_val_)
-                s['val_cost'] = self._objective(self._theta, self.y_val_, y_out_val)        
-                if self._scorer:
-                    y_pred_val = self._task.predict(self._theta, self.X_val_)
-                    s['val_score'] = self._scorer(self.y_val_, y_pred_val)
+            if self._scorer and self.X_val_.shape[0] > 0:
+                y_pred_val = self._task.predict(self._theta, self.X_val_)
+                s['val_score'] = self._scorer(self.y_val_, y_pred_val)
 
         # Grab Gradient. Note: 1st iteration, the gradient will be None
         s['gradient'] = self._gradient
@@ -687,29 +668,9 @@ class GradientDescentEstimator(GradientDescentAbstract):
         return self._scorer(y, y_pred)    
 
     # ----------------------------------------------------------------------- #    
-    def summary(self, reports=None):  
-        """Prints and optimization report. 
-
-        Parameters
-        ----------
-        reports : list default=['summary', 'performance', 'critical_points',
-                                'features', 'hyperparameters']
-            The reports in the order to be rendered. The valid report names are:
-                'summary' : prints summary data for optimzation
-                'hyperparameters' : prints the hyperparameters used for the optimization
-                'performance' : prints performance in terms of cost and scores
-                'critical_points' : prints cost and scores at critical points 
-                    during the optimization
-                'features' : prints the best or final intercept and coeficients 
-                    by feature name if feature names are available. Best results 
-                    are printed if the Performance observer is used and the 
-                    'best_or_final' parameter = 'best'. Otherwise, final results
-                    will be printed.
-
-        features : list of str
-            A list containing the names of the features in the data set. 
-        """
-        optimization = OptimizationReport(model=self, reports=reports)
+    def summary(self):  
+        """Prints and optimization report. """
+        optimization = OptimizationReport(model=self)
         optimization.report()
                     
 # =========================================================================== #
@@ -734,7 +695,7 @@ class GradientDescentRegressor(GradientDescentEstimator):
             verbose = verbose,
             random_state = random_state                
         )
-
+    
     # ----------------------------------------------------------------------- #    
     def _obtain_implicit_dependencies(self):
         super(GradientDescentRegressor, self)._obtain_implicit_dependencies()                
