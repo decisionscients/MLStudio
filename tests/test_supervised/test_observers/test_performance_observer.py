@@ -91,8 +91,7 @@ class PerformanceTests:
         Estimator = get_mock_estimator
         est = Estimator()
         # Obtain and on_train_begin observer
-        observer = Performance(mode='passive', metric='train_cost', 
-                               epsilon=0.02, patience=5)
+        observer = Performance(metric='train_cost', epsilon=0.02, patience=5)
         observer.on_train_begin()
 
         # Register with the observer
@@ -101,9 +100,6 @@ class PerformanceTests:
         # Iterate through logs
         for epoch, log in logs.items():
             observer.on_epoch_end(epoch, log)
-
-        # End training
-        observer.on_train_end()
             
         # Gather expected results in numpy format
         exp_improvement = exp_results['sig'].to_numpy()

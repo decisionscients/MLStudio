@@ -52,7 +52,7 @@ from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 from mlstudio.supervised.core import scorers
 # --------------------------------------------------------------------------  #
 count = 0
-observers = [[Performance(mode='passive')], [Performance(mode='active')],
+observers = [[Performance()],
             [TimeDecay()], [StepDecay()], [ExponentialDecay()], 
             [ExponentialStepDecay()], [PolynomialDecay()], [PolynomialStepDecay()], 
             [PowerSchedule()], [BottouSchedule()], [Improvement()]]

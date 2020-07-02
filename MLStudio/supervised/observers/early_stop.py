@@ -48,18 +48,11 @@ class Performance(PerformanceObserver):
 
     Parameters
     ----------
-    mode : str 'active' or 'passive' (Default='passive')
-        In 'active' mode, this observer signals the estimator to suspend
-        optimization when performance hasn't improved. In 'passive' mode,
-        the observer collects, analyzes and stores performance data, but
-        does not effect the subject's behavior. 
-
     metric : str, optional (default='train_cost')
         Specifies which statistic to metric for evaluation purposes.
 
         'train_cost': Training set costs
         'train_score': Training set scores based upon the model's metric parameter
-        'val_cost': Validation set costs
         'val_score': Validation set scores based upon the model's metric parameter
         'gradient_norm': The norm of the gradient of the objective function w.r.t. theta
 
@@ -71,25 +64,16 @@ class Performance(PerformanceObserver):
         The number of consecutive epochs of non-improvement that is 
         tolerated before considering the optimization stable.
 
-    best_or_final : str, optional (default='best')
-        Indicates whether the composing estimator should use the best
-        or final results from the Performance object when reporting results
-        and computing predictions
-
-    All estimator performance considerations are managed and controlled
-    by this class. 
     """
 
-    def __init__(self, mode='passive', metric='val_score', 
-                 epsilon=0.001, patience=5, best_or_final='best'): 
+    def __init__(self, metric='val_score', epsilon=0.001, patience=5): 
         super(Performance, self).__init__(                   
             metric = metric,
             epsilon = epsilon,
             patience = patience
         )
         self.name = "Performance EarlyStop Observer"
-        self.mode = mode       
-        self.best_or_final = best_or_final 
+        
 
     def on_train_begin(self, log=None):
         """Logic executed at the beginning of training.
@@ -113,19 +97,5 @@ class Performance(PerformanceObserver):
             Dictionary containing the data, cost, batch size and current weights
         """                  
         super(Performance, self).on_epoch_end(epoch=epoch, log=log)
-        if self._stabilized and self.mode == 'active':
+        if self._stabilized:
             self.model.converged = True       
-
-    def on_train_end(self, log=None):
-        """Logic executed at the end of training.
-
-        Updates the model with the best results and the critical points.
-        
-        Parameters
-        ----------        
-        log: dict
-            Dictionary containing the data, cost, batch size and current weights
-        """           
-        self.model.best_results_ = self._best_results        
-        self.model.critical_points_ = self._critical_points
-
