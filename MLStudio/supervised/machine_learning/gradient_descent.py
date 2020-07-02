@@ -380,13 +380,6 @@ class GradientDescentPureOptimizer(GradientDescentAbstract):
         self._on_train_end()
         return self   
         
-    # ----------------------------------------------------------------------- #            
-    def _get_results(self):
-        self.theta_ = self._theta
-        self.intercept_ = self._theta[0]
-        self.coef_ = self._theta[1:]
-
-        
 
 # =========================================================================== #
 #                        GRADIENT DESCENT ESTIMATOR                           #

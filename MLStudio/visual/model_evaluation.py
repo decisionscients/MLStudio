@@ -586,8 +586,7 @@ class OptimizationCurve(BaseVisualizer):
         if self.metric == 'cost':
             d['yaxis_title'] = self.estimator.objective.name
             d['Training Loss'] = self.estimator.blackbox_.epoch_log.get('train_cost')
-            if self.estimator.blackbox_.epoch_log.get('val_cost'):
-                d['Validation Loss'] = self.estimator.blackbox_.epoch_log.get('val_cost')
+
         else:
             d['yaxis_title'] = self.estimator.scorer.label
             d['Training Score'] = self.estimator.blackbox_.epoch_log.get('train_score')
@@ -626,7 +625,7 @@ class OptimizationCurve(BaseVisualizer):
         ))
 
         # Validation metric if available
-        if self.estimator.val_size:
+        if self.estimator.val_size and 'score' in self.metric:
             [validation_metric] = [metric for metric in data.keys() if "Validation" in metric]        
             self.fig.add_trace(go.Scatter(
                 name=validation_metric,

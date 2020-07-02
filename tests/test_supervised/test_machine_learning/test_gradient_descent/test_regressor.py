@@ -19,7 +19,6 @@
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
 """Integration test for GradientDescentRegressor class."""
-import math
 import numpy as np
 import pytest
 from pytest import mark
@@ -75,10 +74,11 @@ estimators = [GradientDescentRegressor(observers=scenario[0], scorer=scenario[1]
                                        objective=scenario[2]) for scenario in scenarios]
 @mark.gd
 @mark.regressor_skl
+@mark.skip(reason="takes too long")
 @parametrize_with_checks(estimators)
 def test_regression_sklearn(estimator, check):    
     observer = [o.name for o in estimator.observers]    
-    #learning_rate = estimator.learning_rate.name
+    print(estimator.scorer.name)
     objective = estimator.objective.name
     regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\
         None
@@ -91,6 +91,7 @@ def test_regression_sklearn(estimator, check):
 
 @mark.gd
 @mark.regressor
+@mark.skip(reason="takes too long")
 def test_regressor(get_regression_data_split):
     X_train, X_test, y_train, y_test = get_regression_data_split
     for estimator in estimators:

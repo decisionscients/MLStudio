@@ -177,8 +177,8 @@ def make_multiclass_data_features():
 
 @fixture(scope="session")
 def get_regression_prediction():
-    X, y = make_regression(random_state=5)
-    X, y_pred = make_regression(random_state=5)
+    X, y = make_regression()
+    X, y_pred = make_regression()
     return X, y, y_pred
 
 @fixture(scope="session")

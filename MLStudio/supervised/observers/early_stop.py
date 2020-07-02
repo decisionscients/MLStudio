@@ -72,7 +72,7 @@ class EarlyStop(PerformanceObserver):
             epsilon = epsilon,
             patience = patience
         )
-        self.name = "Performance EarlyStop Observer"
+        self.name = "EarlyStop Observer"
         
 
     def on_train_begin(self, log=None):

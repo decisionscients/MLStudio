@@ -25,7 +25,7 @@ the Keras implementation.
 """
 from abc import ABC, abstractmethod, ABCMeta
 import warnings
-warnings.filterwarnings("once", category=RuntimeWarning, module='base')
+warnings.filterwarnings("once", category=UserWarning, module='base')
 
 import datetime
 import numpy as np
@@ -376,11 +376,12 @@ class PerformanceObserver(Observer):
     def _get_current_value(self, log):
         """Obtain the designated metric or fallback metric from the log."""
         current = log.get(self.metric)
-        if current:
-            return current
-        else:
-            msg = self.metric + " not evaluated for this estimator."
-            raise ValueError(msg)                    
+        if not current:
+            current = log.get('train_score')            
+            msg = self.metric + " not evaluated for this estimator. Using\
+                train_score instead."
+            warnings.warn(msg, UserWarning)
+        return current
 
     def on_epoch_end(self, epoch, log=None):
         """Logic executed at the end of each epoch.
