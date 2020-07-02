@@ -38,7 +38,7 @@ from mlstudio.supervised.core.tasks import LinearRegression
 from mlstudio.supervised.core.tasks import LogisticRegression
 from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
 from mlstudio.supervised.observers.base import Observer, ObserverList
-from mlstudio.supervised.observers.early_stop import Performance
+from mlstudio.supervised.observers.early_stop import EarlyStop
 from mlstudio.supervised.observers.history import BlackBox, Progress
 from mlstudio.utils.data_manager import AddBiasTerm, unpack_parameters
 from mlstudio.utils.data_manager import RegressionDataProcessor

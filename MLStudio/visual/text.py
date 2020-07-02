@@ -27,7 +27,7 @@ import pandas as pd
 from tabulate import tabulate
 
 from mlstudio.utils.format import proper
-from mlstudio.supervised.observers.early_stop import Performance
+from mlstudio.supervised.observers.early_stop import EarlyStop
 from mlstudio.utils.print import Printer
 
 class Summary(ABC):
@@ -65,7 +65,7 @@ class OptimizationSummary(Summary):
                                 'Batches': str(data['batches'])}
         self._printer.print_dictionary(optimization_summary, "Optimization Summary")          
 
-class OptimizationPerformance(Summary):
+class OptimizationEarlyStop(Summary):
     """Reports performance information for an optimization."""
 
     def report(self):        
@@ -140,6 +140,6 @@ class OptimizationReport:
 
     def report(self):
         OptimizationSummary(model=self.model).report()
-        OptimizationPerformance(model=self.model).report()
+        OptimizationEarlyStop(model=self.model).report()
         OptimizationHyperparameters(model=self.model).report()
 

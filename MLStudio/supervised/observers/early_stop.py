@@ -30,7 +30,7 @@ from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
 #                               PERFORMANCE                                   #
 # --------------------------------------------------------------------------- #
-class Performance(PerformanceObserver):
+class EarlyStop(PerformanceObserver):
     """Performances and log model performance, critical points and stability. 
 
     Performance is defined in terms of:
@@ -67,7 +67,7 @@ class Performance(PerformanceObserver):
     """
 
     def __init__(self, metric='val_score', epsilon=0.001, patience=5): 
-        super(Performance, self).__init__(                   
+        super(EarlyStop, self).__init__(                   
             metric = metric,
             epsilon = epsilon,
             patience = patience
@@ -83,7 +83,7 @@ class Performance(PerformanceObserver):
         log: dict
             Currently not used
         """
-        super(Performance, self).on_train_begin(log=log)
+        super(EarlyStop, self).on_train_begin(log=log)
 
     def on_epoch_end(self, epoch, log=None):
         """Logic executed at the end of each epoch.
@@ -96,6 +96,6 @@ class Performance(PerformanceObserver):
         log: dict
             Dictionary containing the data, cost, batch size and current weights
         """                  
-        super(Performance, self).on_epoch_end(epoch=epoch, log=log)
+        super(EarlyStop, self).on_epoch_end(epoch=epoch, log=log)
         if self._stabilized:
             self.model.converged = True       

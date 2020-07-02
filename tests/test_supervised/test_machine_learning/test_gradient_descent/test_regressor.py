@@ -36,7 +36,7 @@ from mlstudio.supervised.observers.learning_rate import PolynomialStepDecay
 from mlstudio.supervised.observers.learning_rate import PowerSchedule
 from mlstudio.supervised.observers.learning_rate import BottouSchedule
 from mlstudio.supervised.observers.learning_rate import Improvement
-from mlstudio.supervised.observers.early_stop import Performance
+from mlstudio.supervised.observers.early_stop import EarlyStop
 from mlstudio.supervised.observers.debugging import GradientCheck
 from mlstudio.supervised.core.objectives import MSE
 from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
@@ -52,7 +52,7 @@ from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 from mlstudio.supervised.core import scorers
 # --------------------------------------------------------------------------  #
 count = 0
-observers = [[Performance()],
+observers = [[EarlyStop()],
             [TimeDecay()], [StepDecay()], [ExponentialDecay()], 
             [ExponentialStepDecay()], [PolynomialDecay()], [PolynomialStepDecay()], 
             [PowerSchedule()], [BottouSchedule()], [Improvement()]]

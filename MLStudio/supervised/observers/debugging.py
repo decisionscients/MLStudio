@@ -29,8 +29,6 @@ from mlstudio.supervised.core.objectives import Cost
 from mlstudio.utils.validation import is_valid_array_size
 
 # --------------------------------------------------------------------------- #
-#                              GRADIENT CHECK                                 #
-# --------------------------------------------------------------------------- #
 class GradientCheck(Observer):
     """Performs gradient checking."""
 

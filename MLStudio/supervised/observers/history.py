@@ -60,8 +60,6 @@ class BlackBox(Observer):
         """
         self.end = datetime.datetime.now()
         self.duration = (self.end-self.start).total_seconds() 
-        # Computes percent change in metrics in epoch_log.
-        self._compute_pct_change()
         # Extracts final results and updates the model object.
         final_results = {}
         for k, v in self.epoch_log.items():
@@ -102,17 +100,6 @@ class BlackBox(Observer):
         for k,v in log.items():
             self.epoch_log.setdefault(k,[]).append(v)
 
-    def _compute_pct_change(self):
-        """Computes percent change in selected metrics."""
-        metrics = ['train_cost', 'val_cost', 
-                   'train_score', 'val_score', 'gradient_norm']
-        for metric in metrics:
-            new_metric = metric + '_pct_change'
-            if self.epoch_log.get(metric):
-                metric_series = pd.Series(self.epoch_log.get(metric))
-                self.epoch_log[new_metric] = \
-                    metric_series.pct_change().fillna(0).to_numpy()
-   
 
 # --------------------------------------------------------------------------- #
 #                                PROGRESS                                     #

@@ -35,7 +35,7 @@ import pytest
 from pytest import mark
 from tabulate import tabulate
 
-from mlstudio.supervised.observers.early_stop import Performance
+from mlstudio.supervised.observers.early_stop import EarlyStop
 
 # --------------------------------------------------------------------------  #
 #                          TEST OBSERVER                                      #
@@ -46,27 +46,27 @@ class PerformanceTests:
     def test_performance_validation(self): 
         # Validate metric  
         with pytest.raises(ValueError) as v:
-            observer = Performance(metric='hair')
+            observer = EarlyStop(metric='hair')
             observer.on_train_begin()
         with pytest.raises(TypeError) as v:
-            observer = Performance(metric=1)
+            observer = EarlyStop(metric=1)
             observer.on_train_begin()
         # Validate epsilon
         with pytest.raises(TypeError) as v:
-            observer = Performance(epsilon='hair')                
+            observer = EarlyStop(epsilon='hair')                
             observer.on_train_begin()        
         with pytest.raises(ValueError) as v:
-            observer = Performance(epsilon=1.1)                
+            observer = EarlyStop(epsilon=1.1)                
             observer.on_train_begin()
         with pytest.raises(ValueError) as v:
-            observer = Performance(epsilon=-0.1)                
+            observer = EarlyStop(epsilon=-0.1)                
             observer.on_train_begin()        
         # Validate patience
         with pytest.raises(TypeError) as v:
-            observer = Performance(patience='hair')        
+            observer = EarlyStop(patience='hair')        
             observer.on_train_begin()
         with pytest.raises(ValueError) as v:
-            observer = Performance(patience=0)        
+            observer = EarlyStop(patience=0)        
             observer.on_train_begin()        
 
     def _get_expected_results(self, filepath):    
@@ -91,7 +91,7 @@ class PerformanceTests:
         Estimator = get_mock_estimator
         est = Estimator()
         # Obtain and on_train_begin observer
-        observer = Performance(metric='train_cost', epsilon=0.02, patience=5)
+        observer = EarlyStop(metric='train_cost', epsilon=0.02, patience=5)
         observer.on_train_begin()
 
         # Register with the observer

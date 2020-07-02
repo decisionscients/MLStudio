@@ -347,9 +347,9 @@ class PerformanceObserver(Observer):
             self.performance_log_.setdefault(k,[]).append(v)
 
     def _improved(self, current):   
-        """Returns true if relative change is greater than epsilon."""     
+        """Returns true if relative change is greater than epsilon."""  
         return self._better(current, self._baseline) and \
-            abs(current-self._baseline) / self._baseline > \
+            (abs(current-self._baseline) / abs(self._baseline)) > \
                 self.epsilon
 
     def _process_improvement(self, current, log=None):

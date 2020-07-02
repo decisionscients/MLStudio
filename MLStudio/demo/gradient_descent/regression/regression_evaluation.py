@@ -42,7 +42,7 @@ from mlstudio.supervised.machine_learning.gradient_descent import GradientDescen
 from mlstudio.supervised.core.objectives import MSE
 from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 from mlstudio.supervised.core.scorers import R2
-from mlstudio.supervised.observers.early_stop import Performance
+from mlstudio.supervised.observers.early_stop import EarlyStop
 from mlstudio.utils.data_manager import StandardScaler, data_split
 from mlstudio.utils.file_manager import save_fig
 def get_data():
@@ -77,7 +77,7 @@ def get_sgdregressor_results(X,y, algorithm):
 
 def get_mlstudio_results(X, y, algorithm, batch_size):
     params = {'eta0': [0.1, 0.01, 0.001],              
-              'observers': [[Performance(mode='active', metric='val_score', epsilon=0.01)]],
+              'observers': [[EarlyStop(mode='active', metric='val_score', epsilon=0.01)]],
               'objective': [MSE(regularizer=L1(alpha=0.001)),
                             MSE(regularizer=L1(alpha=0.01)),
                             MSE(regularizer=L1(alpha=0.1)),
