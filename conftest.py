@@ -54,7 +54,8 @@ sys.path.append(datadir)
 # ---------------------------------------------------------------------------- #
 #                               FILES TO SKIP                                  #
 # ---------------------------------------------------------------------------- #
-collect_ignore_glob = ["/test_visual/test_model*.py"]
+
+collect_ignore_glob = ["*est_regression.py", "*est_logistic_regression.py"]
 
 # ---------------------------------------------------------------------------- #
 #                                  DATA                                        #
@@ -370,6 +371,41 @@ def get_regularization_package():
     filepath = os.path.join(datadir, filename)
     return get_regularization_test_package(filepath)  
 
+@fixture(scope="session")
+def get_optimization_momentum_test_package():
+    d = {}
+    filename = "test_optimizer_momentum.xlsx"
+    filepath = os.path.join(datadir, filename)
+    xlsx = pd.ExcelFile(filepath)
+    d['v_0'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="A:D").to_numpy().flatten()
+    d['alpha'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="E").to_numpy().flatten()
+    d['lambda'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="F").to_numpy().flatten()
+    d['theta_init'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="G:J").to_numpy().flatten()
+    d['theta'] = pd.read_excel(xlsx, sheet_name='results', header=0, usecols="E:H").to_numpy()
+    return d
 
+@fixture(scope="session")
+def get_optimization_nesterov_test_package():
+    d = {}
+    filename = "test_optimizer_nesterov.xlsx"
+    filepath = os.path.join(datadir, filename)
+    xlsx = pd.ExcelFile(filepath)
+    d['v_0'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="A:D").to_numpy().flatten()
+    d['alpha'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="E").to_numpy().flatten()
+    d['lambda'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="F").to_numpy().flatten()
+    d['theta_init'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="G:J").to_numpy().flatten()
+    d['theta'] = pd.read_excel(xlsx, sheet_name='results', header=0, usecols="E:H").to_numpy()
+    return d
 
-
+@fixture(scope="session")
+def get_optimization_adagrad_test_package():
+    d = {}
+    filename = "test_optimizer_adagrad.xlsx"
+    filepath = os.path.join(datadir, filename)
+    xlsx = pd.ExcelFile(filepath)
+    d['v_0'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="A:D").to_numpy().flatten()
+    d['alpha'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="E").to_numpy().flatten()
+    d['lambda'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="F").to_numpy().flatten()
+    d['theta_init'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="G:J").to_numpy().flatten()
+    d['theta'] = pd.read_excel(xlsx, sheet_name='results', header=0, usecols="A:D").to_numpy()
+    return d

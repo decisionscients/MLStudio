@@ -111,17 +111,23 @@ class Adagrad(Optimizer):
     def __init__(self, epsilon=1e-8):
         self.name = "Adagrad"
         self.epsilon = epsilon
-        self.gradients = 0
+        self.sum_squared_gradients = 0
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):
         grad = gradient(theta, **kwargs)
-        # Create effective learning rate
-        self.gradients = self.gradients + np.square(grad)     
-        self.gradients = self.gradients + np.array(self.epsilon, ndmin=1)        
-        elr = learning_rate / np.sqrt(np.array(self.gradients, ndmin=1))        
+        # Accumulate the square of gradients up to time t
+        self.sum_squared_gradients += np.square(grad)    
         # Convert to diagonal matrix
-        Gt = np.diag(elr)
-        theta = theta - Gt.dot(grad)        
+        Gt_ii = np.diag(self.sum_squared_gradients)        
+        # Add an epsilon to diagonal matrix to avoid division by zero
+        epsilon = np.diag(np.full(len(grad),self.epsilon))      
+        Gt_e = np.add(Gt_ii,epsilon)
+        # Take square root of sum of GT and e
+        Gt_e_sqrt = np.sqrt(Gt_e)
+        # Create its inverse
+        Gt_e_sqrt_inv = np.linalg.inv(Gt_e_sqrt)
+        # Perform update
+        theta = theta - learning_rate * Gt_e_sqrt_inv.dot(grad)
         return theta, grad        
 
 # --------------------------------------------------------------------------  #

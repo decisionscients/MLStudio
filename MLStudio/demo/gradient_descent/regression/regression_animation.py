@@ -91,7 +91,7 @@ def plot_optimization(estimators, max_frames=None, filepath=None, show=True):
     animate_optimization_regression(estimators=estimators, max_frames=max_frames, 
                                     filepath=filepath, show=show)
 
-def regression_demo(max_frames=None, filepath=None, show=True):
+def regression_demo(max_frames=100, filepath=None, show=True):
     """Regression demo main processing function.
     
     Parameters
@@ -109,9 +109,10 @@ def regression_demo(max_frames=None, filepath=None, show=True):
     plot_optimization(estimators=estimators, max_frames=max_frames, 
                       filepath=filepath, show=show)
 
-def main():
-    filepath = os.path.join(demodir, 'figures/regression_demo.html')
-    regression_demo(max_frames=100, filepath=filepath)
+def main(filepath=None, show=True):
+    if not filepath:
+        filepath = os.path.join(demodir, 'figures/regression_demo.html')
+    regression_demo(max_frames=100, filepath=filepath, show=show)
 
 if __name__ == "__main__":
     main()

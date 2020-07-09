@@ -550,6 +550,10 @@ class GradientDescentEstimator(GradientDescentAbstract):
         # If we have a validation set, compute validation error and score
         if self.val_size:
             if self._scorer and self.X_val_.shape[0] > 0:
+                # Compute validation error 
+                y_out_val = self._task.compute_output(self._theta, self.X_val_)
+                s['val_cost'] = self._objective(self._theta, self.y_val_, y_out_val)                
+                # Compute validation score
                 y_pred_val = self._task.predict(self._theta, self.X_val_)
                 s['val_score'] = self._scorer(self.y_val_, y_pred_val)
 

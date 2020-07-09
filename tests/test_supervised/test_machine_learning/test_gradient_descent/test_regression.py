@@ -22,7 +22,7 @@
 import numpy as np
 import pytest
 from pytest import mark
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import SGDRegressor
 from sklearn.utils.estimator_checks import parametrize_with_checks
 from sklearn.utils.estimator_checks import check_estimator
 
@@ -71,7 +71,8 @@ scenarios = [[observer, scorer, objective] for observer in observers
         ]
 
 estimators = [GradientDescentRegressor(observers=scenario[0], scorer=scenario[1],
-                                       objective=scenario[2]) for scenario in scenarios]
+                                       objective=scenario[2])
+                                       for scenario in scenarios]
 @mark.gd
 @mark.regressor_skl
 @mark.skip(reason="takes too long")
@@ -91,37 +92,104 @@ def test_regression_sklearn(estimator, check):
 
 @mark.gd
 @mark.regressor
-@mark.skip(reason="takes too long")
+#@mark.skip(reason="takes too long")
 def test_regressor(get_regression_data_split):
     X_train, X_test, y_train, y_test = get_regression_data_split
+    n_within_1_pct = 0
+    n_within_10_pct = 0    
+    s_num = 0
+    failed_models = []
+
     for estimator in estimators:
+        s_num += 1
         # Extract scenario options
         try:
             observer = [o.name for o in estimator.observers]
         except:
             observer = [estimator.observers.name]
-#        learning_rate = estimator.learning_rate.name
         objective = estimator.objective.name
         regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\
             None        
-        msg = "\nChecking scenario: observers : {o}, objective : {ob},\
-            regularizer : {r}".format(o=str(observer), 
-            ob=str(objective), r=str(regularizer))
-        print(msg)                     
+        scenario = "\nScenario #{s}: observers :  {o}, objective : {ob}, regularizer : {r}".format(s=str(s_num),
+            o=str(observer), 
+            ob=str(objective), r=str(regularizer))        
         # Fit the model
         estimator.fit(X_train,y_train)
         mls_score = estimator.score(X_test, y_test)
         # Fit sklearn's model
-        skl = LinearRegression()
+        skl = SGDRegressor()
         skl.fit(X_train, y_train)
         skl_score = skl.score(X_test, y_test)
-        if mls_score < skl_score:
-            print(msg)
-        msg = "Score is significantly worst than sklearn's score. MLS score = {m}, \
-            Sklearn score = {s}".format(m=str(mls_score), s=str(skl_score))
-        # assert np.isclose(mls_score, skl_score, rtol=0.01) or\
-        #     mls_score > skl_score, msg
-        estimator.summary()
+        # Compute pct difference in scores
+        rel_diff = (skl_score-mls_score) / skl_score 
+        if rel_diff <= 0.01:
+            n_within_1_pct += 1
+            n_within_10_pct += 1
+        elif rel_diff <= 0.1:
+            n_within_10_pct += 1
+        else:
+            pct_off = "Scikit-Learn Score: {s} MLStudio Score: {m} Percent Diff {p}".format(
+                s=str(skl_score), m=str(mls_score), p=str(round(rel_diff*100,3))
+            )
+            scenario = scenario + "\n    " + pct_off 
+            failed_models.append(scenario)
+    msg = "\nThe following models scored poorly relative to Scikit-Learn"
+    for m in failed_models:
+        print(m)            
+    msg = "\nTotal models evaluated: {t}".format(t=str(s_num))
+    print(msg)
+    msg = "Total models within 1 pct of Scikit-Learn: {t} ({p}%)".format(t=str(n_within_1_pct),
+            p=str(round(n_within_1_pct/s_num*100,3)))
+    print(msg)                                                                         
+    msg = "Total models within 10 pct of Scikit-Learn: {t} ({p}%)".format(t=str(n_within_10_pct),
+            p=str(round(n_within_10_pct/s_num*100,3)))                                                     
+    print(msg)
+
+
+@mark.gd
+@mark.regression_optimizers
+#@mark.skip(reason="takes too long")
+def test_regression_optimizers(get_regression_data_split):
+    optimizers = [GradientDescentOptimizer(), Momentum(), Nesterov(),
+                  Adagrad(), Adadelta(), RMSprop(), Adam(), AdaMax(), 
+                  Nadam(), AMSGrad(), AdamW(), QHAdam(), QuasiHyperbolicMomentum()]
+    X_train, X_test, y_train, y_test = get_regression_data_split
+    n_within_1_pct = 0
+    n_within_10_pct = 0    
+    s_num = 0
+    failed_models = []                  
+    for optimizer in optimizers:
+        s_num += 1
+        estimator = GradientDescentRegressor(optimizer=optimizer)
+        estimator.fit(X_train, y_train)
+        mls_score = estimator.score(X_test, y_test)
+        # Fit sklearn's model
+        skl = SGDRegressor()
+        skl.fit(X_train, y_train)
+        skl_score = skl.score(X_test, y_test)
+        # Compute pct difference in scores
+        rel_diff = (skl_score-mls_score) / skl_score 
+        if rel_diff <= 0.01:
+            n_within_1_pct += 1
+            n_within_10_pct += 1
+        elif rel_diff <= 0.1:
+            n_within_10_pct += 1
+        else:
+            msg = "Scenario #{n}  Optimizer: {o}, Scikit-Learn Score: {s} MLStudio Score: {m} Percent Diff {p}".format(
+                n=str(s_num), o=optimizer.name,
+                s=str(skl_score), m=str(mls_score), p=str(round(rel_diff*100,3))
+            )            
+            failed_models.append(msg)
+    msg = "\nThe following models scored poorly relative to Scikit-Learn"
+    for m in failed_models:
+        print(m)            
+    msg = "\nTotal models evaluated: {t}".format(t=str(s_num))
+    print(msg)
+    msg = "Total models within 1 pct of Scikit-Learn: {t} ({p}%)".format(t=str(n_within_1_pct),
+            p=str(round(n_within_1_pct/s_num*100,3)))
+    print(msg)                                                                         
+    msg = "Total models within 10 pct of Scikit-Learn: {t} ({p}%)".format(t=str(n_within_10_pct),
+            p=str(round(n_within_10_pct/s_num*100,3)))                                                             
 
 
 

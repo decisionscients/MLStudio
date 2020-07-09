@@ -53,6 +53,7 @@ class EarlyStop(PerformanceObserver):
 
         'train_cost': Training set costs
         'train_score': Training set scores based upon the model's metric parameter
+        'val_cost' : Validation set costs
         'val_score': Validation set scores based upon the model's metric parameter
         'gradient_norm': The norm of the gradient of the objective function w.r.t. theta
 
