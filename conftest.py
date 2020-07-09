@@ -55,7 +55,7 @@ sys.path.append(datadir)
 #                               FILES TO SKIP                                  #
 # ---------------------------------------------------------------------------- #
 
-collect_ignore_glob = ["*est_regression.py", "*est_logistic_regression.py"]
+collect_ignore_glob = ["*est_regression.py"]
 
 # ---------------------------------------------------------------------------- #
 #                                  DATA                                        #
@@ -151,7 +151,7 @@ def get_logistic_regression_data():
     return X, y   
 
 @fixture(scope="session")
-def get_logistic_regression_split_data():
+def get_logistic_regression_data_split():
     X, y = datasets.load_breast_cancer(return_X_y=True)
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)

@@ -54,7 +54,7 @@ class LinearRegression(Task):
     
     def compute_output(self, theta, X):
         """Computes linear regression output."""        
-        return X.dot(theta) 
+        return np.array(X.dot(theta), dtype=np.float32) 
 
     def predict(self, theta, X):
         return self.compute_output(theta, X)
@@ -72,7 +72,7 @@ class LogisticRegression(Task):
 
     def compute_output(self, theta, X):
         """Computes logistic regression output."""        
-        z = X.dot(theta)
+        z = np.array(X.dot(theta), dtype=np.float32)
         return self.sigmoid(z)
 
     def predict(self, theta, X):
@@ -93,7 +93,7 @@ class MultinomialLogisticRegression(Task):
 
     def compute_output(self, theta, X):
         """Computes multinomial logistic regression output."""        
-        z = X.dot(theta)
+        z = np.array(X.dot(theta), dtype=np.float32)
         return self.softmax(z)        
 
     def predict(self, theta, X):

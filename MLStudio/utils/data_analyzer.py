@@ -22,6 +22,7 @@
 import numpy as np
 import pandas as pd
 from scipy.stats import skew, kurtosis, ttest_1samp, t
+from sklearn.utils import check_array, check_X_y
 
 # --------------------------------------------------------------------------- #
 def standardized_residuals(residuals):
@@ -106,7 +107,26 @@ def describe_categorical_array(x, fmt='dict'):
     if fmt != 'dict':
         d = pd.DataFrame(d, index=[0])    
     return d
+# --------------------------------------------------------------------------  #
+#                             DATA CHECKS                                     #
+# --------------------------------------------------------------------------  #
+def n_classes(y):
+    """Returns the number of classes for a classification dataset."""
+    y = check_array(y,accept_sparse=True, accept_large_sparse=True,
+                    ensure_2d=False)    
+    if y.ndim == 1:
+        return 1
+    else:
+        return y.shape[1]
 
+def n_features(X):
+    """Returns the number of features in a dataset."""
+    X = check_array(X,accept_sparse=True, accept_large_sparse=True,
+                    ensure_2d=False)
+    if X.ndim == 1:
+        return 1
+    else:
+        return X.shape[1]
 
 
 

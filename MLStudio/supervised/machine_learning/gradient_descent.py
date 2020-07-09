@@ -40,6 +40,7 @@ from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
 from mlstudio.supervised.observers.base import Observer, ObserverList
 from mlstudio.supervised.observers.early_stop import EarlyStop
 from mlstudio.supervised.observers.history import BlackBox, Progress
+from mlstudio.utils.data_analyzer import n_classes, n_features
 from mlstudio.utils.data_manager import AddBiasTerm, unpack_parameters
 from mlstudio.utils.data_manager import RegressionDataProcessor
 from mlstudio.utils.data_manager import LogisticRegressionDataProcessor
@@ -89,13 +90,6 @@ class GradientDescentAbstract(ABC,BaseEstimator):
     def converged(self, x):
         self._converged = x       
 
-    @property
-    def feature_names(self):
-        return self._feature_names
-
-    @feature_names.setter
-    def feature_names(self, x):
-        self._feature_names = x
     # ----------------------------------------------------------------------- #
     def _validate_params(self):
         """Performs parameter validation."""
@@ -163,10 +157,10 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._observer_list.set_model(self)            
 
     # ----------------------------------------------------------------------- #
-    def _compile(self):        
+    def _compile(self, log=None):        
         """Obtains, initializes object dependencies and registers observers."""
         self._copy_mutable_parameters()
-        self._obtain_implicit_dependencies()
+        self._obtain_implicit_dependencies(log)
         self._create_observer_attributes()
         self._create_observer_list()
 
@@ -180,7 +174,7 @@ class GradientDescentAbstract(ABC,BaseEstimator):
             Data relevant this part of the process. 
         """
         log = log or {}
-        self._compile()    
+        self._compile(log)    
         self._epoch = 0      
         self._batch = 0 
         self._theta = None
@@ -272,7 +266,7 @@ class GradientDescentAbstract(ABC,BaseEstimator):
 
     # ----------------------------------------------------------------------- #
     @abstractmethod
-    def _obtain_implicit_dependencies(self):
+    def _obtain_implicit_dependencies(self, log=None):
         pass    
     # ----------------------------------------------------------------------- #
     @abstractmethod
@@ -320,7 +314,7 @@ class GradientDescentPureOptimizer(GradientDescentAbstract):
         )        
 
     # ----------------------------------------------------------------------- #        
-    def _obtain_implicit_dependencies(self):
+    def _obtain_implicit_dependencies(self, log=None):
         pass
 
     # ----------------------------------------------------------------------- #
@@ -513,20 +507,20 @@ class GradientDescentEstimator(GradientDescentAbstract):
                     except:
                         self.features_ = None  
         # Set n_features_ as the number of features plus the intercept term
-        self.n_features_ = self.X_train_.shape[1]
+        self.n_features_ = n_features(self.X_train_)
 
     # ----------------------------------------------------------------------- #
     def _init_weights(self):
         """Initializes parameters."""
         if self.theta_init is not None:
-            assert self.theta_init.shape == (self.X_train_.shape[1],), \
+            assert self.theta_init.shape == (self.n_features_,), \
                 "Initial parameters theta must have shape (n_features+1,)."
             self._theta = self.theta_init
             self._theta
         else:
             # Random normal initialization for weights.
             rng = np.random.RandomState(self.random_state)                
-            self._theta = rng.randn(self.X_train_.shape[1]) 
+            self._theta = rng.randn(self.n_features_) 
             # Set the bias initialization to zero
             self._theta[0] = 0
             self._theta = self._theta
@@ -674,7 +668,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
 #                        GRADIENT DESCENT REGRESSOR                           #
 # =========================================================================== # 
 class GradientDescentRegressor(GradientDescentEstimator):
-    """Gradient descent base class for all estimators."""
+    """Gradient descent regression class."""
     def __init__(self, eta0=0.01, epochs=1000, objective=MSE(), 
                  batch_size=None, theta_init=None, optimizer=None,  
                  observers=None, scorer=R2(), val_size=0.3,
@@ -692,9 +686,9 @@ class GradientDescentRegressor(GradientDescentEstimator):
             verbose = verbose,
             random_state = random_state                
         )
-    
+
     # ----------------------------------------------------------------------- #    
-    def _obtain_implicit_dependencies(self):
+    def _obtain_implicit_dependencies(self, log=None):
         super(GradientDescentRegressor, self)._obtain_implicit_dependencies()                
         # Set the task that will be computing the output and predictions. 
         self._task = LinearRegression()
@@ -703,5 +697,59 @@ class GradientDescentRegressor(GradientDescentEstimator):
         self._data_processor = RegressionDataProcessor(estimator=self,
                                 random_state=self.random_state)          
 
+# =========================================================================== #
+#                        GRADIENT DESCENT CLASSIFIER                          #
+# =========================================================================== # 
+class GradientDescentClassifier(GradientDescentEstimator):
+    """Gradient descent classification class."""
+    def __init__(self, eta0=0.01, epochs=1000, objective=CrossEntropy(), 
+                 batch_size=None, theta_init=None, optimizer=None,  
+                 observers=None, scorer=Accuracy(), val_size=0.3,
+                 verbose=False, random_state=None):
+        super(GradientDescentClassifier, self).__init__(
+            eta0 = eta0,
+            epochs = epochs,
+            objective = objective,
+            batch_size = batch_size,
+            theta_init = theta_init,
+            optimizer = optimizer,            
+            observers = observers,
+            scorer = scorer,
+            val_size = val_size,            
+            verbose = verbose,
+            random_state = random_state                
+        )
+    # ----------------------------------------------------------------------- # 
+    def _prepare_data(self, X, y):
+        """Prepares the data and sets n_features_ and n_classes_ attributes."""
+        super(GradientDescentClassifier, self)._prepare_data(X, y)
+        self.n_classes_ = n_classes(self.y_train_)        
 
-        
+    # ----------------------------------------------------------------------- #    
+    def _obtain_implicit_dependencies(self, log=None):
+        """Obtain the task and data processor classes."""
+        super(GradientDescentClassifier, self)._obtain_implicit_dependencies()                
+        # Set the task that will be computing the output and predictions. 
+        if n_classes(log.get('y')) == 1:
+            self._task = LogisticRegression()
+            self._data_processor = LogisticRegressionDataProcessor(estimator=self, 
+                                random_state=self.random_state)
+        else:
+            self._task = MultinomialLogisticRegression()        
+            self._data_processor = MulticlassDataProcessor(estimator=self, 
+                                random_state=self.random_state)
+
+    # ----------------------------------------------------------------------- #                                    
+    def _init_weights(self):
+        """Initializes weights for a binary and multiclass classification problem."""
+        if self.n_classes_ == 1:
+            super(GradientDescentClassifier, self)._init_weights()
+        else:
+            if self.theta_init is not None:
+                assert self.theta_init.shape == (self.n_features_, self.n_classes_), \
+                    "Initial parameters theta must have shape (n_features+1, n_classes)."
+                self._theta = self.theta_init
+            else:
+                rng = np.random.RandomState(self.random_state)                
+                self._theta = rng.randn(self.n_features_, self.n_classes_)                 
+
