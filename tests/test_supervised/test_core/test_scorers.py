@@ -31,6 +31,40 @@ from sklearn.metrics import accuracy_score, auc, roc_auc_score, roc_curve
 
 from mlstudio.supervised.core import scorers 
 
+@mark.scorers
+@mark.classification_scorers
+class ClassificationMetricsTests:
+
+    def test_precision(self, get_classification_metric_test_package):
+        d = get_classification_metric_test_package        
+        scorer = scorers.Precision()
+        score = scorer(d['y'], d['y_pred'])
+        assert np.isclose([score], d['precision']), "Precision score not correct." 
+
+    def test_specificity(self, get_classification_metric_test_package):
+        d = get_classification_metric_test_package        
+        scorer = scorers.Recall()
+        score = scorer(d['y'], d['y_pred'])
+        assert np.isclose([score], d['specificity']), "Recall score not correct."         
+
+    def test_specificity(self, get_classification_metric_test_package):
+        d = get_classification_metric_test_package        
+        scorer = scorers.Specificity()
+        score = scorer(d['y'], d['y_pred'])
+        assert np.isclose([score], d['specificity']), "Specificity score not correct."                 
+
+    def test_f1(self, get_classification_metric_test_package):
+        d = get_classification_metric_test_package        
+        scorer = scorers.F1()
+        score = scorer(d['y'], d['y_pred'])
+        assert np.isclose([score], d['f1']), "F1 score not correct."                 
+
+    def test_balanced_accuracy(self, get_classification_metric_test_package):
+        d = get_classification_metric_test_package        
+        scorer = scorers.BalancedAccuracy()
+        score = scorer(d['y'], d['y_pred'])
+        assert np.isclose([score], d['balanced_accuracy']), "Balanced accuracy score not correct."                 
+
 class RegressionMetricsTests:
 
     @mark.scorers

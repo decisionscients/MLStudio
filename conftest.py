@@ -409,3 +409,18 @@ def get_optimization_adagrad_test_package():
     d['theta_init'] = pd.read_excel(xlsx, sheet_name='params', header=0, usecols="G:J").to_numpy().flatten()
     d['theta'] = pd.read_excel(xlsx, sheet_name='results', header=0, usecols="A:D").to_numpy()
     return d
+
+@fixture(scope="session")
+def get_classification_metric_test_package():
+    d = {}
+    filename = "test_classification_metrics.xlsx"
+    filepath = os.path.join(datadir, filename)
+    xlsx = pd.ExcelFile(filepath)
+    d['y'] = pd.read_excel(xlsx, sheet_name='data', header=0, usecols="A").to_numpy().flatten()
+    d['y_pred'] = pd.read_excel(xlsx, sheet_name='data', header=0, usecols="B").to_numpy().flatten()
+    d['precision'] = pd.read_excel(xlsx, sheet_name='metrics', header=0, usecols="E").to_numpy().flatten()
+    d['recall'] = pd.read_excel(xlsx, sheet_name='metrics', header=0, usecols="F").to_numpy().flatten()
+    d['specificity'] = pd.read_excel(xlsx, sheet_name='metrics', header=0, usecols="G").to_numpy().flatten()
+    d['f1'] = pd.read_excel(xlsx, sheet_name='metrics', header=0, usecols="H").to_numpy().flatten()
+    d['balanced_accuracy'] = pd.read_excel(xlsx, sheet_name='metrics', header=0, usecols="I").to_numpy().flatten()
+    return d    
