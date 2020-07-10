@@ -27,7 +27,6 @@ from scipy.sparse import csr_matrix
 from sklearn.datasets import make_classification
 
 from mlstudio.utils.data_manager import MinMaxScaler, data_split, GradientScaler
-from mlstudio.utils.data_manager import encode_labels
 from mlstudio.utils.data_manager import AddBiasTerm, ZeroBiasTerm, unpack_parameters
 # --------------------------------------------------------------------------  #
 #                       TEST ADD BIAS TERM TRANSFORMER                        #
@@ -76,25 +75,6 @@ def test_zero_bias_term():
     X = xformer.fit_transform(X)    
     assert np.array_equal(X[0,:], np.zeros(shape=X.shape[1])), "Bias not zeroed out ."
 
-
-# --------------------------------------------------------------------------  #
-#                       TEST DATA CHECKS AND PREP                             #
-# --------------------------------------------------------------------------  #
-@mark.utils
-@mark.data_manager
-@mark.data_checks
-@mark.encode_labels
-def test_encode_labels(get_data_management_data):
-    d = get_data_management_data
-    for k, y in d.items():
-        classes = np.unique(y)
-        n_classes = len(classes)
-        encoded_classes = np.arange(n_classes)
-        y_new = encode_labels(y)
-        y_new_classes = np.sort(np.unique(y_new))
-        msg = "Encoding of " + k + " didn't work."
-        assert np.array_equal(encoded_classes, y_new_classes), msg
-  
 
 # --------------------------------------------------------------------------  #
 #                        TEST GRADIENT SCALER                                 #

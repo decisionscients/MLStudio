@@ -33,7 +33,7 @@ class Scorer(ABC, BaseEstimator):
                                   "this Abstract Base Class.")
 
     @abstractmethod
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
@@ -46,7 +46,7 @@ class RegressionScorer(Scorer):
                                   "this Abstract Base Class.")
 
     @abstractmethod
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
@@ -59,7 +59,7 @@ class ClassificationScorer(Scorer):
                                   "this Abstract Base Class.")
 
     @abstractmethod
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
@@ -80,7 +80,7 @@ class SSR(RegressionScorer):
         self.epsilon_factor = -1
 
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         e = y - y_pred
         return np.sum(e**2)  
 
@@ -98,7 +98,7 @@ class SST(RegressionScorer):
         self.epsilon_factor = -1
 
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         y_avg = np.mean(y)
         e = y-y_avg                
         return np.sum(e**2)
@@ -117,11 +117,37 @@ class R2(RegressionScorer):
         self.epsilon_factor = 1
 
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         self._ssr = SSR()
         self._sst = SST()
         r2 = 1 - (self._ssr(y, y_pred)/self._sst(y, y_pred))        
         return r2
+
+
+class AdjustedR2(RegressionScorer):
+    """Computes adjusted coefficient of determination."""
+
+    def __init__(self):
+        self.mode = 'max'        
+        self.name = 'R2'
+        self.label = r"$\text{Adjusted }R^2$"
+        self.stateful = False
+        self.best = np.max
+        self.better = np.greater
+        self.worst = -np.Inf
+        self.epsilon_factor = 1
+
+    
+    def __call__(self, y, y_pred, **kwargs):
+        self._ssr = SSR()
+        self._sst = SST()
+        X = kwargs.get('X')
+        n = X.shape[0]
+        p = X.shape[1] - 1
+        df_e = n-p-1
+        df_t = n-1
+        ar2 = 1 - ((self._ssr(y, y_pred)/df_e)/(self._sst(y, y_pred)/df_t))        
+        return ar2
 
 class VarExplained(RegressionScorer):
     """Computes proportion of variance explained."""
@@ -137,7 +163,7 @@ class VarExplained(RegressionScorer):
         self.epsilon_factor = 1
 
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         var_explained = 1 - (np.var(y-y_pred) / np.var(y))
         return var_explained                   
 
@@ -154,7 +180,7 @@ class MAE(RegressionScorer):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         e = abs(y-y_pred)
         return np.mean(e)
 
@@ -172,7 +198,7 @@ class MSE(RegressionScorer):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):        
+    def __call__(self, y, y_pred, **kwargs):        
         e = y - y_pred
         return np.mean(e**2)
 
@@ -190,7 +216,7 @@ class NMSE(RegressionScorer):
         self.epsilon_factor = 1
 
     
-    def __call__(self, y, y_pred):        
+    def __call__(self, y, y_pred, **kwargs):        
         e = y - y_pred
         return -np.mean(e**2)
 
@@ -207,7 +233,7 @@ class RMSE(RegressionScorer):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         e = y-y_pred
         return np.sqrt(np.mean(e**2)) 
 
@@ -225,7 +251,7 @@ class NRMSE(RegressionScorer):
         self.epsilon_factor = 1
 
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         e = y-y_pred
         return -np.sqrt(np.mean(e**2))
 
@@ -242,7 +268,7 @@ class MSLE(RegressionScorer):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         e = np.log(y+1)-np.log(y_pred+1)
         y = np.clip(y, 1e-15, 1-1e-15)    
         y_pred = np.clip(y_pred, 1e-15, 1-1e-15)    
@@ -262,7 +288,7 @@ class RMSLE(RegressionScorer):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, **kwargs):
         y = np.clip(y, 1e-15, 1-1e-15)    
         y_pred = np.clip(y_pred, 1e-15, 1-1e-15)    
         e = np.log(y)-np.log(y_pred)
@@ -281,7 +307,7 @@ class MEDAE(RegressionScorer):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):        
+    def __call__(self, y, y_pred, **kwargs):        
         return np.median(np.abs(y_pred-y))
 
 class MAPE(RegressionScorer):
@@ -297,7 +323,7 @@ class MAPE(RegressionScorer):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):        
+    def __call__(self, y, y_pred, **kwargs):        
         return 100*np.mean(np.abs((y-y_pred)/y))
 
 
@@ -317,7 +343,6 @@ class Accuracy(ClassificationScorer):
         self.worst = -np.Inf
         self.epsilon_factor = 1
     
-    def __call__(self, y, y_pred):
-        """Computes accuracy as correct over total."""
-        # If scoring multinomial logistical regression with one-hot vectors,
+    def __call__(self, y, y_pred, **kwargs):
+        """Computes accuracy as correct over total."""        
         return np.sum(np.equal(y,y_pred)) / y.shape[0]

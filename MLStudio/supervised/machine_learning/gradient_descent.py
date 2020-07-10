@@ -45,6 +45,7 @@ from mlstudio.utils.data_manager import AddBiasTerm, unpack_parameters
 from mlstudio.utils.data_manager import RegressionDataProcessor
 from mlstudio.utils.data_manager import LogisticRegressionDataProcessor
 from mlstudio.utils.data_manager import MulticlassDataProcessor, batch_iterator
+from mlstudio.utils.data_manager import check_y
 from mlstudio.utils.validation import check_X, check_X_y, check_is_fitted
 from mlstudio.visual.text import OptimizationReport
 # =========================================================================== #
@@ -536,20 +537,17 @@ class GradientDescentEstimator(GradientDescentAbstract):
         # Compute training costs 
         y_out = self._task.compute_output(self._theta, self.X_train_)
         s['train_cost'] = self._objective(self._theta, self.y_train_, y_out)
-        # If there is a scoring object, compute scores
-        if self._scorer:
-            y_pred = self._task.predict(self._theta, self.X_train_)
-            s['train_score'] = self._scorer(self.y_train_, y_pred)
+        # Compute training score
+        s['train_score'] = self._score(self.X_train_, self.y_train_)
 
         # If we have a validation set, compute validation error and score
         if self.val_size:
-            if self._scorer and self.X_val_.shape[0] > 0:
+            if self.X_val_.shape[0] > 0:
                 # Compute validation error 
                 y_out_val = self._task.compute_output(self._theta, self.X_val_)
                 s['val_cost'] = self._objective(self._theta, self.y_val_, y_out_val)                
                 # Compute validation score
-                y_pred_val = self._task.predict(self._theta, self.X_val_)
-                s['val_score'] = self._scorer(self.y_val_, y_pred_val)
+                s['val_score'] = self._score(self.X_val_, self.y_val_)
 
         # Grab Gradient. Note: 1st iteration, the gradient will be None
         s['gradient'] = self._gradient
@@ -631,10 +629,14 @@ class GradientDescentEstimator(GradientDescentAbstract):
     # ----------------------------------------------------------------------- #    
     def _score(self, X, y):
         """Calculates scores during as the beginning of each training epoch."""        
-        y_pred = self._task.predict(self.theta_, X)
-        if self._scorer is None:
-            raise Exception("Unable to compute score. No scorer object provided.")
-        return self._scorer(y, y_pred)
+        y = check_y(y)
+        y_pred = self._task.predict(self._theta, X)
+        try:
+            score = self._scorer(y, y_pred)
+        except:
+            msg = "Unable to compute score. No scorer object designated."        
+            raise Exception(msg)
+        return score
 
     # ----------------------------------------------------------------------- #    
     def score(self, X, y):
@@ -654,9 +656,11 @@ class GradientDescentEstimator(GradientDescentAbstract):
         
         """
         y_pred = self.predict(X)        
-        if self._scorer is None:
-            raise Exception("Unable to compute score. No scorer object provided.")        
-        return self._scorer(y, y_pred)    
+        try:
+            score = self._scorer(y, y_pred)    
+        except:
+            raise Exception("No valid scorer designated.")
+        return score
 
     # ----------------------------------------------------------------------- #    
     def summary(self):  
@@ -694,7 +698,7 @@ class GradientDescentRegressor(GradientDescentEstimator):
         self._task = LinearRegression()
 
         # Instantiates the data processor for regression
-        self._data_processor = RegressionDataProcessor(estimator=self,
+        self._data_processor = RegressionDataProcessor(val_size=self.val_size,
                                 random_state=self.random_state)          
 
 # =========================================================================== #
@@ -729,20 +733,28 @@ class GradientDescentClassifier(GradientDescentEstimator):
     def _obtain_implicit_dependencies(self, log=None):
         """Obtain the task and data processor classes."""
         super(GradientDescentClassifier, self)._obtain_implicit_dependencies()                
-        # Set the task that will be computing the output and predictions. 
-        if n_classes(log.get('y')) == 1:
+        # Determine type of classification and obtain required dependencies.          
+
+        if n_classes(log.get('y')) < 3:            
             self._task = LogisticRegression()
-            self._data_processor = LogisticRegressionDataProcessor(estimator=self, 
+            self._data_processor = LogisticRegressionDataProcessor(\
+                                val_size=self.val_size, 
                                 random_state=self.random_state)
+            if "Binary" not in self._objective.type:                
+                self._objective = CrossEntropy()
         else:
             self._task = MultinomialLogisticRegression()        
-            self._data_processor = MulticlassDataProcessor(estimator=self, 
+            self._data_processor = MulticlassDataProcessor(\
+                                val_size=self.val_size, 
                                 random_state=self.random_state)
+            if "Multiclass" not in self._objective.type:
+                self._objective = CategoricalCrossEntropy()
+        
 
     # ----------------------------------------------------------------------- #                                    
     def _init_weights(self):
         """Initializes weights for a binary and multiclass classification problem."""
-        if self.n_classes_ == 1:
+        if self.n_classes_ == 2:
             super(GradientDescentClassifier, self)._init_weights()
         else:
             if self.theta_init is not None:
@@ -751,5 +763,4 @@ class GradientDescentClassifier(GradientDescentEstimator):
                 self._theta = self.theta_init
             else:
                 rng = np.random.RandomState(self.random_state)                
-                self._theta = rng.randn(self.n_features_, self.n_classes_)                 
-
+                self._theta = rng.randn(self.n_features_, self.n_classes_)   

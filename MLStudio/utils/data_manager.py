@@ -30,12 +30,19 @@ import pandas as pd
 from scipy.sparse import isspmatrix_coo, issparse, csr_matrix, hstack
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils import shuffle, check_array
-from sklearn.preprocessing import LabelBinarizer, LabelEncoder
+from sklearn.preprocessing import LabelBinarizer
 
 from mlstudio.utils.validation import check_X_y
 # --------------------------------------------------------------------------- #
 #                           DATA PREPARATION                                  #
 # --------------------------------------------------------------------------- #
+def check_y(y):
+    """Converts one-hot vectors to an array of integers."""        
+    y = np.array(y)
+    if y.ndim > 1:
+        if np.sum(y) == len(y):
+            y = np.argmax(y, axis=1)
+    return y
 
 def check_coo(X):
     """Converts coo matrices to csr format."""
@@ -56,27 +63,6 @@ def unpack_parameters(theta):
         bias = np.atleast_1d(theta[0,:])
         weights = np.atleast_1d(theta[1:,:])
     return bias, weights
-# --------------------------------------------------------------------------- #
-def encode_labels(y):
-    """Encodes labels to have values from 0 to n_classes - 1
-    
-    Parameters
-    ----------
-    y : array shape (n_samples,)
-        Labels to encode
-
-    Returns
-    -------
-    y : Encoded labels with values from 0 to n_classes - 1
-    """
-    classes = np.sort(np.unique(y))
-    n_classes = len(classes)
-    binary_classes = np.arange(n_classes)
-    if np.array_equal(classes, binary_classes):
-        return y
-    else:
-        encoder = LabelEncoder()
-        return encoder.fit_transform(y)
 
 # --------------------------------------------------------------------------- #
 #                               TRANSFORMERS                                  #
@@ -133,7 +119,7 @@ class ZeroBiasTerm(BaseEstimator, TransformerMixin):
            
 
 # --------------------------------------------------------------------------- #
-class DataProcessor(ABC, BaseEstimator):
+class DataProcessor(ABC, TransformerMixin, BaseEstimator):
     """Prepares data for training.
     
     Parameters
@@ -145,8 +131,8 @@ class DataProcessor(ABC, BaseEstimator):
         The seed for pseudo randomization.
     
     """
-    def __init__(self, estimator, random_state=None):        
-        self.estimator = estimator
+    def __init__(self, val_size, random_state=None):        
+        self.val_size = val_size
         self.random_state = random_state
 
 
@@ -189,9 +175,9 @@ class RegressionDataProcessor(DataProcessor):
         d = {}
         d['n_features_'] = X_train.shape[1]        
         # Return training and validation data if val_size is truthy
-        if self.estimator.val_size:
+        if self.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=False, test_size=self.estimator.val_size, 
+                        stratify=False, test_size=self.val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train
@@ -218,9 +204,9 @@ class LogisticRegressionDataProcessor(DataProcessor):
         d = {}
         d['n_features_'] = X_train.shape[1]        
         # Return stratified training and validation data if val_size is truthy
-        if self.estimator.val_size:
+        if self.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=True, test_size=self.estimator.val_size, 
+                        stratify=True, test_size=self.val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train
@@ -237,6 +223,11 @@ class LogisticRegressionDataProcessor(DataProcessor):
 class MulticlassDataProcessor(DataProcessor):
     """Prepares data for multi-class classification."""
 
+    def __init__(self, val_size, random_state=None):
+        super(MulticlassDataProcessor, self).__init__(val_size=val_size,
+                                                      random_state=random_state)
+        self.encoder = LabelBinarizer()
+
     def transform(self, X, y):
         """Prepares data for multi-class classification."""
         if len(np.unique(y)) < 3:
@@ -246,16 +237,16 @@ class MulticlassDataProcessor(DataProcessor):
 
         # Check the data, add bias term, and encode y to values [0,n_classes - 1]
         X_train, y_train = check_X_y(X, y)
-        X_train = AddBiasTerm().fit_transform(X_train)
-        y_train = encode_labels(y_train)
+        X_train = AddBiasTerm().fit_transform(X_train)        
+        y_train = self.encoder.fit_transform(y_train)        
         # Initialize data dict, n_features (including bias term) and n_classes
         d = {}
         d['n_features_'] = X_train.shape[1]  
-        d['n_classes_'] = len(np.unique(y_train))
+        d['n_classes_'] = y_train.shape[1]
         # Return stratified training and validation data if val_size is truthy
-        if self.estimator.val_size:
+        if self.val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=True, test_size=self.estimator.val_size, 
+                        stratify=True, test_size=self.val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train            

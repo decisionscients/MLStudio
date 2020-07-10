@@ -115,7 +115,7 @@ def n_classes(y):
     y = check_array(y,accept_sparse=True, accept_large_sparse=True,
                     ensure_2d=False)    
     if y.ndim == 1:
-        return 1
+        return len(np.unique(y))
     else:
         return y.shape[1]
 
@@ -127,6 +127,9 @@ def n_features(X):
         return 1
     else:
         return X.shape[1]
+
+
+        
 
 
 

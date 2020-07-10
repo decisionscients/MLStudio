@@ -62,10 +62,6 @@ class Objective(ABC, BaseEstimator):
         self.gradient_scaler = False
 
     @abstractmethod
-    def name(self):
-        pass
-
-    @abstractmethod
     def __call__(self, theta, **kwargs):
         """Computes the objective function.
 
@@ -107,11 +103,7 @@ class Cost(Objective):
 
     def __init__(self, regularizer=None, gradient_scaler=None):
         self.regularizer = regularizer
-        self.gradient_scaler = gradient_scaler
-    
-    @property
-    def name(self):
-        return "Cost Base Class"        
+        self.gradient_scaler = gradient_scaler    
 
     @abstractmethod
     def __call__(self, theta, y, y_out):
@@ -124,9 +116,12 @@ class Cost(Objective):
 # --------------------------------------------------------------------------  #
 class MSE(Cost):
 
-    @property
-    def name(self):
-        return "Mean Squared Error Cost"        
+    def __init__(self, regularizer=None, gradient_scaler=None):
+        super(MSE, self).__init__(regularizer=regularizer, 
+                                  gradient_scaler=gradient_scaler)
+
+        self.name = "Mean Squared Error Cost"        
+        self.type = "Regression"
 
     def __call__(self, theta, y, y_out):
         """Computes the mean squared error cost.
@@ -193,9 +188,12 @@ class MSE(Cost):
 # --------------------------------------------------------------------------  #
 class CrossEntropy(Cost):
 
-    @property
-    def name(self):
-        return "Cross Entropy Cost"        
+    def __init__(self, regularizer=None, gradient_scaler=None):
+        super(CrossEntropy, self).__init__(regularizer=regularizer, 
+                                  gradient_scaler=gradient_scaler)
+
+        self.name = "Cross Entropy"        
+        self.type = "Binary Classification"
 
     def __call__(self, theta, y, y_out):
         """Computes cross entropy cost.
@@ -265,9 +263,12 @@ class CrossEntropy(Cost):
 class CategoricalCrossEntropy(Cost):
 
 
-    @property
-    def name(self):
-        return "Categorical Cross Entropy Cost"        
+    def __init__(self, regularizer=None, gradient_scaler=None):
+        super(CategoricalCrossEntropy, self).__init__(regularizer=regularizer, 
+                                  gradient_scaler=gradient_scaler)
+
+        self.name = "Categorical Cross Entropy"        
+        self.type = "Multiclass Classification"
 
     def __call__(self, theta, y, y_out):
         """Computes categorical cross entropy cost.

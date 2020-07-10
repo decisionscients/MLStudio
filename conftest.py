@@ -165,7 +165,7 @@ def get_logistic_regression_data_features():
     return data['feature_names']
 
 @fixture(scope="session")
-def get_softmax_regression_split_data(make_multiclass_data):
+def get_multiclass_regression_data_split(make_multiclass_data):
     X, y = make_multiclass_data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.33, random_state=50)
@@ -208,21 +208,21 @@ def get_log():
 # ---------------------------------------------------------------------------- #
 @fixture(scope="session")
 def make_regression_data():
-    X, y = make_regression(n_samples=1000, n_features=100, random_state=5)    
+    X, y = make_regression(n_samples=100, n_features=10, random_state=5)    
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)    
     return X, y
 
 @fixture(scope="session")
 def make_classification_data():
-    X, y, = make_classification(n_samples=1000, n_features=100, random_state=5)        
+    X, y, = make_classification(n_samples=100, n_features=10, random_state=5)        
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)    
     return X, y
 
 @fixture(scope="session")
 def make_multiclass_data():
-    X, y = make_classification(n_samples=1000,n_features=100, n_informative=3,
+    X, y = make_classification(n_samples=100,n_features=10, n_informative=3,
                 n_classes=4, random_state=5)
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)    
