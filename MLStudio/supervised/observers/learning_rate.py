@@ -480,7 +480,7 @@ class BottouSchedule(LearningRateSchedule):
 # --------------------------------------------------------------------------- #
 #                             IMPROVEMENT                                     #
 # --------------------------------------------------------------------------- #
-class Improvement(LearningRateSchedule):
+class Adaptive(LearningRateSchedule):
     """Decays the learning rate if performance plateaus.
 
     Parameters
@@ -517,12 +517,12 @@ class Improvement(LearningRateSchedule):
     def __init__(self, eta0=0.1, eta_min=1e-4,
                  decay_factor=0.5, metric='train_cost',  epsilon=0.001, 
                  patience=10):
-        super(Improvement, self).__init__(
+        super(Adaptive, self).__init__(
             eta0=eta0,
             eta_min=eta_min,
             decay_factor=decay_factor)
 
-        self.name = "Improvement Learning Rate Schedule"        
+        self.name = "Adaptive Learning Rate Schedule"        
         self.metric = metric                
         self.epsilon = epsilon
         self.patience = patience        
@@ -535,7 +535,7 @@ class Improvement(LearningRateSchedule):
         log : dict
             Contains no information
         """
-        super(Improvement, self).on_train_begin(log)
+        super(Adaptive, self).on_train_begin(log)
         self._observer = PerformanceObserver(metric=self.metric, \
             epsilon=self.epsilon, patience=self.patience)    
         self._observer.on_train_begin()        
@@ -558,6 +558,6 @@ class Improvement(LearningRateSchedule):
         """        
         log = log or {}                        
         self._observer.on_epoch_end(epoch, log)
-        super(Improvement, self).on_epoch_end(epoch, log)        
+        super(Adaptive, self).on_epoch_end(epoch, log)        
         
            

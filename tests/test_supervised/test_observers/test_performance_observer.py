@@ -112,7 +112,7 @@ class PerformanceTests:
         act_stability = log['stabilized']
 
         # Compare expected and actual results
-        assert np.array_equal(exp_improvement, act_improvement), "Improvement errors: \nExp {e} \nAct {a}".format(\
+        assert np.array_equal(exp_improvement, act_improvement), "Adaptive errors: \nExp {e} \nAct {a}".format(\
             e=str(exp_improvement), a=str(act_improvement))
         assert np.array_equal(exp_stability, act_stability), "Stability errors"
         

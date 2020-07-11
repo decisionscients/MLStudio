@@ -131,6 +131,11 @@ def get_regression_data():
     return X, y
 
 @fixture(scope="session")
+def get_regression_data_unscaled():
+    X, y = datasets.load_boston(return_X_y=True)
+    return X, y    
+
+@fixture(scope="session")
 def get_regression_data_features():
     data = datasets.load_boston()
     return data['feature_names']
@@ -208,24 +213,40 @@ def get_log():
 # ---------------------------------------------------------------------------- #
 @fixture(scope="session")
 def make_regression_data():
-    X, y = make_regression(n_samples=100, n_features=10, random_state=5)    
+    X, y = make_regression(n_samples=1000, n_features=10, random_state=5)    
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)    
     return X, y
 
 @fixture(scope="session")
 def make_classification_data():
-    X, y, = make_classification(n_samples=100, n_features=10, random_state=5)        
+    X, y, = make_classification(n_samples=1000, n_features=10, random_state=5)        
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)    
     return X, y
 
 @fixture(scope="session")
 def make_multiclass_data():
-    X, y = make_classification(n_samples=100,n_features=10, n_informative=3,
+    X, y = make_classification(n_samples=1000,n_features=10, n_informative=3,
                 n_classes=4, random_state=5)
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)    
+    return X, y
+
+@fixture(scope="session")
+def make_regression_data_unscaled():
+    X, y = make_regression(n_samples=1000, n_features=10, random_state=5)    
+    return X, y
+
+@fixture(scope="session")
+def make_classification_data_unscaled():
+    X, y, = make_classification(n_samples=1000, n_features=10, random_state=5)        
+    return X, y
+
+@fixture(scope="session")
+def make_multiclass_data_unscaled():
+    X, y = make_classification(n_samples=1000,n_features=10, n_informative=3,
+                n_classes=4, random_state=5)
     return X, y
 
 # ---------------------------------------------------------------------------- #

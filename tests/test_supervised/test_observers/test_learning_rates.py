@@ -38,7 +38,7 @@ from mlstudio.supervised.observers.learning_rate import SqrtTimeDecay
 from mlstudio.supervised.observers.learning_rate import ExponentialDecay, PolynomialDecay
 from mlstudio.supervised.observers.learning_rate import PolynomialStepDecay
 from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay, PowerSchedule
-from mlstudio.supervised.observers.learning_rate import BottouSchedule, Improvement
+from mlstudio.supervised.observers.learning_rate import BottouSchedule, Adaptive
 
 @mark.observer
 @mark.lrs
@@ -758,7 +758,7 @@ class BottouScheduleTests:
 @mark.observer
 @mark.lrs
 @mark.improvement
-class ImprovementTests:
+class AdaptiveTests:
 
     def _get_expected_results(self, filepath):
         return pd.read_excel(filepath, sheet_name='results', header=0, names=['cost','lr'],
@@ -768,41 +768,41 @@ class ImprovementTests:
         est = get_mock_estimator        
         # Validate initial learning rate
         with pytest.raises(TypeError):
-            lrs = Improvement(eta0='h')
+            lrs = Adaptive(eta0='h')
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = Improvement(eta0=0)
+            lrs = Adaptive(eta0=0)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = Improvement(eta0=1)
+            lrs = Adaptive(eta0=1)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()            
         # Validate minimum learning rate
         with pytest.raises(TypeError):
-            lrs = Improvement(eta_min=None)
+            lrs = Adaptive(eta_min=None)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = Improvement(eta_min=0)
+            lrs = Adaptive(eta_min=0)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = Improvement(eta_min=1)
+            lrs = Adaptive(eta_min=1)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()      
         # Validate decay_factor
         with pytest.raises(TypeError):
-            lrs = Improvement(decay_factor=None)            
+            lrs = Adaptive(decay_factor=None)            
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = Improvement(decay_factor=-1)
+            lrs = Adaptive(decay_factor=-1)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()
         with pytest.raises(ValueError):
-            lrs = Improvement(decay_factor=2)
+            lrs = Adaptive(decay_factor=2)
             lrs.set_model(est(epochs=10))
             lrs.on_train_begin()   
     
@@ -814,7 +814,7 @@ class ImprovementTests:
         cost = exp_results['cost'].values
         exp_results = exp_results['lr'].values
         # Instantiate learning rate schedule and create it as an observer
-        lrs = Improvement(eta0=0.1, eta_min=0.007,
+        lrs = Adaptive(eta0=0.1, eta_min=0.007,
                         decay_factor=0.5, epsilon=0.01, patience=2)
         observers=[lrs]    
         # Instantiate mock estimator
