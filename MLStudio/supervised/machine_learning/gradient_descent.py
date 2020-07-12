@@ -93,22 +93,6 @@ class GDAbstract(ABC,BaseEstimator):
         self._converged = x       
 
     # ----------------------------------------------------------------------- #
-    def _validate_params(self):
-        """Performs parameter validation."""
-        validate_range(param=self.eta0, minimum=0,
-                       maximum=1, param_name='eta0',
-                       left="open", right="open")        
-        validate_int(param=self.epochs, param_name='epochs')
-        if self.theta_init:
-            validate_array_like(param=self.theta_init, param_name='theta_init')
-        if self.optimizer:
-            validate_optimizer(self.optimizer)
-
-        validate_bool(param=self.verbose, param_name='verbose')
-        if self.random_state:
-            validate_int(param=self.random_state, param_name='random_state')
-
-    # ----------------------------------------------------------------------- #
     def _copy_mutable_parameters(self, log=None):
         """Makes copies of mutable parameters and makes them private members."""
 
