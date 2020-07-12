@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.datasets import make_regression
 
-from mlstudio.supervised.estimator.gradient import GradientDescentRegressor
+from mlstudio.supervised.estimator.gradient import GDRegressor
 from mlstudio.utils.data_manager import StandardScaler
 from mlstudio.visual.animations.gradient import MultiModelSearch3D
 from mlstudio.visual.animations.gradient import MultiModelFit2D
@@ -45,7 +45,7 @@ theta_init = np.array([-15., 15.])
 batch_size = np.array([None, 32, 1])
 models = {}
 for i in range(len(batch_size)):
-    models[name[i]] = GradientDescentRegressor(theta_init=theta_init, batch_size=batch_size[i]).fit(X,y)
+    models[name[i]] = GDRegressor(theta_init=theta_init, batch_size=batch_size[i]).fit(X,y)
 
 # Run visualizations and save
 directory = "../figures/variants/"

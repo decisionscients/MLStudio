@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentPureOptimizer
+from mlstudio.supervised.machine_learning.gradient_descent import GDPureOptimizer
 from mlstudio.supervised.observers.learning_rate import TimeDecay, StepDecay
 from mlstudio.supervised.observers.learning_rate import ExponentialDecay
 from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay
@@ -68,7 +68,7 @@ class PureOptimizerObjectiveTests:
         for objective in self.objectives:
             objective_min_norm = np.linalg.norm(objective.minimum)
             for optimizer in self.optimizers:
-                est = GradientDescentPureOptimizer(epochs=epochs, 
+                est = GDPureOptimizer(epochs=epochs, 
                                                    optimizer=optimizer,
                                                    objective=objective)
                 est.fit()

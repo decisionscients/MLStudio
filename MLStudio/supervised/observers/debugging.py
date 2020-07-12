@@ -74,9 +74,9 @@ class GradientCheck(Observer):
             theta_plus[i] = theta_plus[i] + self.epsilon
             theta_minus[i] = theta_minus[i] - self.epsilon
             # Compute associated costs
-            y_pred = self.model.task.compute_output(theta_plus, X)
+            y_pred = self.model.application.compute_output(theta_plus, X)
             J_plus = self._objective(theta_plus, y, y_pred)
-            y_pred = self.model.task.compute_output(theta_minus, X)
+            y_pred = self.model.application.compute_output(theta_minus, X)
             J_minus = self._objective(theta_minus, y, y_pred)
 
             # Estimate the gradient
@@ -84,7 +84,7 @@ class GradientCheck(Observer):
             grad_approx.append(grad_approx_i)
         
         # Compute gradient via back-propagation
-        y_pred = self.model.task.compute_output(theta, X)
+        y_pred = self.model.application.compute_output(theta, X)
         grad = self._objective.gradient(theta, X, y, y_pred)         
         return grad, grad_approx
 

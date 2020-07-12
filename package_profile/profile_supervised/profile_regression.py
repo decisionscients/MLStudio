@@ -32,7 +32,7 @@ from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 
 from mlstudio.supervised.machine_learning.linear_regression import LinearRegression
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 
 # --------------------------------------------------------------------------- #
 #                                  DATA                                       #
@@ -48,7 +48,7 @@ def get_regression_data():
 # --------------------------------------------------------------------------- #  
 def profile_linear_regression():    
     X, y = get_regression_data()
-    lr = GradientDescentRegressor(algorithm=LinearRegression())        
+    lr = GDRegressor(algorithm=LinearRegression())        
     pr = cProfile.Profile()
     pr.enable()
     lr.fit(X,y)
@@ -60,7 +60,7 @@ def profile_linear_regression():
 # --------------------------------------------------------------------------- #  
 def profile_linear_regression_sgd():    
     X, y = get_regression_data()
-    lr = GradientDescentRegressor(algorithm=LinearRegression(), batch_size=1)        
+    lr = GDRegressor(algorithm=LinearRegression(), batch_size=1)        
     pr = cProfile.Profile()
     pr.enable()
     lr.fit(X,y)

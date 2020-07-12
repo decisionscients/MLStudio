@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 from mlstudio.visual.model_evaluation import OptimizationCurve
 # --------------------------------------------------------------------------- #
 @mark.visual
@@ -30,7 +30,7 @@ class OptimizationCurveTests:
 
     def test_optimization_curve_loss(self, make_regression_data):
         filepath = "tests/test_visualizations/test_visualization_output/optimization_curve_loss.html"         
-        est = GradientDescentRegressor()
+        est = GDRegressor()
         X, y = make_regression_data
         plot = OptimizationCurve(est)
         plot.fit(X, y)
@@ -39,7 +39,7 @@ class OptimizationCurveTests:
 
     def test_optimization_curve_loss_no_val(self, make_regression_data):
         filepath = "tests/test_visualizations/test_visualization_output/optimization_curve_loss_no_val.html"         
-        est = GradientDescentRegressor(val_size=0)
+        est = GDRegressor(val_size=0)
         X, y = make_regression_data
         plot = OptimizationCurve(est)
         plot.fit(X, y)
@@ -48,7 +48,7 @@ class OptimizationCurveTests:
 
     def test_optimization_curve_score(self, make_regression_data):
         filepath = "tests/test_visualizations/test_visualization_output/optimization_curve_score.html"         
-        est = GradientDescentRegressor()
+        est = GDRegressor()
         X, y = make_regression_data
         plot = OptimizationCurve(est, metric='score')
         plot.fit(X, y)
@@ -57,7 +57,7 @@ class OptimizationCurveTests:
 
     def test_optimization_curve_score_no_val(self, make_regression_data):
         filepath = "tests/test_visualizations/test_visualization_output/optimization_curve_score_no_val.html"         
-        est = GradientDescentRegressor(val_size=0)
+        est = GDRegressor(val_size=0)
         X, y = make_regression_data
         plot = OptimizationCurve(est, metric='score')
         plot.fit(X, y)

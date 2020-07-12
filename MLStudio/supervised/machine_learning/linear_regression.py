@@ -51,7 +51,7 @@ class LinearRegression(BaseRegressor, RegressorMixin):
         return "Linear Regression"    
 
     @property
-    def task(self):
+    def application(self):
         return "Regression"
 
     def compute_output(self, X, theta):

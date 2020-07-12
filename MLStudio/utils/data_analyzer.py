@@ -114,7 +114,7 @@ def n_classes(y):
     """Returns the number of classes for a classification dataset."""
     y = check_array(y,accept_sparse=True, accept_large_sparse=True,
                     ensure_2d=False)    
-    if y.ndim == 1:
+    if y.ndim < 2:
         return len(np.unique(y))
     else:
         return y.shape[1]

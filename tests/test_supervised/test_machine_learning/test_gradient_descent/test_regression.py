@@ -18,7 +18,7 @@
 # License : BSD                                                               #
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
-"""Integration test for GradientDescentRegressor class."""
+"""Integration test for GDRegressor class."""
 import numpy as np
 import pytest
 from pytest import mark
@@ -26,7 +26,7 @@ from sklearn.linear_model import SGDRegressor
 from sklearn.utils.estimator_checks import parametrize_with_checks
 from sklearn.utils.estimator_checks import check_estimator
 
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 from mlstudio.supervised.observers.learning_rate import TimeDecay, StepDecay
 from mlstudio.supervised.observers.learning_rate import ExponentialDecay
 from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay
@@ -51,11 +51,12 @@ from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 from mlstudio.supervised.core import scorers
 # --------------------------------------------------------------------------  #
 count = 0
-observers = [[EarlyStop()],
-            [TimeDecay()], [StepDecay()], [ExponentialDecay()], 
-            [ExponentialStepDecay()], [PolynomialDecay()], [PolynomialStepDecay()], 
-            [PowerSchedule()], [BottouSchedule()], [Adaptive()]]
-scorer_objects = [scorers.R2(), scorers.MSE()]
+early_stops = [None,EarlyStop()]
+learning_rates = \
+            [None, TimeDecay(), StepDecay(), ExponentialDecay(), 
+             ExponentialStepDecay(), PolynomialDecay(), PolynomialStepDecay(), 
+             PowerSchedule(), BottouSchedule(), Adaptive()]
+scorer_objects = [scorers.R2(), scorers.MSE(),scorers.AdjustedR2()]
 objectives = [MSE(), MSE(regularizer=L1(alpha=0.01)), 
                         MSE(regularizer=L2(alpha=0.01)), 
                         MSE(regularizer=L1_L2(alpha=0.01, ratio=0.5))]
@@ -65,28 +66,33 @@ objectives = [MSE(), MSE(regularizer=L1(alpha=0.01)),
 #     QuasiHyperbolicMomentum()
 # ]
 
-scenarios = [[observer, scorer, objective] for observer in observers
-                                           for scorer in scorer_objects
-                                           for objective in objectives
+scenarios = [[scorer, objective, early_stop, learning_rate] \
+    for scorer in scorer_objects
+    for objective in objectives
+    for early_stop in early_stops
+    for learning_rate in learning_rates
         ]
 
-estimators = [GradientDescentRegressor(observers=scenario[0], scorer=scenario[1],
-                                       objective=scenario[2])
+estimators = [GDRegressor(scorer=scenario[0],
+                                       objective=scenario[1], 
+                                       early_stop=scenario[2],
+                                       learning_rate=scenario[3])
                                        for scenario in scenarios]
 @mark.gd
 @mark.regressor_skl
 @mark.skip(reason="takes too long")
 @parametrize_with_checks(estimators)
-def test_regression_sklearn(estimator, check):    
-    observer = [o.name for o in estimator.observers]    
-    print(estimator.scorer.name)
+def test_regression_sklearn(estimator, check):        
+    count += 1
+    scorer = estimator.scorer.name
     objective = estimator.objective.name
+    early_stop = estimator.early_stop.name if estimator.early_stop else None
+    learning_rate = estimator.learning_rate if estimator.learning_rate else None
     regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\
-        None
-    # optimizer = estimator.optimizer.name
-    msg = "Checking scenario : observers : {o}, objective : {ob},\
-            regularizer : {r}".format(
-                o=str(observer), ob=str(objective), r=str(regularizer))
+        None    
+    msg = "Checking scenario {s}: objective : {ob}, regularizer : {r}\
+        scorer : {k}".format(
+                s=str(count), ob=str(objective), r=str(regularizer), k=str(scorer))
     print(msg)        
     check(estimator)
 
@@ -102,17 +108,16 @@ def test_regressor(get_regression_data_split):
 
     for estimator in estimators:
         s_num += 1
-        # Extract scenario options
-        try:
-            observer = [o.name for o in estimator.observers]
-        except:
-            observer = [estimator.observers.name]
+        scorer = estimator.scorer.name
         objective = estimator.objective.name
+        early_stop = estimator.early_stop.name if estimator.early_stop else None
+        learning_rate = estimator.learning_rate if estimator.learning_rate else None
         regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\
-            None        
-        scenario = "\nScenario #{s}: observers :  {o}, objective : {ob}, regularizer : {r}".format(s=str(s_num),
-            o=str(observer), 
-            ob=str(objective), r=str(regularizer))        
+            None    
+        scenario = "Checking scenario {s}: objective : {ob}, regularizer : {r}\
+                scorer : {k}".format(s=str(count), ob=str(objective), 
+                r=str(regularizer), k=str(scorer))            
+
         # Fit the model
         estimator.fit(X_train,y_train)
         mls_score = estimator.score(X_test, y_test)
@@ -160,7 +165,7 @@ def test_regression_optimizers(get_regression_data_split):
     failed_models = []                  
     for optimizer in optimizers:
         s_num += 1
-        estimator = GradientDescentRegressor(optimizer=optimizer)
+        estimator = GDRegressor(optimizer=optimizer)
         estimator.fit(X_train, y_train)
         mls_score = estimator.score(X_test, y_test)
         # Fit sklearn's model

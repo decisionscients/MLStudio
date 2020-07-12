@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 from mlstudio.visual.model_evaluation import ModelSummary, OptimizationCurve
 # --------------------------------------------------------------------------- #
 @mark.visual
@@ -30,7 +30,7 @@ class ModelEvaluationVisualizationTests:
 
     def test_model_summary(self, make_regression_data):
         filepath = "tests/test_visualizations/test_visualization_output/learning_curve.html"         
-        est = GradientDescentRegressor()
+        est = GDRegressor()
         X, y = make_regression_data
         plot = ModelSummary(est)
         plot.fit(X, y)

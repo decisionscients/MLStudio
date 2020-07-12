@@ -28,13 +28,13 @@ from scipy.special import expit, softmax
 from sklearn.linear_model import LinearRegression as skl_linear_regression
 from sklearn.linear_model import LogisticRegression as skl_logistic_regression
 
-from mlstudio.supervised.core.tasks import LinearRegression, LogisticRegression
-from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
+from mlstudio.supervised.core.applications import LinearRegression, LogisticRegression
+from mlstudio.supervised.core.applications import MultinomialLogisticRegression
 from mlstudio.utils.data_manager import AddBiasTerm
 # --------------------------------------------------------------------------  #
-@mark.tasks
+@mark.applications
 @mark.linear_regression
-class LinearRegressionTaskTests:
+class LinearRegressionApplicationTests:
 
     def test_linear_regression_output(self, make_regression_data):        
         X, y = make_regression_data
@@ -55,9 +55,9 @@ class LinearRegressionTaskTests:
         assert np.allclose(y_pred_skl, y_pred), "Predict inaccurate"
 
 # --------------------------------------------------------------------------  #
-@mark.tasks
+@mark.applications
 @mark.logistic_regression
-class LogisticRegressionTaskTests:
+class LogisticRegressionApplicationTests:
 
     def test_logistic_regression_output(self, make_classification_data):
         X, y = make_classification_data
@@ -79,9 +79,9 @@ class LogisticRegressionTaskTests:
         assert np.allclose(y_pred_skl, y_pred), "Predict inaccurate"
 
 # --------------------------------------------------------------------------  #
-@mark.tasks
+@mark.applications
 @mark.softmax_regression
-class SoftmaxRegressionTaskTests:
+class SoftmaxRegressionApplicationTests:
 
     def test_softmax_regression_output(self, make_multiclass_data):
         X, y = make_multiclass_data

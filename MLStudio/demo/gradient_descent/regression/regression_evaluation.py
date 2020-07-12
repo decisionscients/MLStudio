@@ -38,7 +38,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.pipeline import Pipeline
 
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 from mlstudio.supervised.core.objectives import MSE
 from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 from mlstudio.supervised.core.scorers import R2
@@ -95,7 +95,7 @@ def get_mlstudio_results(X, y, algorithm, batch_size):
                             MSE(regularizer=L1_L2(alpha=0.1, ratio=0.15))],
               'epochs': [1000], 'batch_size': batch_size,
               'random_state' : [50]}
-    estimator = GradientDescentRegressor()
+    estimator = GDRegressor()
     clf = GridSearchCV(estimator, params, scoring='r2')
     clf.fit(X,y)    
     # Create scores dataframe

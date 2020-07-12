@@ -34,9 +34,9 @@ from mlstudio.supervised.core.objectives import CategoricalCrossEntropy
 from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
 from mlstudio.supervised.core.regularizers import L2
 from mlstudio.supervised.core.scorers import R2, Accuracy
-from mlstudio.supervised.core.tasks import LinearRegression
-from mlstudio.supervised.core.tasks import LogisticRegression
-from mlstudio.supervised.core.tasks import MultinomialLogisticRegression
+from mlstudio.supervised.core.applications import LinearRegression
+from mlstudio.supervised.core.applications import LogisticRegression
+from mlstudio.supervised.core.applications import MultinomialLogisticRegression
 from mlstudio.supervised.observers.base import Observer, ObserverList
 from mlstudio.supervised.observers.early_stop import EarlyStop
 from mlstudio.supervised.observers.history import BlackBox, Progress
@@ -51,20 +51,21 @@ from mlstudio.visual.text import OptimizationReport
 # =========================================================================== #
 #                       GRADIENT DESCENT ABSTRACT                             #
 # =========================================================================== #        
-class GradientDescentAbstract(ABC,BaseEstimator):
+class GDAbstract(ABC,BaseEstimator):
     """Gradient Descent abstract base class."""
 
-    def __init__(self, eta0=0.01, epochs=1000, objective=None,
-                 theta_init=None, optimizer=None,  observers=None,
-                 scorer=None, verbose=False, random_state=None):
+    def __init__(self, eta0=0.01, learning_rate=None, epochs=1000, 
+                 objective=None, theta_init=None, optimizer=None,  
+                 early_stop=False, verbose=False, 
+                 random_state=None):
 
         self.eta0 = eta0
+        self.learning_rate = learning_rate
         self.epochs = epochs
         self.objective = objective
         self.theta_init = theta_init        
         self.optimizer = optimizer 
-        self.observers = observers
-        self.scorer = scorer
+        self.early_stop = early_stop
         self.verbose = verbose
         self.random_state = random_state
 
@@ -94,76 +95,70 @@ class GradientDescentAbstract(ABC,BaseEstimator):
     # ----------------------------------------------------------------------- #
     def _validate_params(self):
         """Performs parameter validation."""
-        # Initial Learning Rate
         validate_range(param=self.eta0, minimum=0,
                        maximum=1, param_name='eta0',
                        left="open", right="open")        
-        # Epochs
         validate_int(param=self.epochs, param_name='epochs')
-        # Theta Init
         if self.theta_init:
             validate_array_like(param=self.theta_init, param_name='theta_init')
-        # Optimizer
         if self.optimizer:
             validate_optimizer(self.optimizer)
-        # Observers 
-        if self.observers:
-            validate_observers(self.observers)
-        # Verbose 
+
         validate_bool(param=self.verbose, param_name='verbose')
-        # Random State
         if self.random_state:
             validate_int(param=self.random_state, param_name='random_state')
 
     # ----------------------------------------------------------------------- #
-    def _copy_mutable_parameters(self):
-        """Makes deepcopies of mutable parameters and makes them private members."""
-        # Copy observers e.g. Learning Rate, Early Stop
-        self._observers = []
-        if self.observers:
-            for observer in self.observers:
-                self._observers.append(copy.deepcopy(observer))     
+    def _copy_mutable_parameters(self, log=None):
+        """Makes copies of mutable parameters and makes them private members."""
 
-        # The Optimizer algorithm
+        self._eta = copy.copy(self.eta0)
+        
+        self._learning_rate = copy.deepcopy(self.learning_rate) if \
+            self.learning_rate else self.learning_rate
+
+        self._early_stop = copy.deepcopy(self.early_stop) if self.early_stop\
+            else self.early_stop
+
         self._optimizer = copy.deepcopy(self.optimizer) if self.optimizer\
             else GradientDescentOptimizer()
 
-        # Objective function
         self._objective = copy.deepcopy(self.objective) if self.objective\
-            else self.objective
-
-        # Scorer object
-        self._scorer = copy.deepcopy(self.scorer) if self.scorer\
-            else self.scorer
+            else self.objective            
 
     # ----------------------------------------------------------------------- #
-    def _create_observer_attributes(self):            
+    def _obtain_implicit_dependencies(self, log=None):
+        """Initialize delegated objects."""            
+        pass
+
+    # ----------------------------------------------------------------------- #
+    def _initialize_observers(self, log=None):
+        """Initialize remaining observers. Create and initialize observer list."""
+
+        self._observer_list = ObserverList()                   
+
         self.blackbox_ = BlackBox()
+        self._observer_list.append(self.blackbox_)
 
-    # ----------------------------------------------------------------------- #
-    def _create_observer_list(self):
-        """Adds all observers to the observer list that gets notified."""
-        self._observers.append(self.blackbox_)
-        # Add any additional default observers to observer dictionary
         if self.verbose:
-            self._observers.append(Progress())
+            self._observer_list.append(Progress())
 
-        # Create private list of observers
-        self._observer_list = ObserverList()                
-        for observer in self._observers:
-            self._observer_list.append(observer)
+        if self._learning_rate:
+            self._observer_list.append(self._learning_rate)
 
-        # Publish model parameters and instance on observer objects.
+        if self._early_stop:
+            self._observer_list.append(self._early_stop)
+        
+        # Publish model parameters and estimator instance on observer objects.
         self._observer_list.set_params(self.get_params())
         self._observer_list.set_model(self)            
 
     # ----------------------------------------------------------------------- #
     def _compile(self, log=None):        
         """Obtains, initializes object dependencies and registers observers."""
-        self._copy_mutable_parameters()
+        self._copy_mutable_parameters(log)
         self._obtain_implicit_dependencies(log)
-        self._create_observer_attributes()
-        self._create_observer_list()
+        self._initialize_observers(log)
 
     # ----------------------------------------------------------------------- #
     def _on_train_begin(self, log=None):
@@ -182,11 +177,10 @@ class GradientDescentAbstract(ABC,BaseEstimator):
         self._gradient = None
         self._current_state = {}
         self._converged = False    
-        # Initialize learning rate
-        self._eta = copy.copy(self.eta0)
+
         # Initialize training on observers
         self._observer_list.on_train_begin()
-        # Prepares data and adds to estimator as attributes.
+        # Prepares data and adds data to estimator as attributes.
         if log:            
             self._prepare_data(log.get('X'), log.get('y'))
         # Weights are initialized based upon the number of features in the dataset 
@@ -267,10 +261,6 @@ class GradientDescentAbstract(ABC,BaseEstimator):
 
     # ----------------------------------------------------------------------- #
     @abstractmethod
-    def _obtain_implicit_dependencies(self, log=None):
-        pass    
-    # ----------------------------------------------------------------------- #
-    @abstractmethod
     def _set_current_state(self):
         """Takes snapshot of current state and performance."""
         pass           
@@ -296,27 +286,24 @@ class GradientDescentAbstract(ABC,BaseEstimator):
 # =========================================================================== #
 #                    GRADIENT DESCENT PURE OPTIMIZER                          #
 # =========================================================================== #
-class GradientDescentPureOptimizer(GradientDescentAbstract):
+class GDPureOptimizer(GDAbstract):
     """Performs pure optimization of an objective function."""
 
-    def __init__(self, eta0=0.01, epochs=1000, objective=Adjiman(),
-                 theta_init=None, optimizer=None,  observers=None, 
-                 scorer=None, verbose=False, random_state=None):
-        super(GradientDescentPureOptimizer, self).__init__(
+    def __init__(self, eta0=0.01, learning_rate=None, epochs=1000, 
+                 objective=None, theta_init=None, optimizer=None,  
+                 early_stop=False, verbose=False, 
+                 random_state=None):
+        super(GDPureOptimizer, self).__init__(
             eta0 = eta0,
+            learning_rate=learning_rate,
             epochs = epochs,
             objective = objective,
             theta_init = theta_init,
             optimizer = optimizer,
-            observers = observers,
-            scorer = scorer,
+            early_stop=early_stop,
             verbose = verbose,
             random_state = random_state
         )        
-
-    # ----------------------------------------------------------------------- #        
-    def _obtain_implicit_dependencies(self, log=None):
-        pass
 
     # ----------------------------------------------------------------------- #
     def _init_weights(self):
@@ -366,11 +353,10 @@ class GradientDescentPureOptimizer(GradientDescentAbstract):
 
             cost = self._objective(self._theta)
 
-            self._theta_new, self._gradient = self._optimizer(gradient=self._objective.gradient, \
+            self._theta, self._gradient = self._optimizer(gradient=self._objective.gradient, \
                     learning_rate=self._eta, theta=copy.deepcopy(self._theta))                    
 
             self._on_epoch_end()
-            
 
         self._on_train_end()
         return self   
@@ -379,7 +365,7 @@ class GradientDescentPureOptimizer(GradientDescentAbstract):
 # =========================================================================== #
 #                        GRADIENT DESCENT ESTIMATOR                           #
 # =========================================================================== # 
-class GradientDescentEstimator(GradientDescentAbstract):
+class GDEstimator(GDAbstract):
     """Gradient descent base class for all estimators.
     
     Performs gradient descent optimization to estimate the parameters theta
@@ -389,6 +375,10 @@ class GradientDescentEstimator(GradientDescentAbstract):
     ----------
     eta0 : float
         The initial learning rate on open interval (0,1) 
+
+    learning_rate : LearningRateSchedule object or None (default=None)
+        This optional parameter can be a supported LearningRateSchedule
+        object.
 
     epochs : int
         The number of epochs to execute
@@ -414,11 +404,12 @@ class GradientDescentEstimator(GradientDescentAbstract):
         The optimization algorithm to use. If None, the generic 
         GradientDescentOptimizer will be used.
 
-    observers : list
-        A list of observer objects.
+    early_stop : an EarlyStop object or None (default=None)
+        Class responsible for stopping the optimization process once
+        training has stabilized. 
 
-    scorer : A Scorer object
-        The object used to compute in-sample and out-of-sample scoring.
+    scorer : a Scorer object (default=None)
+        Supported Scorer object for estimating performance.
 
     val_size : float in interval [0,1) (default=0.3)
         The proportion of the training set to allocate a validation set
@@ -432,28 +423,24 @@ class GradientDescentEstimator(GradientDescentAbstract):
         occurs.
     
     """
-    def __init__(self, eta0=0.01, epochs=1000, objective=None,
-                 batch_size=None,  theta_init=None, optimizer=None, 
-                 observers=None, scorer=None, val_size=0.3, 
-                 verbose=False, random_state=None):
-        super(GradientDescentEstimator, self).__init__(
+    def __init__(self, eta0=0.01, learning_rate=None, 
+                 epochs=1000, objective=None, batch_size=None,  theta_init=None, 
+                 optimizer=None, early_stop=None, scorer=None, 
+                 val_size=0.3, verbose=False, random_state=None):
+        super(GDEstimator, self).__init__(
             eta0 = eta0,
+            learning_rate=learning_rate,
             epochs = epochs,
             objective = objective,
             theta_init = theta_init,
             optimizer = optimizer,            
-            observers = observers,
-            scorer = scorer,
+            early_stop=early_stop,            
             verbose = verbose,
             random_state = random_state    
         )
+        self.scorer = scorer
         self.val_size = val_size
         self.batch_size = batch_size               
-
-    # ----------------------------------------------------------------------- #                
-    @property
-    def task(self):
-        return self._task
 
     # ----------------------------------------------------------------------- #                
     @property
@@ -470,22 +457,41 @@ class GradientDescentEstimator(GradientDescentAbstract):
     # ----------------------------------------------------------------------- #                
     @property
     def description(self):
-        """Returns the estimator description."""                   
-        
-        # Optimizer Title
+        """Creates and returns the estimator description."""                   
+
         try:
-            optimizer_title = self.optimizer.name
+            schedule = " with " + self.learning_rate.name + " Learning Rate Schedule"
         except:
-            optimizer_title = ""
+            schedule = ""           
+
+        try:
+            objective = " Optimizing " + self.objective.name
+        except:
+            objective = ""            
         
-        # Regularizer Title        
+        try:
+            optimizer = " using " + self.optimizer.name
+        except:
+            optimizer = ""
+
+        try:
+            early_stop = " and " + self.early_stop.name
+        except:
+            early_stop = ""
+               
         try: 
-            regularizer_title = " with " + self.objective.regularizer_name
+            regularizer = " with  " + self.objective.regularizer_name
         except:
-            regularizer_title = ""
+            regularizer = ""
         
-        return self.__class__.__name__ + ' using ' + self.variant + optimizer_title + \
-            regularizer_title
+        return self._application.name + " for " + self.variant + objective +\
+            regularizer + optimizer + early_stop
+    # ----------------------------------------------------------------------- #
+    def _copy_mutable_parameters(self, log=None):
+        """Makes copies of mutable parameters and makes them private members."""
+        super(GDEstimator, self)._copy_mutable_parameters(log=log)
+        self.scorer_ = copy.deepcopy(self.scorer) if self.scorer\
+            else self.scorer
 
     # ----------------------------------------------------------------------- #    
     def _prepare_data(self, X, y):
@@ -535,7 +541,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
         s['theta'] = self._theta 
         
         # Compute training costs 
-        y_out = self._task.compute_output(self._theta, self.X_train_)
+        y_out = self._application.compute_output(self._theta, self.X_train_)
         s['train_cost'] = self._objective(self._theta, self.y_train_, y_out)
         # Compute training score
         s['train_score'] = self._score(self.X_train_, self.y_train_)
@@ -544,7 +550,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
         if self.val_size:
             if self.X_val_.shape[0] > 0:
                 # Compute validation error 
-                y_out_val = self._task.compute_output(self._theta, self.X_val_)
+                y_out_val = self._application.compute_output(self._theta, self.X_val_)
                 s['val_cost'] = self._objective(self._theta, self.y_val_, y_out_val)                
                 # Compute validation score
                 s['val_score'] = self._score(self.X_val_, self.y_val_)
@@ -583,7 +589,7 @@ class GradientDescentEstimator(GradientDescentAbstract):
                 self._on_batch_begin()
                 
                 # Compute model output
-                y_out = self._task.compute_output(self._theta, X_batch)     
+                y_out = self._application.compute_output(self._theta, X_batch)     
 
                 # Compute costs
                 cost = self._objective(self._theta, y_batch, y_out)
@@ -624,19 +630,18 @@ class GradientDescentEstimator(GradientDescentAbstract):
         check_is_fitted(self)
         X = check_X(X)
         X = AddBiasTerm().fit_transform(X)
-        return self._task.predict(self.theta_, X)    
+        return self._application.predict(self.theta_, X)    
 
     # ----------------------------------------------------------------------- #    
     def _score(self, X, y):
         """Calculates scores during as the beginning of each training epoch."""        
         y = check_y(y)
-        y_pred = self._task.predict(self._theta, X)
+        y_pred = self._application.predict(self._theta, X)
         try:
-            score = self._scorer(y, y_pred)
-        except:
-            msg = "Unable to compute score. No scorer object designated."        
-            raise Exception(msg)
-        return score
+            return self.scorer_(y, y_pred, X)
+        except Exception as e:            
+            print(e)
+        
 
     # ----------------------------------------------------------------------- #    
     def score(self, X, y):
@@ -657,10 +662,10 @@ class GradientDescentEstimator(GradientDescentAbstract):
         """
         y_pred = self.predict(X)        
         try:
-            score = self._scorer(y, y_pred)    
-        except:
-            raise Exception("No valid scorer designated.")
-        return score
+            return self.scorer_(y, y_pred, X)    
+        except Exception as e:
+            print(e)
+        
 
     # ----------------------------------------------------------------------- #    
     def summary(self):  
@@ -671,20 +676,22 @@ class GradientDescentEstimator(GradientDescentAbstract):
 # =========================================================================== #
 #                        GRADIENT DESCENT REGRESSOR                           #
 # =========================================================================== # 
-class GradientDescentRegressor(GradientDescentEstimator):
+class GDRegressor(GDEstimator):
     """Gradient descent regression class."""
-    def __init__(self, eta0=0.01, epochs=1000, objective=MSE(), 
-                 batch_size=None, theta_init=None, optimizer=None,  
-                 observers=None, scorer=R2(), val_size=0.3,
+    def __init__(self, eta0=0.01, learning_rate=None, epochs=1000, 
+                 objective=MSE(), batch_size=None, theta_init=None, 
+                 optimizer=GradientDescentOptimizer(),  
+                 early_stop=None, scorer=R2(), val_size=0.3,
                  verbose=False, random_state=None):
-        super(GradientDescentRegressor, self).__init__(
+        super(GDRegressor, self).__init__(
             eta0 = eta0,
+            learning_rate=learning_rate,
             epochs = epochs,
             objective = objective,
             batch_size = batch_size,
             theta_init = theta_init,
-            optimizer = optimizer,            
-            observers = observers,
+            optimizer = optimizer,      
+            early_stop=early_stop,
             scorer = scorer,
             val_size = val_size,            
             verbose = verbose,
@@ -693,9 +700,9 @@ class GradientDescentRegressor(GradientDescentEstimator):
 
     # ----------------------------------------------------------------------- #    
     def _obtain_implicit_dependencies(self, log=None):
-        super(GradientDescentRegressor, self)._obtain_implicit_dependencies()                
-        # Set the task that will be computing the output and predictions. 
-        self._task = LinearRegression()
+        super(GDRegressor, self)._obtain_implicit_dependencies()                
+        # Set the application that will be computing the output and predictions. 
+        self._application = LinearRegression()
 
         # Instantiates the data processor for regression
         self._data_processor = RegressionDataProcessor(val_size=self.val_size,
@@ -704,58 +711,67 @@ class GradientDescentRegressor(GradientDescentEstimator):
 # =========================================================================== #
 #                        GRADIENT DESCENT CLASSIFIER                          #
 # =========================================================================== # 
-class GradientDescentClassifier(GradientDescentEstimator):
+class GDClassifier(GDEstimator):
     """Gradient descent classification class."""
-    def __init__(self, eta0=0.01, epochs=1000, objective=CrossEntropy(), 
-                 batch_size=None, theta_init=None, optimizer=None,  
-                 observers=None, scorer=Accuracy(), val_size=0.3,
-                 verbose=False, random_state=None):
-        super(GradientDescentClassifier, self).__init__(
+    def __init__(self, eta0=0.01, learning_rate=None, epochs=1000, 
+                 objective=CrossEntropy(), batch_size=None, theta_init=None, 
+                 optimizer=GradientDescentOptimizer(),  early_stop=None,
+                 scorer=Accuracy(), val_size=0.3, verbose=False, 
+                 random_state=None):
+        super(GDClassifier, self).__init__(
             eta0 = eta0,
+            learning_rate=learning_rate,
             epochs = epochs,
             objective = objective,
             batch_size = batch_size,
             theta_init = theta_init,
-            optimizer = optimizer,            
-            observers = observers,
+            optimizer = optimizer,    
+            early_stop=early_stop,                    
             scorer = scorer,
             val_size = val_size,            
             verbose = verbose,
             random_state = random_state                
         )
-    # ----------------------------------------------------------------------- # 
-    def _prepare_data(self, X, y):
-        """Prepares the data and sets n_features_ and n_classes_ attributes."""
-        super(GradientDescentClassifier, self)._prepare_data(X, y)
-        self.n_classes_ = n_classes(self.y_train_)        
+
+    # ----------------------------------------------------------------------- #
+    def _on_train_begin(self, log=None):
+        """Initializes all data, objects, and dependencies."""        
+
+        self.n_classes_ = n_classes(log.get('y'))
+
+        if self.n_classes_ > 2:
+            self._binary_classification = False
+        else:
+            self._binary_classification = True
+        
+        super(GDClassifier, self)._on_train_begin(log=log)
 
     # ----------------------------------------------------------------------- #    
     def _obtain_implicit_dependencies(self, log=None):
-        """Obtain the task and data processor classes."""
-        super(GradientDescentClassifier, self)._obtain_implicit_dependencies()                
-        # Determine type of classification and obtain required dependencies.          
+        """Obtain the application and data processor classes."""
+        super(GDClassifier, self)._obtain_implicit_dependencies()                
 
-        if n_classes(log.get('y')) < 3:            
-            self._task = LogisticRegression()
+        if self._binary_classification:
+            self._application = LogisticRegression()
             self._data_processor = LogisticRegressionDataProcessor(\
                                 val_size=self.val_size, 
-                                random_state=self.random_state)
-            if "Binary" not in self._objective.type:                
+                                random_state=self.random_state)          
+            if not self.objective:  
                 self._objective = CrossEntropy()
         else:
-            self._task = MultinomialLogisticRegression()        
+            self._application = MultinomialLogisticRegression()        
             self._data_processor = MulticlassDataProcessor(\
                                 val_size=self.val_size, 
                                 random_state=self.random_state)
-            if "Multiclass" not in self._objective.type:
+            if not self._objective:
                 self._objective = CategoricalCrossEntropy()
         
 
     # ----------------------------------------------------------------------- #                                    
     def _init_weights(self):
         """Initializes weights for a binary and multiclass classification problem."""
-        if self.n_classes_ == 2:
-            super(GradientDescentClassifier, self)._init_weights()
+        if self._binary_classification:
+            super(GDClassifier, self)._init_weights()
         else:
             if self.theta_init is not None:
                 assert self.theta_init.shape == (self.n_features_, self.n_classes_), \
@@ -764,3 +780,11 @@ class GradientDescentClassifier(GradientDescentEstimator):
             else:
                 rng = np.random.RandomState(self.random_state)                
                 self._theta = rng.randn(self.n_features_, self.n_classes_)   
+
+    # ----------------------------------------------------------------------- #                                        
+    def predict_proba(self, X):
+        """Predicts class probabilities."""
+        check_is_fitted(self)
+        X = check_X(X)
+        X = AddBiasTerm().fit_transform(X)        
+        return self._application.predict_proba(self.theta_, X)

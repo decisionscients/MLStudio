@@ -16,7 +16,7 @@
 # License : BSD                                                               #
 # Copyright (c) 2020 nov8.ai                                                  #
 # =========================================================================== #
-"""Integration test for GradientDescentRegressor class."""
+"""Integration test for GDRegressor class."""
 import numpy as np
 import pytest
 from pytest import mark
@@ -24,7 +24,7 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.utils.estimator_checks import parametrize_with_checks
 from sklearn.utils.estimator_checks import check_estimator
 
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentClassifier
+from mlstudio.supervised.machine_learning.gradient_descent import GDClassifier
 from mlstudio.supervised.observers.learning_rate import TimeDecay, StepDecay
 from mlstudio.supervised.observers.learning_rate import ExponentialDecay
 from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay
@@ -49,44 +49,53 @@ from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
 from mlstudio.supervised.core import scorers
 # --------------------------------------------------------------------------  #
 count = 0
-observers = [[EarlyStop()],
-            [TimeDecay()], [StepDecay()], [ExponentialDecay()], 
-            [ExponentialStepDecay()], [PolynomialDecay()], [PolynomialStepDecay()], 
-            [PowerSchedule()], [BottouSchedule()], [Adaptive()]]
-scorer_objects = [scorers.Accuracy()]
+early_stops = [None,EarlyStop()]
+learning_rates = \
+            [None, TimeDecay(), StepDecay(), ExponentialDecay(), 
+             ExponentialStepDecay(), PolynomialDecay(), PolynomialStepDecay(), 
+             PowerSchedule(), BottouSchedule(), Adaptive()]
+scorer_objects = [scorers.F1(), scorers.Recall(),scorers.Precision(),scorers.Specificity()]
 objectives = [CrossEntropy(), CrossEntropy(regularizer=L1(alpha=0.01)), 
                         CrossEntropy(regularizer=L2(alpha=0.01)), 
                         CrossEntropy(regularizer=L1_L2(alpha=0.01, ratio=0.5))]
+# optimizers = [
+#     GradientDescentOptimizer(), Momentum(), Nesterov(),Adagrad(), Adadelta(),
+#     RMSprop(), Adam(), AdaMax(), Nadam(), AMSGrad(), AdamW(), QHAdam(),
+#     QuasiHyperbolicMomentum()
+# ]
 
-scenarios = [[observer, scorer, objective] for observer in observers
-                                           for scorer in scorer_objects
-                                           for objective in objectives
-                                         
+scenarios = [[scorer, objective, early_stop, learning_rate] \
+    for scorer in scorer_objects
+    for objective in objectives
+    for early_stop in early_stops
+    for learning_rate in learning_rates
         ]
 
-estimators = [GradientDescentClassifier(observers=scenario[0], scorer=scenario[1],
-                                       objective=scenario[2])
+estimators = [GDClassifier(scorer=scenario[0],
+                                       objective=scenario[1], 
+                                       early_stop=scenario[2],
+                                       learning_rate=scenario[3])
                                        for scenario in scenarios]
 @mark.gd
 @mark.logistic_regression_skl
-@mark.skip(reason="takes too long")
+#@mark.skip(reason="takes too long")
 @parametrize_with_checks(estimators)
-def test_logistic_regression_sklearn(estimator, check):    
-    observer = [o.name for o in estimator.observers]    
-    print(estimator.scorer.name)
+def test_logistic_regression_sklearn(estimator, check):        
+    scorer = estimator.scorer.name
     objective = estimator.objective.name
+    early_stop = estimator.early_stop.name if estimator.early_stop else None
+    learning_rate = estimator.learning_rate if estimator.learning_rate else None
     regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\
-        None
-    # optimizer = estimator.optimizer.name
-    msg = "Checking scenario : observers : {o}, objective : {ob},\
-            regularizer : {r}".format(
-                o=str(observer), ob=str(objective), r=str(regularizer))
+        None    
+    msg = "Processing Objective: {o}, Scorer: {s}, Early Stop: {e}, Learning Rate: {l}, \
+        Regularizer: {r}".format(o=str(objective),s=str(scorer), e=str(early_stop),\
+            l=str(learning_rate), r=str(regularizer))
     print(msg)        
     check(estimator)
 
 @mark.gd
 @mark.logistic_regression
-#@mark.skip(reason="takes too long")
+@mark.skip(reason="takes too long")
 def test_logistic_regression(get_logistic_regression_data_split):
     X_train, X_test, y_train, y_test = get_logistic_regression_data_split
     n_within_1_pct = 0
@@ -96,17 +105,15 @@ def test_logistic_regression(get_logistic_regression_data_split):
 
     for estimator in estimators:
         s_num += 1
-        # Extract scenario options
-        try:
-            observer = [o.name for o in estimator.observers]
-        except:
-            observer = [estimator.observers.name]
+        scorer = estimator.scorer.name
         objective = estimator.objective.name
+        early_stop = estimator.early_stop.name if estimator.early_stop else None
+        learning_rate = estimator.learning_rate if estimator.learning_rate else None
         regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\
-            None        
-        scenario = "\nScenario #{s}: observers : {o}, objective : {ob}, regularizer : {r}".format(s=str(s_num),
-            o=str(observer), 
-            ob=str(objective), r=str(regularizer))        
+            None    
+        msg = "Checking scenario {s}: objective : {ob}, regularizer : {r}\
+        scorer : {k}".format(
+                s=str(s_num), ob=str(objective), r=str(regularizer), k=str(scorer))       
         # Fit the model
         estimator.fit(X_train,y_train)
         mls_score = estimator.score(X_test, y_test)

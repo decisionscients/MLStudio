@@ -43,9 +43,9 @@ from mlstudio.supervised.core.optimizers import Adagrad
 from mlstudio.supervised.core.objectives import StyblinskiTank
 from mlstudio.supervised.observers.learning_rate import TimeDecay
 from mlstudio.supervised.core.scorers import MSE
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentAbstract
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentPureOptimizer
+from mlstudio.supervised.machine_learning.gradient_descent import GDAbstract
+from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GDPureOptimizer
 
 homedir = str(Path(__file__).parents[0])
 datadir = os.path.join(homedir, "tests\\test_data")
@@ -55,7 +55,7 @@ sys.path.append(datadir)
 #                               FILES TO SKIP                                  #
 # ---------------------------------------------------------------------------- #
 
-collect_ignore_glob = ["*est_regression.py"]
+collect_ignore_glob = ["*validation.py", "*ss_regression.py", "*t_regression.py"]
 
 # ---------------------------------------------------------------------------- #
 #                                  DATA                                        #
@@ -277,7 +277,7 @@ class MockEstimator:
         self.verbose = verbose
         self.random_state = random_state
         # Initialize attributes and variables required
-        self.scorer = MSE()
+        self.scorer_ = MSE()
         self.blackbox_ = MockBlackBox()
         self._eta = eta0
     # ----------------------------------------------------------------------- #
@@ -317,7 +317,7 @@ def get_mock_estimator():
 
 @fixture(scope='session')
 def get_regression_estimator():
-    return GradientDescentRegressor()
+    return GDRegressor()
 # ---------------------------------------------------------------------------- #
 #                                   TEST PACKAGES                              #
 # ---------------------------------------------------------------------------- #

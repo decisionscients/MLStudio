@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 from mlstudio.supervised.core.objectives import MSE
 from mlstudio.supervised.core.regularizers import L2
 from mlstudio.model_selection.cross_validation import NestedCV
@@ -31,7 +31,7 @@ class CrossValidationTests:
 
     def test_nested_cv(self, get_regression_data_unscaled):
         X, y = get_regression_data_unscaled
-        est = GradientDescentRegressor()
+        est = GDRegressor()
         param_set = [
             {"epochs": [100,200,500,1000],
              "batch_size": [32, 64]}

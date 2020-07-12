@@ -167,11 +167,11 @@ def test_validate_scorer():
 # --------------------------------------------------------------------------  #    
 @mark.utils
 @mark.validation
-def test_validate_task():    
-    from mlstudio.utils.validation import validate_task
-    from mlstudio.supervised.core.tasks import LogisticRegression    
+def test_validate_application():    
+    from mlstudio.utils.validation import validate_application
+    from mlstudio.supervised.core.applications import LogisticRegression    
     with pytest.raises(TypeError) as v:
-        validate_task('hand')
+        validate_application('hand')
         assert "value error"  in str(v.value)
-    validate_task(LogisticRegression())           
+    validate_application(LogisticRegression())           
 

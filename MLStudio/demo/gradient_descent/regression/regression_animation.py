@@ -31,7 +31,7 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import SGDRegressor
 
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 from mlstudio.supervised.core.scorers import R2
 from mlstudio.supervised.core.objectives import MSE
 from mlstudio.utils.data_manager import StandardScaler, data_split
@@ -59,14 +59,14 @@ def get_data():
 
 def train_models(X, y):
     """Trains batch, stochastic and minibatch gradient descent."""    
-    bgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, 
-                                   random_state=50,scorer=R2(),
+    bgd = GDRegressor(theta_init=np.array([0,0]), epochs=500, 
+                                   random_state=50,metric=R2(),
                                    objective=MSE())
-    sgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, 
-                                   batch_size=1, random_state=50, scorer=R2(),
+    sgd = GDRegressor(theta_init=np.array([0,0]), epochs=500, 
+                                   batch_size=1, random_state=50, metric=R2(),
                                    objective=MSE())
-    mbgd = GradientDescentRegressor(theta_init=np.array([0,0]), epochs=500, 
-                                    batch_size=64, random_state=50, scorer=R2(),
+    mbgd = GDRegressor(theta_init=np.array([0,0]), epochs=500, 
+                                    batch_size=64, random_state=50, metric=R2(),
                                     objective=MSE())
     bgd.fit(X,y)
     sgd.fit(X,y)

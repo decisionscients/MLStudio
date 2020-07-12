@@ -170,12 +170,12 @@ def validate_regularizer(regularizer):
     else:
         return True   
 # --------------------------------------------------------------------------  #
-def validate_task(task):    
-    from mlstudio.supervised.core.tasks import Task
-    valid_tasks = [cls.__name__ for cls in Task.__subclasses__()]
-    if not isinstance(task, Task):
-        msg = "{s} is an invalid Task object. The valid Task \
-        classes include : {v}".format(s=task, v=str(valid_tasks))
+def validate_application(application):    
+    from mlstudio.supervised.core.applications import Application
+    valid_applications = [cls.__name__ for cls in Application.__subclasses__()]
+    if not isinstance(application, Application):
+        msg = "{s} is an invalid Application object. The valid Application \
+        classes include : {v}".format(s=application, v=str(valid_applications))
         raise TypeError(msg)
     else:
         return True           

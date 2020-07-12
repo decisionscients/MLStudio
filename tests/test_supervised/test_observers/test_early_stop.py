@@ -34,7 +34,7 @@ from pytest import mark
 from tabulate import tabulate
 
 from mlstudio.supervised.observers.early_stop import EarlyStop
-from mlstudio.supervised.machine_learning.gradient_descent import GradientDescentRegressor
+from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 
 # --------------------------------------------------------------------------  #
 @mark.observer
@@ -46,7 +46,7 @@ class EarlyStopTests:
         X, y = make_regression_data
         last_epoch=0
         for epsilon in epsilons:
-            est = GradientDescentRegressor(observers=[EarlyStop(epsilon=epsilon,patience=50)],
+            est = GDRegressor(observers=[EarlyStop(epsilon=epsilon,patience=50)],
                                            random_state=5)
             est.fit(X,y)
             assert est.blackbox_.total_epochs > last_epoch, "Early stop error " + str(epsilon)

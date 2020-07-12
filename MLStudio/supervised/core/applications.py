@@ -3,7 +3,7 @@
 # =========================================================================== #
 # Project : ML Studio                                                         #
 # Version : 0.1.0                                                             #
-# File    : task.py                                                           #
+# File    : application.py                                                           #
 # Python  : 3.8.2                                                             #
 # --------------------------------------------------------------------------  #
 # Author  : John James                                                        #
@@ -27,8 +27,8 @@ from sklearn.base import BaseEstimator
 from mlstudio.supervised.core.activations import Sigmoid, Softmax
 from mlstudio.supervised.core.objectives import MSE, CrossEntropy, CategoricalCrossEntropy 
 # --------------------------------------------------------------------------  #
-class Task(ABC, BaseEstimator):
-    """Defines the base class for all tasks."""
+class Application(ABC, BaseEstimator):
+    """Defines the base class for all applications."""
 
     @abstractmethod
     def name(self):
@@ -36,7 +36,7 @@ class Task(ABC, BaseEstimator):
 
     @abstractmethod
     def compute_output(self, theta, X):
-        """Computes output for the task."""
+        """Computes output for the application."""
         pass
 
     @abstractmethod
@@ -45,8 +45,8 @@ class Task(ABC, BaseEstimator):
         pass
 
 # --------------------------------------------------------------------------  #
-class LinearRegression(Task):
-    """Defines the linear regression task."""
+class LinearRegression(Application):
+    """Defines the linear regression application."""
 
     @property
     def name(self):
@@ -60,8 +60,8 @@ class LinearRegression(Task):
         return self.compute_output(theta, X)
 
 # --------------------------------------------------------------------------  #
-class LogisticRegression(Task):
-    """Defines the logistic regression task."""
+class LogisticRegression(Application):
+    """Defines the logistic regression application."""
 
     def __init__(self):
         self.sigmoid = Sigmoid()
@@ -79,10 +79,12 @@ class LogisticRegression(Task):
         o = self.compute_output(theta, X)        
         return np.round(o).astype(int)
 
+    def predict_proba(self, theta, X):
+        return self.compute_output(theta, X)        
 
 # --------------------------------------------------------------------------  #
-class MultinomialLogisticRegression(Task):
-    """Defines the multinomial logistic regression task."""
+class MultinomialLogisticRegression(Application):
+    """Defines the multinomial logistic regression application."""
 
     def __init__(self):
         self.softmax = Softmax()
@@ -99,3 +101,6 @@ class MultinomialLogisticRegression(Task):
     def predict(self, theta, X):
         o = self.compute_output(theta, X)        
         return o.argmax(axis=1)
+
+    def predict_proba(self, theta, X):
+        return self.compute_output(theta, X)                
