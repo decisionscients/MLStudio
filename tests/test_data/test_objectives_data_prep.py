@@ -41,9 +41,9 @@ sys.path.append(homedir)
 sys.path.append(datadir)
 
 from mlstudio.utils.data_manager import StandardScaler
-from mlstudio.supervised.core.objectives import MSE, CrossEntropy
-from mlstudio.supervised.core.objectives import CategoricalCrossEntropy
-from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
+from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic, CrossEntropy
+from mlstudio.supervised.algorithms.optimization.services.objectives import CategoricalCrossEntropy
+from mlstudio.supervised.algorithms.optimization.services.regularizers import L1, L2, L1_L2
 
 # --------------------------------------------------------------------------  #
 def create_regression_prediction(y=None, X=None, theta=None):

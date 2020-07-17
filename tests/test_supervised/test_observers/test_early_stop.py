@@ -33,7 +33,7 @@ import pytest
 from pytest import mark
 from tabulate import tabulate
 
-from mlstudio.supervised.observers.early_stop import EarlyStop
+from mlstudio.supervised.algorithms.optimization.observers.early_stop import EarlyStop
 from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 
 # --------------------------------------------------------------------------  #

@@ -27,28 +27,28 @@ from sklearn.utils.estimator_checks import parametrize_with_checks
 from sklearn.utils.estimator_checks import check_estimator
 
 from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
-from mlstudio.supervised.observers.learning_rate import TimeDecay, StepDecay
-from mlstudio.supervised.observers.learning_rate import ExponentialDecay
-from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay
-from mlstudio.supervised.observers.learning_rate import PolynomialDecay
-from mlstudio.supervised.observers.learning_rate import PolynomialStepDecay
-from mlstudio.supervised.observers.learning_rate import PowerSchedule
-from mlstudio.supervised.observers.learning_rate import BottouSchedule
-from mlstudio.supervised.observers.learning_rate import Adaptive
-from mlstudio.supervised.observers.early_stop import EarlyStop
-from mlstudio.supervised.observers.debugging import GradientCheck
-from mlstudio.supervised.core.objectives import MSE
-from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
-from mlstudio.supervised.core.optimizers import Momentum
-from mlstudio.supervised.core.optimizers import Nesterov
-from mlstudio.supervised.core.optimizers import Adagrad
-from mlstudio.supervised.core.optimizers import Adadelta
-from mlstudio.supervised.core.optimizers import RMSprop
-from mlstudio.supervised.core.optimizers import Adam, AdaMax, Nadam
-from mlstudio.supervised.core.optimizers import AMSGrad, AdamW, QHAdam
-from mlstudio.supervised.core.optimizers import QuasiHyperbolicMomentum
-from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
-from mlstudio.supervised.core import scorers
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import TimeDecay, StepDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialStepDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PolynomialDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PolynomialStepDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PowerSchedule
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import BottouSchedule
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import Adaptive
+from mlstudio.supervised.algorithms.optimization.observers.early_stop import EarlyStop
+from mlstudio.supervised.algorithms.optimization.observers.debug import GradientCheck
+from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic
+from mlstudio.supervised.algorithms.optimization.services.optimizers import GradientDescentOptimizer
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Momentum
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Nesterov
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Adagrad
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Adadelta
+from mlstudio.supervised.algorithms.optimization.services.optimizers import RMSprop
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Adam, AdaMax, Nadam
+from mlstudio.supervised.algorithms.optimization.services.optimizers import AMSGrad, AdamW, QHAdam
+from mlstudio.supervised.algorithms.optimization.services.optimizers import QuasiHyperbolicMomentum
+from mlstudio.supervised.algorithms.optimization.services.regularizers import L1, L2, L1_L2
+from mlstudio.supervised.algorithms.optimization.services import scorers
 # --------------------------------------------------------------------------  #
 count = 0
 early_stops = [None,EarlyStop()]
@@ -57,9 +57,9 @@ learning_rates = \
              ExponentialStepDecay(), PolynomialDecay(), PolynomialStepDecay(), 
              PowerSchedule(), BottouSchedule(), Adaptive()]
 scorer_objects = [scorers.R2(), scorers.MSE(),scorers.AdjustedR2()]
-objectives = [MSE(), MSE(regularizer=L1(alpha=0.01)), 
-                        MSE(regularizer=L2(alpha=0.01)), 
-                        MSE(regularizer=L1_L2(alpha=0.01, ratio=0.5))]
+objectives = [Quadratic(), Quadratic(regularizer=L1(alpha=0.01)), 
+                        Quadratic(regularizer=L2(alpha=0.01)), 
+                        Quadratic(regularizer=L1_L2(alpha=0.01, ratio=0.5))]
 # optimizers = [
 #     GradientDescentOptimizer(), Momentum(), Nesterov(),Adagrad(), Adadelta(),
 #     RMSprop(), Adam(), AdaMax(), Nadam(), AMSGrad(), AdamW(), QHAdam(),

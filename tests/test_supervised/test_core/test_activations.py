@@ -27,7 +27,7 @@ from pytest import mark
 from scipy.special import expit
 from sklearn.utils.extmath import softmax
 
-from mlstudio.supervised.core.activations import Sigmoid, Softmax
+from mlstudio.supervised.algorithms.optimization.services.activations import Sigmoid, Softmax
 # --------------------------------------------------------------------------  #
 @mark.activations
 @mark.sigmoid

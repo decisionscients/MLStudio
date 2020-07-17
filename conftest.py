@@ -39,10 +39,10 @@ import warnings
 warnings.filterwarnings('ignore')
 warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
 
-from mlstudio.supervised.core.optimizers import Adagrad
-from mlstudio.supervised.core.objectives import StyblinskiTank
-from mlstudio.supervised.observers.learning_rate import TimeDecay
-from mlstudio.supervised.core.scorers import MSE
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Adagrad
+from mlstudio.supervised.algorithms.optimization.services.objectives import StyblinskiTank
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import TimeDecay
+from mlstudio.supervised.metrics.regression import MSE
 from mlstudio.supervised.machine_learning.gradient_descent import GDAbstract
 from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 from mlstudio.supervised.machine_learning.gradient_descent import GDPureOptimizer
@@ -55,7 +55,8 @@ sys.path.append(datadir)
 #                               FILES TO SKIP                                  #
 # ---------------------------------------------------------------------------- #
 
-collect_ignore_glob = ["*validation.py", "*ss_regression.py", "*t_regression.py"]
+collect_ignore_glob = ["*regression.py", "*ss_regression.py", 
+                       "*t_regression.py"]
 
 # ---------------------------------------------------------------------------- #
 #                                  DATA                                        #

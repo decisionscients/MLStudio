@@ -11,7 +11,7 @@ Welcome to Machine Learning Algorithms's documentation!
    modules
    contributing
    authors
-   history
+   monitoring
 
 Indices and tables
 ==================

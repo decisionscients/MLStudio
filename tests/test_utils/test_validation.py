@@ -114,7 +114,7 @@ def test_validate_string():
 @mark.validation
 def test_validate_activation():    
     from mlstudio.utils.validation import validate_activation
-    from mlstudio.supervised.core.activations import Sigmoid
+    from mlstudio.supervised.algorithms.optimization.services.activations import Sigmoid
     with pytest.raises(TypeError) as v:
         validate_activation('hand')
         assert "value error"  in str(v.value)
@@ -125,18 +125,18 @@ def test_validate_activation():
 @mark.validation
 def test_validate_objective():    
     from mlstudio.utils.validation import validate_objective
-    from mlstudio.supervised.core.objectives import MSE
+    from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic
     with pytest.raises(TypeError) as v:
         validate_objective('hand')
         assert "value error"  in str(v.value)
-    validate_objective(MSE())    
+    validate_objective(Quadratic())    
 
 # --------------------------------------------------------------------------  #    
 @mark.utils
 @mark.validation
 def test_validate_optimizer():    
     from mlstudio.utils.validation import validate_optimizer
-    from mlstudio.supervised.core.optimizers import Adam 
+    from mlstudio.supervised.algorithms.optimization.services.optimizers import Adam 
     with pytest.raises(TypeError) as v:
         validate_optimizer('hand')
         assert "value error"  in str(v.value)
@@ -147,7 +147,7 @@ def test_validate_optimizer():
 @mark.validation
 def test_validate_regularizer():    
     from mlstudio.utils.validation import validate_regularizer
-    from mlstudio.supervised.core.regularizers import L1
+    from mlstudio.supervised.algorithms.optimization.services.regularizers import L1
     with pytest.raises(TypeError) as v:
         validate_regularizer('hand')
         assert "value error"  in str(v.value)
@@ -158,7 +158,7 @@ def test_validate_regularizer():
 @mark.validation
 def test_validate_scorer():    
     from mlstudio.utils.validation import validate_scorer
-    from mlstudio.supervised.core.scorers import MSE    
+    from mlstudio.supervised.metrics.regression import MSE    
     with pytest.raises(TypeError) as v:
         validate_scorer('hand')
         assert "value error"  in str(v.value)
@@ -169,7 +169,7 @@ def test_validate_scorer():
 @mark.validation
 def test_validate_application():    
     from mlstudio.utils.validation import validate_application
-    from mlstudio.supervised.core.applications import LogisticRegression    
+    from mlstudio.supervised.algorithms.optimization.services.tasks import LogisticRegression    
     with pytest.raises(TypeError) as v:
         validate_application('hand')
         assert "value error"  in str(v.value)

@@ -22,9 +22,9 @@ import pytest
 from pytest import mark
 
 from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
-from mlstudio.supervised.core.objectives import MSE
-from mlstudio.supervised.core.regularizers import L2
-from mlstudio.model_selection.cross_validation import NestedCV
+from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic
+from mlstudio.supervised.algorithms.optimization.services.regularizers import L2
+from mlstudio.model.development import ModelBuilder
 # --------------------------------------------------------------------------- #
 @mark.cross_validation
 class CrossValidationTests:
@@ -36,7 +36,7 @@ class CrossValidationTests:
             {"epochs": [100,200,500,1000],
              "batch_size": [32, 64]}
         ]
-        ncv = NestedCV(estimator=est, parameters=param_set) 
+        ncv = ModelBuilder(estimator=est, parameters=param_set) 
         ncv.fit(X,y)
         print(ncv.results_.get('test_score'))
         print(ncv.results_.get('estimator'))

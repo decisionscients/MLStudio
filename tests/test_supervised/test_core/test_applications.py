@@ -28,8 +28,8 @@ from scipy.special import expit, softmax
 from sklearn.linear_model import LinearRegression as skl_linear_regression
 from sklearn.linear_model import LogisticRegression as skl_logistic_regression
 
-from mlstudio.supervised.core.applications import LinearRegression, LogisticRegression
-from mlstudio.supervised.core.applications import MultinomialLogisticRegression
+from mlstudio.supervised.algorithms.optimization.services.tasks import LinearRegression, LogisticRegression
+from mlstudio.supervised.algorithms.optimization.services.tasks import MulticlassLogisticRegression
 from mlstudio.utils.data_manager import AddBiasTerm
 # --------------------------------------------------------------------------  #
 @mark.applications
@@ -96,7 +96,7 @@ class SoftmaxRegressionApplicationTests:
         # Add bias term to data
         X = AddBiasTerm().fit_transform(X) 
         # Compute solution
-        t = MultinomialLogisticRegression()
+        t = MulticlassLogisticRegression()
         y_pred = t.compute_output(theta, X)        
         assert np.allclose(y_prob_skl, y_pred), "Compute output inaccurate"
         y_pred = t.predict(theta, X)        

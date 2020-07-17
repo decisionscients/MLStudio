@@ -22,7 +22,7 @@ import pytest
 from pytest import mark
 
 from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
-from mlstudio.visual.model_evaluation import ModelSummary, OptimizationCurve
+from mlstudio.supervised.visual.model_evaluation import ModelSummary, OptimizationCurve
 # --------------------------------------------------------------------------- #
 @mark.visual
 @mark.model_evaluation

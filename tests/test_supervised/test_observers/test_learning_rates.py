@@ -33,12 +33,12 @@ import pytest
 from pytest import mark
 import numpy as np
 
-from mlstudio.supervised.observers.learning_rate import StepDecay, TimeDecay
-from mlstudio.supervised.observers.learning_rate import SqrtTimeDecay
-from mlstudio.supervised.observers.learning_rate import ExponentialDecay, PolynomialDecay
-from mlstudio.supervised.observers.learning_rate import PolynomialStepDecay
-from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay, PowerSchedule
-from mlstudio.supervised.observers.learning_rate import BottouSchedule, Adaptive
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import StepDecay, TimeDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import SqrtTimeDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialDecay, PolynomialDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PolynomialStepDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialStepDecay, PowerSchedule
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import BottouSchedule, Adaptive
 
 @mark.observer
 @mark.lrs
@@ -103,7 +103,7 @@ class StepDecayTests:
         # Instantiate and fit mock estimator
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
-        # Extract learning rate history
+        # Extract learning rate monitoring
         epochs = est.blackbox_.epoch_log.get('epoch')
         act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
@@ -169,7 +169,7 @@ class TimeDecayTests:
         # Instantiate and fit mock estimator
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
-        # Extract learning rate history
+        # Extract learning rate monitoring
         epochs = est.blackbox_.epoch_log.get('epoch')
         act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
@@ -235,7 +235,7 @@ class SqrtTimeDecayTests:
         # Instantiate and fit mock estimator
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
-        # Extract learning rate history
+        # Extract learning rate monitoring
         epochs = est.blackbox_.epoch_log.get('epoch')
         act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
@@ -300,7 +300,7 @@ class ExponentialDecayTests:
         # Instantiate and fit mock estimator
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
-        # Extract learning rate history
+        # Extract learning rate monitoring
         epochs = est.blackbox_.epoch_log.get('epoch')
         act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
@@ -384,7 +384,7 @@ class ExponentialStepDecayTests:
         # Instantiate and fit mock estimator
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
-        # Extract learning rate history
+        # Extract learning rate monitoring
         epochs = est.blackbox_.epoch_log.get('epoch')
         act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
@@ -468,7 +468,7 @@ class ExponentialStepDecayStaircaseTests:
         # Instantiate and fit mock estimator
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
-        # Extract learning rate history
+        # Extract learning rate monitoring
         epochs = est.blackbox_.epoch_log.get('epoch')
         act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
@@ -533,7 +533,7 @@ class PolynomialDecayTests:
         # Instantiate and fit mock estimator
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
-        # Extract learning rate history
+        # Extract learning rate monitoring
         epochs = est.blackbox_.epoch_log.get('epoch')
         act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
@@ -605,7 +605,7 @@ class PolynomialStepDecayTests:
         # Instantiate and fit mock estimator
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
-        # Extract learning rate history
+        # Extract learning rate monitoring
         epochs = est.blackbox_.epoch_log.get('epoch')
         act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
@@ -677,7 +677,7 @@ class PowerScheduleTests:
         # Instantiate and fit mock estimator
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
-        # Extract learning rate history
+        # Extract learning rate monitoring
         epochs = est.blackbox_.epoch_log.get('epoch')
         act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays
@@ -743,7 +743,7 @@ class BottouScheduleTests:
         # Instantiate and fit mock estimator
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
-        # Extract learning rate history
+        # Extract learning rate monitoring
         epochs = est.blackbox_.epoch_log.get('epoch')
         act_results = est.blackbox_.epoch_log.get('eta')
         # Compare two arrays

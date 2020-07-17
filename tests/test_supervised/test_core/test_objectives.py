@@ -38,39 +38,39 @@ datadir = os.path.join(homedir, "tests\\test_data")
 sys.path.append(homedir)
 sys.path.append(datadir)
 
-from mlstudio.supervised.core.objectives import MSE, CrossEntropy
-from mlstudio.supervised.core.objectives import CategoricalCrossEntropy
-from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
+from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic, CrossEntropy
+from mlstudio.supervised.algorithms.optimization.services.objectives import CategoricalCrossEntropy
+from mlstudio.supervised.algorithms.optimization.services.regularizers import L1, L2, L1_L2
 # --------------------------------------------------------------------------  #
 @mark.objectives
 @mark.mse
-class MSETests:
+class QuadraticTests:
 
     @mark.mse_cost
     def test_cost(self, get_objective_mse_package):
         p = get_objective_mse_package
-        obj = MSE()
+        obj = Quadratic()
         J = obj(p['theta'], p['y'], p['y_pred'])
         assert np.isclose(J, p['cost'][0])
 
     @mark.mse_cost
     def test_cost_l1(self, get_objective_mse_package):
         p = get_objective_mse_package
-        obj = MSE(L1(alpha=0.1))
+        obj = Quadratic(L1(alpha=0.1))
         J = obj(p['theta'], p['y'], p['y_pred'])
         assert np.isclose(J, p['cost_l1'][0])
 
     @mark.mse_cost
     def test_cost_l2(self, get_objective_mse_package):
         p = get_objective_mse_package
-        obj = MSE(L2(alpha=0.1))
+        obj = Quadratic(L2(alpha=0.1))
         J = obj(p['theta'], p['y'], p['y_pred'])
         assert np.isclose(J, p['cost_l2'][0])
 
     @mark.mse_cost        
     def test_cost_l1_l2(self, get_objective_mse_package):
         p = get_objective_mse_package
-        obj = MSE(L1_L2(alpha=0.1, ratio=0.5))
+        obj = Quadratic(L1_L2(alpha=0.1, ratio=0.5))
         J = obj(p['theta'], p['y'], p['y_pred'])
         assert np.isclose(J, p['cost_l1_l2'][0])    
 
@@ -78,28 +78,28 @@ class MSETests:
     @mark.mse_grad
     def test_gradient(self, get_objective_mse_package):
         p = get_objective_mse_package
-        obj = MSE()
+        obj = Quadratic()
         g = obj.gradient(p['theta'], p['X'], p['y'], p['y_pred'])
         assert np.allclose(g, p['grad'])
 
     @mark.mse_grad
     def test_gradient_l1(self, get_objective_mse_package):
         p = get_objective_mse_package
-        obj = MSE(regularizer=L1(alpha=0.1))
+        obj = Quadratic(regularizer=L1(alpha=0.1))
         g = obj.gradient(p['theta'], p['X'], p['y'], p['y_pred'])
         assert np.allclose(g, p['grad_l1'])
 
     @mark.mse_grad
     def test_gradient_l2(self, get_objective_mse_package):
         p = get_objective_mse_package
-        obj = MSE(regularizer=L2(alpha=0.1))
+        obj = Quadratic(regularizer=L2(alpha=0.1))
         g = obj.gradient(p['theta'], p['X'], p['y'], p['y_pred'])
         assert np.allclose(g, p['grad_l2'])
 
     @mark.mse_grad
     def test_gradient_l1_l2(self, get_objective_mse_package):
         p = get_objective_mse_package
-        obj = MSE(regularizer=L1_L2(alpha=0.1, ratio=0.5))
+        obj = Quadratic(regularizer=L1_L2(alpha=0.1, ratio=0.5))
         g = obj.gradient(p['theta'], p['X'], p['y'], p['y_pred'])
         assert np.allclose(g, p['grad_l1_l2'])
     

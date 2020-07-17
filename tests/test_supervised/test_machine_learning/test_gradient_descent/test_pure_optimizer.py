@@ -25,30 +25,30 @@ import pytest
 from pytest import mark
 
 from mlstudio.supervised.machine_learning.gradient_descent import GDPureOptimizer
-from mlstudio.supervised.observers.learning_rate import TimeDecay, StepDecay
-from mlstudio.supervised.observers.learning_rate import ExponentialDecay
-from mlstudio.supervised.observers.learning_rate import ExponentialStepDecay
-from mlstudio.supervised.observers.learning_rate import PolynomialDecay
-from mlstudio.supervised.observers.learning_rate import PolynomialStepDecay
-from mlstudio.supervised.observers.learning_rate import PowerSchedule
-from mlstudio.supervised.observers.learning_rate import BottouSchedule
-from mlstudio.supervised.observers.learning_rate import Adaptive
-from mlstudio.supervised.observers.early_stop import EarlyStop
-from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
-from mlstudio.supervised.core.optimizers import Momentum
-from mlstudio.supervised.core.optimizers import Nesterov
-from mlstudio.supervised.core.optimizers import Adagrad
-from mlstudio.supervised.core.optimizers import Adadelta
-from mlstudio.supervised.core.optimizers import RMSprop
-from mlstudio.supervised.core.optimizers import Adam, AdaMax, Nadam
-from mlstudio.supervised.core.optimizers import AMSGrad, AdamW, QHAdam
-from mlstudio.supervised.core.optimizers import QuasiHyperbolicMomentum
-from mlstudio.supervised.core.objectives import Adjiman, BartelsConn
-from mlstudio.supervised.core.objectives import Himmelblau, Leon
-from mlstudio.supervised.core.objectives import Rosenbrock, Branin02
-from mlstudio.supervised.core.objectives import StyblinskiTank
-from mlstudio.supervised.core.objectives import ThreeHumpCamel, Ursem01
-from mlstudio.supervised.core.objectives import Wikipedia
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import TimeDecay, StepDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialStepDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PolynomialDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PolynomialStepDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PowerSchedule
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import BottouSchedule
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import Adaptive
+from mlstudio.supervised.algorithms.optimization.observers.early_stop import EarlyStop
+from mlstudio.supervised.algorithms.optimization.services.optimizers import GradientDescentOptimizer
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Momentum
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Nesterov
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Adagrad
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Adadelta
+from mlstudio.supervised.algorithms.optimization.services.optimizers import RMSprop
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Adam, AdaMax, Nadam
+from mlstudio.supervised.algorithms.optimization.services.optimizers import AMSGrad, AdamW, QHAdam
+from mlstudio.supervised.algorithms.optimization.services.optimizers import QuasiHyperbolicMomentum
+from mlstudio.supervised.algorithms.optimization.services.objectives import Adjiman, BartelsConn
+from mlstudio.supervised.algorithms.optimization.services.objectives import Himmelblau, Leon
+from mlstudio.supervised.algorithms.optimization.services.objectives import Rosenbrock, Branin02
+from mlstudio.supervised.algorithms.optimization.services.objectives import StyblinskiTank
+from mlstudio.supervised.algorithms.optimization.services.objectives import ThreeHumpCamel, Ursem01
+from mlstudio.supervised.algorithms.optimization.services.objectives import Wikipedia
 # --------------------------------------------------------------------------  #
 #                       TEST OBJECTIVE FUNCTIONS                              #
 # --------------------------------------------------------------------------  #

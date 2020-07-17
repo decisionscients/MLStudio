@@ -36,12 +36,12 @@ datadir = os.path.join(homedir, "tests\\test_data")
 sys.path.append(homedir)
 sys.path.append(datadir)
 
-from mlstudio.supervised.core.optimizers import GradientDescentOptimizer
-from mlstudio.supervised.core.optimizers import Momentum, Nesterov
-from mlstudio.supervised.core.optimizers import Adagrad, Adadelta     
-from mlstudio.supervised.core.optimizers import RMSprop, Adam, AdaMax
-from mlstudio.supervised.core.optimizers import Nadam, AMSGrad, AdamW
-from mlstudio.supervised.core.optimizers import AggMo, QuasiHyperbolicMomentum
+from mlstudio.supervised.algorithms.optimization.services.optimizers import GradientDescentOptimizer
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Momentum, Nesterov
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Adagrad, Adadelta     
+from mlstudio.supervised.algorithms.optimization.services.optimizers import RMSprop, Adam, AdaMax
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Nadam, AMSGrad, AdamW
+from mlstudio.supervised.algorithms.optimization.services.optimizers import AggMo, QuasiHyperbolicMomentum
 # --------------------------------------------------------------------------  #
 # Mock gradient function
 def gradient(theta):

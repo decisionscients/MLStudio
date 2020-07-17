@@ -23,7 +23,7 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.supervised.core.regularizers import L1, L2, L1_L2
+from mlstudio.supervised.algorithms.optimization.services.regularizers import L1, L2, L1_L2
 # --------------------------------------------------------------------------  #
 @mark.regularizers
 @mark.lasso

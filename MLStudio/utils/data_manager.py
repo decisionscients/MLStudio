@@ -124,15 +124,11 @@ class DataProcessor(ABC, TransformerMixin, BaseEstimator):
     
     Parameters
     ----------
-    val_size : float (default = 0.3)
-        The proportion of data to be allocated to a validation set.
-
     random_state : int or None (default = None)
         The seed for pseudo randomization.
     
     """
-    def __init__(self, val_size, random_state=None):        
-        self.val_size = val_size
+    def __init__(self, random_state=None):                
         self.random_state = random_state
 
 
@@ -141,7 +137,7 @@ class DataProcessor(ABC, TransformerMixin, BaseEstimator):
         return self
 
     @abstractmethod
-    def transform(self, X, y=None):
+    def transform(self, X, y=None, val_size=None):
         """Processes data and returns a dictionary to the calling object.
         
         Parameters
@@ -152,14 +148,17 @@ class DataProcessor(ABC, TransformerMixin, BaseEstimator):
         y : array_like of shape(n_samples,)
             An array of target values.
 
+        val_size : float (default=0.3)
+            The proportion of the training set to be designated for validation set. 
+
         Returns
         -------
         dict : Dictionary containing transformed data.           
 
         """
         pass
-
-    def fit_transform(self, X, y=None):
+    
+    def fit_transform(self, X, y=None, val_size=None):
         """Calls fit and transform."""
         return self.fit(X, y).transform(X, y)        
 
@@ -167,17 +166,24 @@ class DataProcessor(ABC, TransformerMixin, BaseEstimator):
 class RegressionDataProcessor(DataProcessor):
     """Prepares data for regression."""
 
-    def transform(self, X, y):
+    def transform(self, X, y=None, val_size=None):        
         """Prepares data for regression."""
+        if y is None:
+            d = {}
+            # Transform X only. This a call from a predict function.
+            X = check_array(X)     
+            d['X'] = AddBiasTerm().fit_transform(X)            
+            return d
+
         X_train, y_train = check_X_y(X, y)
         X_train = AddBiasTerm().fit_transform(X_train)
         # Initialize data dictionary and n_features (including bias term)
         d = {}
         d['n_features_'] = X_train.shape[1]        
         # Return training and validation data if val_size is truthy
-        if self.val_size:
+        if val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=False, test_size=self.val_size, 
+                        stratify=False, test_size=val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train
@@ -195,8 +201,15 @@ class RegressionDataProcessor(DataProcessor):
 class LogisticRegressionDataProcessor(DataProcessor):
     """Prepares data for regression."""
 
-    def transform(self, X, y):
+    def transform(self, X, y=None, val_size=None):
         """Prepares data for regression."""
+        if y is None:
+            d = {}
+            # Transform X only. This a call from a predict function.
+            X = check_array(X)     
+            d['X'] = AddBiasTerm().fit_transform(X)            
+            return d
+        
         # Check the data and add bias term
         X_train, y_train = check_X_y(X, y)
         X_train = AddBiasTerm().fit_transform(X_train)
@@ -204,9 +217,9 @@ class LogisticRegressionDataProcessor(DataProcessor):
         d = {}
         d['n_features_'] = X_train.shape[1]        
         # Return stratified training and validation data if val_size is truthy
-        if self.val_size:
+        if val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=True, test_size=self.val_size, 
+                        stratify=True, test_size=val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train
@@ -223,13 +236,19 @@ class LogisticRegressionDataProcessor(DataProcessor):
 class MulticlassDataProcessor(DataProcessor):
     """Prepares data for multi-class classification."""
 
-    def __init__(self, val_size, random_state=None):
-        super(MulticlassDataProcessor, self).__init__(val_size=val_size,
-                                                      random_state=random_state)
+    def __init__(self, random_state=None):
+        super(MulticlassDataProcessor, self).__init__(random_state=random_state)
         self.encoder = LabelBinarizer()
 
-    def transform(self, X, y):
+    def transform(self, X, y=None, val_size=None):
         """Prepares data for multi-class classification."""
+        if y is None:
+            d = {}
+            # Transform X only. This a call from a predict function.
+            X = check_array(X)     
+            d['X'] = AddBiasTerm().fit_transform(X)            
+            return d
+
         if len(np.unique(y)) < 3:
             msg = "This data processor is for multi-class settings with classes\
                 >2. Please use the LogisticRegressionDataProcessor instead."
@@ -244,9 +263,9 @@ class MulticlassDataProcessor(DataProcessor):
         d['n_features_'] = X_train.shape[1]  
         d['n_classes_'] = y_train.shape[1]
         # Return stratified training and validation data if val_size is truthy
-        if self.val_size:
+        if val_size:
             X_train, X_val, y_train, y_val = data_split(X=X_train, y=y_train, 
-                        stratify=True, test_size=self.val_size, 
+                        stratify=True, test_size=val_size, 
                         random_state=self.random_state)
             d['X_train_'] = X_train
             d['y_train_'] = y_train            
@@ -258,6 +277,18 @@ class MulticlassDataProcessor(DataProcessor):
             d['y_train_'] = y_train        
         return d                               
 
+class DataProcessorFactory:
+    """Obtains a data processor based upon the client class name."""
+
+    _data_processors = {'LinearRegression': RegressionDataProcessor(),
+                        'LogisticRegression': LogisticRegressionDataProcessor(),
+                        'MulticlassLogisticRegression': MulticlassDataProcessor()}
+    
+    def __call__(self, task):
+        data_processor = self._data_processors.get(task)
+        if not data_processor:
+            raise ValueError(task)
+        return data_processor
 # --------------------------------------------------------------------------- #
 class NormScaler(TransformerMixin, BaseEstimator):
     """Scalers a vector to unit length.  

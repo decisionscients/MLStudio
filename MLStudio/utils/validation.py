@@ -98,7 +98,7 @@ def validate_array_like(param, param_name=""):
         return True             
 # --------------------------------------------------------------------------  #
 def validate_observers(param, param_name='observers'):
-    from mlstudio.supervised.observers.base import Observer
+    from mlstudio.supervised.algorithms.optimization.observers.base import Observer
     if not isinstance(param, dict):
         msg = "The observer parameter must be a dictionary where each entry's \
             key is the name of the observer and the value is the observer object."
@@ -111,7 +111,7 @@ def validate_observers(param, param_name='observers'):
     
 # --------------------------------------------------------------------------  #
 def validate_scorer(scorer):    
-    from mlstudio.supervised.core.scorers import Scorer
+    from mlstudio.supervised.metrics.regression import Scorer
     valid_scorers = [cls.__name__ for cls in Scorer.__subclasses__()]
     if not isinstance(scorer, Scorer):
         msg = "{s} is an invalid Scorer object. The valid Scorer classes include : \
@@ -121,7 +121,7 @@ def validate_scorer(scorer):
         return True
 # --------------------------------------------------------------------------  #
 def validate_activation(activation):    
-    from mlstudio.supervised.core.activations import Activation
+    from mlstudio.supervised.algorithms.optimization.services.activations import Activation
     valid_activations = [cls.__name__ for cls in Activation.__subclasses__()]
     if not isinstance(activation, Activation):
         msg = "{s} is an invalid Activation object. The valid Activation classes include : \
@@ -132,7 +132,7 @@ def validate_activation(activation):
 
 # --------------------------------------------------------------------------  #
 def validate_objective(objective):    
-    from mlstudio.supervised.core.objectives import Objective
+    from mlstudio.supervised.algorithms.optimization.services.objectives import Objective
     valid_objectives = [cls.__name__ for cls in Objective.__subclasses__()]
     if not isinstance(objective, Objective):
         msg = "{s} is an invalid Objective function object. The valid Objective \
@@ -151,7 +151,7 @@ def validate_gradient_scaler(scaler):
         return True     
 # --------------------------------------------------------------------------  #
 def validate_optimizer(optimizer):    
-    from mlstudio.supervised.core.optimizers import Optimizer
+    from mlstudio.supervised.algorithms.optimization.services.optimizers import Optimizer
     valid_optimizers = [cls.__name__ for cls in Optimizer.__subclasses__()]
     if not isinstance(optimizer, Optimizer):
         msg = "{s} is an invalid Optimizer object. The valid Optimizer \
@@ -161,7 +161,7 @@ def validate_optimizer(optimizer):
         return True         
 # --------------------------------------------------------------------------  #
 def validate_regularizer(regularizer):    
-    from mlstudio.supervised.core.regularizers import Regularizer
+    from mlstudio.supervised.algorithms.optimization.services.regularizers import Regularizer
     valid_regularizers = [cls.__name__ for cls in Regularizer.__subclasses__()]
     if not isinstance(regularizer, Regularizer):
         msg = "{s} is an invalid Regularizer object. The valid Regularizer \
@@ -171,7 +171,7 @@ def validate_regularizer(regularizer):
         return True   
 # --------------------------------------------------------------------------  #
 def validate_application(application):    
-    from mlstudio.supervised.core.applications import Application
+    from mlstudio.supervised.algorithms.optimization.services.tasks import Application
     valid_applications = [cls.__name__ for cls in Application.__subclasses__()]
     if not isinstance(application, Application):
         msg = "{s} is an invalid Application object. The valid Application \
