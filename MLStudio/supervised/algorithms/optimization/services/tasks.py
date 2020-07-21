@@ -18,20 +18,20 @@
 # License : BSD                                                               #
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
-"""Defines linear, logistic, and multinomial logistic regression tasks."""
+"""Defines linear, logistic, and multiclass classification tasks."""
 from abc import ABC, abstractmethod, abstractproperty 
 
 import numpy as np
-
+from sklearn.base import BaseEstimator
 from mlstudio.supervised.algorithms.optimization.services.activations import Sigmoid, Softmax
 from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic 
 from mlstudio.supervised.algorithms.optimization.services.loss import CrossEntropy
 from mlstudio.supervised.algorithms.optimization.services.loss import CategoricalCrossEntropy 
 from mlstudio.utils.data_analyzer import n_classes, n_features
 from mlstudio.utils.data_manager import DataProcessorFactory, AddBiasTerm
-from mlstudio.utils.validation import check_X, check_is_fitted, check_X_y
+from mlstudio.utils import validation
 # --------------------------------------------------------------------------  #
-class Task(ABC):
+class Task(ABC, BaseEstimator):
     """Defines the base class for all tasks."""
 
     def __init__(self, loss, data_processor, activation=None, 
@@ -67,7 +67,7 @@ class Task(ABC):
         data : dictionary 
             Dict containing training and optionally validation data
         """
-        data = self.data_processor.fit_transform(X, y)
+        data = self._data_processor.fit_transform(X, y)
         self._n_features = n_features(data.get('X_train_'))
         self._data_prepared = True
         return data
@@ -121,7 +121,7 @@ class Task(ABC):
         -------
         J : average loss
         """
-        return self.loss(theta, y, y_out)
+        return self._loss(theta, y, y_out)
 
     def compute_output(self, theta, X):
         """Computes output as a linear combination of parameters and inputs.
@@ -140,6 +140,11 @@ class Task(ABC):
         """
         return np.array(X.dot(theta), dtype=np.float32)
 
+    def gradient(self, theta, X, y, y_out):
+        """Computes the gradient."""
+
+        return self._loss.gradient(theta, X, y, y_out)
+
     def predict(self, theta, X):
         """Computes prediction on test data.
 
@@ -155,7 +160,7 @@ class Task(ABC):
         -------
         y_pred : prediction
         """
-        X = check_X(X)        
+        X = validation.check_X(X)        
         return self.compute_output(theta, X)
     
 # --------------------------------------------------------------------------  #
@@ -166,20 +171,64 @@ class LinearRegression(Task):
     def name(self):
         return "Linear Regression"
 
+    @property
+    def loss(self):
+        return self._loss
+
+    @loss.setter
+    def loss(self, x):
+        validation.validate_regression_loss(x)
+        self._loss = x
+
+    @property
+    def data_processor(self):
+        return self._data_processor
+
+    @data_processor.setter
+    def data_processor(self, x):
+        validation.validate_regression_data_processor(x)
+        self._data_processor = x
+
+    def predict_proba(self, theta, X):
+        raise NotImplementedError("predict_proba is not implemented for the LinearRegression task.")
+
+
 # --------------------------------------------------------------------------  #
 class LogisticRegression(Task):
     """Defines the logistic regression task."""
 
-    def __init__(self, loss, scorer, data_processor, activation=None):
-        super(LogisticRegression, self).__init__(loss=loss, scorer=scorer,
-                                                 data_processor=data_processor,
-                                                 activation=activation)        
-        
 
     @property
     def name(self):
         return "Logistic Regression"    
 
+    @property
+    def loss(self):
+        return self._loss
+
+    @loss.setter
+    def loss(self, x):
+        validation.validate_binary_classification_loss(x)
+        self._loss = x
+
+    @property
+    def data_processor(self):
+        return self._data_processor
+
+    @data_processor.setter
+    def data_processor(self, x):
+        validation.validate_binary_classification_data_processor(x)
+        self._data_processor = x        
+
+    @property
+    def activation(self):
+        return self._activation
+
+    @activation.setter
+    def activation(self, x):
+        validation.validate_binary_classification_activation(x)
+        self._activation = x                
+    
     def compute_output(self, theta, X):
         """Computes output as a probability of the positive class.
 
@@ -200,7 +249,7 @@ class LogisticRegression(Task):
         y_out
         """
         z = super(LogisticRegression, self).compute_output(theta, X)        
-        return self.activation(z)
+        return self._activation(z)
 
     def predict(self, theta, X):
         """Computes prediction on test data.
@@ -238,18 +287,45 @@ class LogisticRegression(Task):
         return self.compute_output(theta, X)        
 
 # --------------------------------------------------------------------------  #
-class MulticlassLogisticRegression(Task):
-    """Defines the multinomial logistic regression task."""
+class MulticlassClassification(Task):
+    """Defines the multiclass classification task."""
 
-    def __init__(self, loss, scorer, data_processor, activation=None):
-        super(MulticlassLogisticRegression, self).__init__(loss=loss, scorer=scorer,
+    def __init__(self, loss, data_processor, activation=None):
+        super(MulticlassClassification, self).__init__(loss=loss, 
                                                  data_processor=data_processor,
                                                  activation=activation)
         
 
     @property
     def name(self):
-        return "Multiclass Logistic Regression"    
+        return "Multiclass Classification"    
+
+    @property
+    def loss(self):
+        return self._loss
+
+    @loss.setter
+    def loss(self, x):
+        validation.validate_multiclass_classification_loss(x)
+        self._loss = x
+
+    @property
+    def data_processor(self):
+        return self._data_processor
+
+    @data_processor.setter
+    def data_processor(self, x):
+        validation.validate_multiclass_classification_data_processor(x)
+        self._data_processor = x        
+
+    @property
+    def activation(self):
+        return self._activation
+
+    @activation.setter
+    def activation(self, x):
+        validation.validate_multiclass_classification_activation(x)
+        self._activation = x                        
 
     def prepare_data(self, X, y):
         """Prepares data for training.
@@ -270,7 +346,7 @@ class MulticlassLogisticRegression(Task):
         data : dictionary 
             Dict containing training and optionally validation data
         """
-        data = super(MulticlassLogisticRegression, self).prepare_data(X, y)        
+        data = super(MulticlassClassification, self).prepare_data(X, y)        
         self._n_classes = n_classes(data.get('y_train_'))        
         return data      
 
@@ -323,8 +399,8 @@ class MulticlassLogisticRegression(Task):
         -------
         y_out
         """      
-        z = super(MulticlassLogisticRegression, self).compute_output(theta, X)
-        return self.activation(z)        
+        z = super(MulticlassClassification, self).compute_output(theta, X)
+        return self._activation(z)        
 
     def predict(self, theta, X):
         """Computes prediction on test data.

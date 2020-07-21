@@ -42,11 +42,10 @@ from mlstudio.supervised.algorithms.optimization.services import loss
 from mlstudio.supervised.algorithms.optimization.services import optimizers
 from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
-from mlstudio.utils.data_analyzer import n_classes, n_features
+from mlstudio.utils.data_analyzer import n_classes, n_features, get_features
 from mlstudio.utils.data_manager import AddBiasTerm, unpack_parameters
 from mlstudio.utils.data_manager import batch_iterator
-from mlstudio.utils.data_manager import check_y
-from mlstudio.utils.validation import check_X, check_X_y, check_is_fitted
+from mlstudio.utils import validation
 # =========================================================================== #
 #                              GRADIENT DESCENT                               #
 # =========================================================================== #        
@@ -164,27 +163,27 @@ class GradientDescent(BaseEstimator):
             schedule = ""           
 
         try:
-            objective = " Optimizing " + self.objective.name
+            objective = " Optimizing " + self.task.loss.name
         except:
             objective = ""            
         
         try:
-            optimizer = " using " + self.optimizer.name
+            optimizer = " with " + self.optimizer.name
         except:
             optimizer = ""
 
         try:
-            early_stop = " and " + self.early_stop.name
+            early_stop = " implementing " + self.early_stop.name
         except:
             early_stop = ""
                
         try: 
-            regularizer = " with  " + self.objective.regularizer_name
+            regularizer = " with  " + self.task.loss.regularizer.name 
         except:
-            regularizer = ""
+            regularizer = ""        
         
-        return self._task.name + " for " + self.variant + objective +\
-            regularizer + optimizer + early_stop
+        return self._task.name + " with " + self.variant + optimizer +\
+            objective + regularizer + optimizer + early_stop + schedule
 
     @property
     def eta(self):
@@ -203,42 +202,78 @@ class GradientDescent(BaseEstimator):
         self._converged = x       
 
     # ----------------------------------------------------------------------- #
+    def _validate(self, log=None):
+        """Validates input rather than peppering try except everywhere."""
+        validation.check_X_y(log.get('X'), log.get('y'))
+        validation.validate_task(self.task)
+        validation.validate_range(self.eta0, param_name="eta0", minimum=0, 
+                                  maximum=1, left='open', right='close')
+        validation.validate_int(self.epochs, param_name="epochs", minimum=0,
+                                left='open', right='close')                 
+        if self.batch_size:
+            validation.validate_int(self.batch_size, param_name="batch_size", 
+                                    minimum=0, left='open', right='close')            
+        if self.val_size:
+            validation.validate_range(self.val_size, param_name="val_size", 
+                                    minimum=0, maximum=1, left='closed', 
+                                    right='open')
+        validation.validate_optimizer(self.optimizer)
+        validation.validate_scorer(self.scorer)               
+        if self.early_stop:
+            validation.validate.observers(self.early_stop, 
+                                            param_name='early_stop')
+        if self.learning_rate:
+            validation.validate.observers(self.learning_rate, 
+                                            param_name='learning_rate')   
+
+        validation.validate.observer_list(self.observer_list)
+        validation.validate_black_box(self.blackbox)
+        validation.validate_progress(self.progress)
+        validation.validate_summary(self.summary)
+
+        if self.verbose:
+            validation.validate_int(param=self.verbose, param_name='verbose',
+                            minimum=0, left='open')
+        if self.random_state:
+            validation.validate_int(param=self.random_state,
+                                    param_name='random_state')                                            
+
+
+        if not isinstance(self.eta0, float):
+            raise ValueError("The eta0 parameter must be a float in (0,1) object.")   
+
+        if not isinstance(self.eta0, float):
+            raise ValueError("The eta0 parameter must be a float in (0,1) object.")                
+
+
+    # ----------------------------------------------------------------------- #
     def _copy_mutable_parameters(self, log=None):
         """Makes copies of mutable parameters and makes them private members."""
 
         self._eta = copy.copy(self.eta0)
-
         self._task = copy.deepcopy(self.task) 
+        self._observer_list = copy.deepcopy(self.observer_list)           
+        self._optimizer = copy.deepcopy(self.optimizer)
+        self._progress = copy.deepcopy(self.progress)
+        self._summary = copy.deepcopy(self.summary) 
 
-        self._observer_list = copy.deepcopy(self.observer_list) if \
-            self.observer_list else self.observer_list            
-        
+        # Attributes
+        self.blackbox_ = copy.deepcopy(self.blackbox)
+        self.scorer_ = copy.deepcopy(self.scorer)
+
+        # Optional dependencies
         self._learning_rate = copy.deepcopy(self.learning_rate) if \
             self.learning_rate else self.learning_rate
 
         self._early_stop = copy.deepcopy(self.early_stop) if self.early_stop\
-            else self.early_stop
+            else self.early_stop        
 
-        self._optimizer = copy.deepcopy(self.optimizer) if self.optimizer\
-            else self.optimizer 
-
-        self._progress = copy.deepcopy(self.progress) if self.progress\
-            else self.progress             
-
-        self.blackbox_ = copy.deepcopy(self.blackbox) if self.blackbox\
-            else self.blackbox 
-
-        self.scorer_ = copy.deepcopy(self.scorer) if self.scorer\
-            else self.scorer
-
-        self._summary = copy.deepcopy(self.summary) if self.summary\
-            else self.summary
- 
     # ----------------------------------------------------------------------- #
     def _initialize_observers(self, log=None):
         """Initialize remaining observers. Create and initialize observer list."""        
 
         self._observer_list.append(self.blackbox_)
+        self._observer_list.append(self._summary)
 
         if self.verbose:
             self._observer_list.append(self._progress)
@@ -248,18 +283,27 @@ class GradientDescent(BaseEstimator):
 
         if self._early_stop:
             self._observer_list.append(self._early_stop)
-
-        self._observer_list.append(self._summary)
         
         # Publish model parameters and estimator instance on observer objects.
         self._observer_list.set_params(self.get_params())
         self._observer_list.set_model(self)            
+        self._observer_list.on_train_begin()
 
     # ----------------------------------------------------------------------- #
     def _compile(self, log=None):        
         """Obtains, initializes object dependencies and registers observers."""
         self._copy_mutable_parameters(log)
         self._initialize_observers(log)
+
+    # ----------------------------------------------------------------------- #
+    def _initialize_state(self, log=None):
+        """Initializes variables that represent teh state of the estimator."""
+        self._epoch = 0      
+        self._batch = 0 
+        self._theta = None
+        self._gradient = None
+        self._current_state = {}
+        self._converged = False            
 
     # ----------------------------------------------------------------------- #
     def _on_train_begin(self, log=None):
@@ -271,20 +315,10 @@ class GradientDescent(BaseEstimator):
             Data relevant this part of the process. 
         """
         log = log or {}
+        self._validate(log)
         self._compile(log)    
-        self._epoch = 0      
-        self._batch = 0 
-        self._theta = None
-        self._gradient = None
-        self._current_state = {}
-        self._converged = False    
-
-        # Initialize training on observers
-        self._observer_list.on_train_begin()
-        # Prepares data and adds data to estimator as attributes.
-        if log:            
-            self._prepare_data(log.get('X'), log.get('y'))
-        # Weights are initialized based upon the number of features in the dataset 
+        self._initialize_state(log)
+        self._prepare_data(log.get('X'), log.get('y'))
         self._theta = self._task.init_weights(self.theta_init)
 
     # ----------------------------------------------------------------------- #
@@ -364,16 +398,10 @@ class GradientDescent(BaseEstimator):
     def _prepare_data(self, X, y):
         """Prepares X and y data for training."""        
         data = self._task.prepare_data(X, y, self.val_size)
-        # Set attributes from data.
+        self.features_ = get_features(X)
+        # Make each data set an attribute
         for k, v in data.items():     
             setattr(self, k, v)
-            # Attempt to extract feature names from the 'X' array  
-            if np.ndim(v) > 1:
-                if v.shape[1] > 1:
-                    try:
-                        self.features_ =  v.dtype.names                     
-                    except:
-                        self.features_ = None  
         # Set n_features_ as the number of features plus the intercept term
         self.n_features_ = n_features(self.X_train_)
 
@@ -385,33 +413,27 @@ class GradientDescent(BaseEstimator):
         s['eta'] = self._eta    
         s['theta'] = self._theta 
         
-        # Compute training costs 
         y_out = self._task.compute_output(self._theta, self.X_train_)
-        s['train_cost'] = self._task.compute_loss(self._theta, self.y_train_, y_out)
-        # Compute training score
+        s['train_cost'] = self._task.compute_loss(self._theta, self.y_train_, y_out)        
         s['train_score'] = self._score(self.X_train_, self.y_train_)
 
-        # If we have a validation set, compute validation error and score
+        # Check not only val_size but also for empty validation sets 
         if self.val_size:
-            if self.X_val_.shape[0] > 0:
-                # Compute validation error 
+            if self.X_val_.shape[0] > 0:                
                 y_out_val = self._task.compute_output(self._theta, self.X_val_)
-                s['val_cost'] = self._task.compute_loss(self._theta, self.y_val_, y_out_val)                
-                # Compute validation score
+                s['val_cost'] = self._task.compute_loss(self._theta, self.y_val_, y_out_val)                                
                 s['val_score'] = self._score(self.X_val_, self.y_val_)
 
-        # Grab Gradient. Note: 1st iteration, the gradient will be None
         s['gradient'] = self._gradient
-        # Compute the gradient norm if not first iteration
         s['gradient_norm'] = None
         if self._gradient is not None:
             s['gradient_norm'] = np.linalg.norm(self._gradient) 
-        # This reflects current state for the epoch sent to all observers.
+
         self._current_state = s
     
     # ----------------------------------------------------------------------- #
     def _format_results(self):
-        # Set parameter attributes
+        """Format the attributes that hold the optimization solution.""" 
         self.theta_ = self._theta
         self.intercept_, self.coef_ = unpack_parameters(self.theta_)
 
@@ -433,36 +455,25 @@ class GradientDescent(BaseEstimator):
         self._on_train_begin(train_log)        
 
         while (self._epoch < self.epochs and not self._converged):            
-
             self._on_epoch_begin()
 
             for X_batch, y_batch in batch_iterator(self.X_train_, self.y_train_, batch_size=self.batch_size):
-
                 self._on_batch_begin()
-                
-                # Compute model output
+
                 y_out = self._task.compute_output(self._theta, X_batch)     
-
-                # Compute costs
                 cost = self._task.compute_loss(self._theta, y_batch, y_out)
-
-                # Format batch log
+                # Grab theta for the batch log before it is updated
                 log = {'batch': self._batch,'theta': self._theta, 
                        'train_cost': cost}
-
-                # Compute gradient and update parameters 
-                self._theta, self._gradient = self._optimizer(gradient=self._objective.gradient, \
+                # Update the model parameters and return gradient for monitoring purposes.
+                self._theta, self._gradient = self._optimizer(gradient=self._task.loss.gradient, \
                     learning_rate=self._eta, theta=copy.copy(self._theta),  X=X_batch, y=y_batch,\
                         y_out=y_out)                       
-
-                # Update batch log
                 log['gradient'] = self._gradient
                 log['gradient_norm'] = np.linalg.norm(self._gradient) 
                 self._on_batch_end(log=log)
 
-            # Wrap up epoch
             self._on_epoch_end()
-
         self._on_train_end()
         return self 
 

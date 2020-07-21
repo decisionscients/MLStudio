@@ -43,20 +43,18 @@ from mlstudio.supervised.algorithms.optimization.services.optimizers import Adag
 from mlstudio.supervised.algorithms.optimization.services.objectives import StyblinskiTank
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import TimeDecay
 from mlstudio.supervised.metrics.regression import MSE
-from mlstudio.supervised.machine_learning.gradient_descent import GDAbstract
-from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
-from mlstudio.supervised.machine_learning.gradient_descent import GDPureOptimizer
+
 
 homedir = str(Path(__file__).parents[0])
-datadir = os.path.join(homedir, "tests\\test_data")
+datadir = os.path.join(homedir, "tests\\test_supervised\\test_data")
 sys.path.append(homedir)
 sys.path.append(datadir)
 # ---------------------------------------------------------------------------- #
 #                               FILES TO SKIP                                  #
 # ---------------------------------------------------------------------------- #
 
-collect_ignore_glob = ["*regression.py", "*ss_regression.py", 
-                       "*t_regression.py"]
+collect_ignore_glob = ["*test_data*", "*ions.py","*regression.py", "*ss_regression.py", 
+                       "*t_regression.py", "*test_cross_validation.py"]
 
 # ---------------------------------------------------------------------------- #
 #                                  DATA                                        #
@@ -171,7 +169,15 @@ def get_logistic_regression_data_features():
     return data['feature_names']
 
 @fixture(scope="session")
-def get_multiclass_regression_data_split(make_multiclass_data):
+def get_multiclass_classification_data():
+    X, y = datasets.load_iris(return_X_y=True)
+    scaler = StandardScaler()    
+    X = scaler.fit_transform(X)
+    return X, y   
+
+
+@fixture(scope="session")
+def get_multiclass_classification_data_split(make_multiclass_data):
     X, y = make_multiclass_data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.33, random_state=50)
@@ -446,3 +452,38 @@ def get_classification_metric_test_package():
     d['f1'] = pd.read_excel(xlsx, sheet_name='metrics', header=0, usecols="H").to_numpy().flatten()
     d['balanced_accuracy'] = pd.read_excel(xlsx, sheet_name='metrics', header=0, usecols="I").to_numpy().flatten()
     return d    
+
+@fixture(scope="session")
+def get_multiclass_classification_task_package():
+    d = {}
+    filename = "test_task_multiclass_classification.xlsx"
+    filepath = os.path.join(datadir, filename)
+    xlsx = pd.ExcelFile(filepath)
+    d['X'] = pd.read_excel(xlsx, sheet_name='X', header=0, usecols="A:E").to_numpy()
+    d['theta'] = pd.read_excel(xlsx, sheet_name='theta', header=0, usecols="A:C").to_numpy()    
+    d['y_prob'] = pd.read_excel(xlsx, sheet_name='y', header=0, usecols="M:O").to_numpy()    
+    d['y_pred'] = pd.read_excel(xlsx, sheet_name='y', header=0, usecols="Q").to_numpy().flatten()    
+    return d        
+
+@fixture(scope="session")
+def get_logistic_regression_task_package():
+    d = {}
+    filename = "test_task_logistic_regression.xlsx"
+    filepath = os.path.join(datadir, filename)
+    xlsx = pd.ExcelFile(filepath)
+    d['X'] = pd.read_excel(xlsx, sheet_name='X', header=0, usecols="A:E").to_numpy()
+    d['theta'] = pd.read_excel(xlsx, sheet_name='theta', header=0, usecols="A").to_numpy().flatten()    
+    d['y_prob'] = pd.read_excel(xlsx, sheet_name='y', header=0, usecols="C").to_numpy().flatten()    
+    d['y_pred'] = pd.read_excel(xlsx, sheet_name='y', header=0, usecols="E").to_numpy().flatten()    
+    return d            
+
+@fixture(scope="session")
+def get_regression_task_package():
+    d = {}
+    filename = "test_task_regression.xlsx"
+    filepath = os.path.join(datadir, filename)
+    xlsx = pd.ExcelFile(filepath)
+    d['X'] = pd.read_excel(xlsx, sheet_name='X', header=0, usecols="A:E").to_numpy()
+    d['theta'] = pd.read_excel(xlsx, sheet_name='theta', header=0, usecols="A").to_numpy().flatten()        
+    d['y_pred'] = pd.read_excel(xlsx, sheet_name='y', header=0, usecols="A").to_numpy().flatten()    
+    return d                

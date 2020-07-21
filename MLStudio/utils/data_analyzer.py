@@ -128,6 +128,19 @@ def n_features(X):
     else:
         return X.shape[1]
 
+def get_features(X):
+    """Attempts to retrieve the feature names from the dataset."""
+    if isinstance(X, pd.DataFrame):
+        features = X.columns
+    elif isinstance(X, (np.ndarray, np.generic)):
+        try:
+            features = X.dtype.names
+        except:
+            features = None
+    return features
+
+
+
 
         
 

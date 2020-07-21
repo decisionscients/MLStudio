@@ -283,12 +283,39 @@ class Observer(ABC):
 class PerformanceObserver(Observer):
     """Base class for performance observers."""
 
-    def __init__(self, metric='val_score', epsilon=1e-3, patience=5): 
-        super(PerformanceObserver, self).__init__()       
-        self.name = "Performance Base Observer"
-        self.metric = metric                
-        self.epsilon = epsilon
-        self.patience = patience     
+    def __init__(self): 
+        super(PerformanceObserver, self).__init__()               
+        self._metric = None
+        self._epsilon = None
+        self._patience = None
+
+    @property
+    def name(self):
+        return "Performance Base Observer"
+
+    @property
+    def metric(self):
+        return self._metric
+
+    @metric.setter
+    def metric(self, x):
+        self._metric = x
+
+    @property
+    def epsilon(self):
+        return self._epsilon
+
+    @epsilon.setter
+    def epsilon(self, x):
+        self._epsilon = x
+
+    @property
+    def patience(self):
+        return self._patience
+
+    @patience.setter
+    def patience(self, x):
+        self._patience = x        
 
     @property
     def stabilized(self):

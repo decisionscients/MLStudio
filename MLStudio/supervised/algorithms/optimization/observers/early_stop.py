@@ -28,18 +28,15 @@ PROJECT_DIR = Path(__file__).resolve().parents[5]
 print(PROJECT_DIR)
 site.addsitedir(PROJECT_DIR)
 
-import dependency_injector.providers as providers
-import dependency_injector.containers as containers
 import datetime
 import numpy as np
 import pandas as pd
 
 from mlstudio.supervised.algorithms.optimization.observers.base import Observer
-from mlstudio.supervised.algorithms.optimization.observers.base import PerformanceObserverFactory
 from mlstudio.utils.validation import validate_metric, validate_int
 from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
-#                               PERFORMANCE                                   #
+#                               EARLYSTOP                                     #
 # --------------------------------------------------------------------------- #
 class EarlyStop(Observer):
     """Performances and log model performance, critical points and stability. 
@@ -78,15 +75,13 @@ class EarlyStop(Observer):
 
     """
 
-    def __init__(self, metric='val_score', epsilon=0.001, patience=5, factory=None): 
+    def __init__(self, metric='val_score', epsilon=0.001, patience=5, observer=None): 
         super(EarlyStop, self).__init__()
         self.metric = metric
         self.epsilon = epsilon
         self.patience = patience
-        self.factory = factory
-        self._performance_observer = None
-        self.name = "EarlyStop Observer"
-        
+        self.observer = observer
+        self.name = "EarlyStop Observer"        
 
     def on_train_begin(self, log=None):
         """Logic executed at the beginning of training.
@@ -96,11 +91,13 @@ class EarlyStop(Observer):
         log: dict
             Currently not used
         """
-        if not self._performance_observer:
-            self._performance_observer = \
-            PerformanceObserverFactory.get(metric=self.metric, 
-                                           epsilon=self.epsilon,
-                                           patience=self.patience)
+        if self.observer:
+            self.observer.metric = self.metric
+            self.observer.epsilon = self.epsilon
+            self.observer.patience = self.patience
+        else:
+            raise Exception("EarlyStop requires a PerformanceObserver object.")
+
         self.observer.on_train_begin(log)
         super(EarlyStop, self).on_train_begin(log=log)
 
@@ -116,23 +113,10 @@ class EarlyStop(Observer):
             Dictionary containing the data, cost, batch size and current weights
         """                  
         super(EarlyStop, self).on_epoch_end(epoch=epoch, log=log)
-        if self._stabilized:
+        self.observer.on_epoch_end(epoch, log)
+        if self.observer.stabilized:
             self.model.converged = True       
 
-# --------------------------------------------------------------------------- #
-#               PERFORMANCE OBSERVER FACTORY CONTAINER                        #
-# --------------------------------------------------------------------------- #
-class PerformanceObserverFactories(containers.DeclarativeContainer):
-    """IoC container for performance observer factory providers."""
-
-    PerformanceObserver = collections.namedtuple("PerformanceObserver",
-                                                    ['metric', 'epsilon',
-                                                     'patience'])
-
-    performance_observer_factory = providers.DelegatedFactory(PerformanceObserver) 
-    performance_observer = performance_observer_factory('val_score', '0.0001',
-                                                        '5')
-PerformanceObserverFactories.performance_observer                    
 
 #%%
 

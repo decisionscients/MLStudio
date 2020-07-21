@@ -78,10 +78,10 @@ estimators = [GDClassifier(scorer=scenario[0],
                                        for scenario in scenarios]
 @mark.gd
 @mark.multiclass
-@mark.multiclass_regression_skl
+@mark.multiclass_classification_skl
 #@mark.skip(reason="takes too long")
 @parametrize_with_checks(estimators)
-def test_multiclass_regression_sklearn(estimator, check):    
+def test_multiclass_classification_sklearn(estimator, check):    
     scorer = estimator.scorer.name
     objective = estimator.objective.name
     early_stop = estimator.early_stop.name if estimator.early_stop else None
@@ -94,10 +94,10 @@ def test_multiclass_regression_sklearn(estimator, check):
 
 @mark.gd
 @mark.multiclass
-@mark.multiclass_regression
+@mark.multiclass_classification
 #@mark.skip(reason="takes too long")
-def test_multiclass_regression(get_multiclass_regression_data_split):
-    X_train, X_test, y_train, y_test = get_multiclass_regression_data_split
+def test_multiclass_classification(get_multiclass_classification_data_split):
+    X_train, X_test, y_train, y_test = get_multiclass_classification_data_split
     n_within_1_pct = 0
     n_within_10_pct = 0    
     s_num = 0

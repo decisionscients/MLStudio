@@ -29,7 +29,7 @@ from sklearn.metrics import mean_squared_error, mean_squared_log_error
 from sklearn.metrics import median_absolute_error, r2_score
 from sklearn.metrics import accuracy_score, auc, roc_auc_score, roc_curve
 
-from mlstudio.supervised.algorithms.optimization.services import scorers 
+from mlstudio.supervised.metrics.classification import ClassificationScorer 
 
 @mark.scorers
 @mark.classification_scorers

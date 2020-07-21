@@ -23,7 +23,6 @@ import sys
 
 import numpy as np
 import sklearn.utils.validation as skl
-
 # --------------------------------------------------------------------------  #
 def check_X(X):
     """Wraps sklearn's check array function."""
@@ -96,6 +95,93 @@ def validate_array_like(param, param_name=""):
         raise TypeError(msg)
     else:
         return True             
+# --------------------------------------------------------------------------  #        
+def validate_summary(param):
+    from mlstudio.supervised.algorithms.optimization.observers import monitor    
+    if param is None:
+        raise ValueError("The Summary observer from optimization.observers.monitor is required.")
+    if not isinstance(param, monitor.Summary):
+        raise TypeError("The Summary observer from optimization.observers.monitor is required.")
+    return True                
+# --------------------------------------------------------------------------  #        
+def validate_progress(param):
+    from mlstudio.supervised.algorithms.optimization.observers import monitor    
+    if param is None:
+        raise ValueError("The Progress observer from optimization.observers.monitor is required.")    
+    if not isinstance(param, monitor.Progress):
+        raise TypeError("The Progress observer from optimization.observers.monitor is required.")
+    return True        
+# --------------------------------------------------------------------------  #        
+def validate_black_box(param):
+    from mlstudio.supervised.algorithms.optimization.observers import monitor    
+    if param is None:
+        raise ValueError("The BlackBox observer from optimization.observers.monitor is required.")    
+    if not isinstance(param, monitor.BlackBox):
+        raise TypeError("The BlackBox observer from optimization.observers.monitor is required.")
+    return True        
+# --------------------------------------------------------------------------  #        
+def validate_regression_loss(param):
+    from mlstudio.supervised.algorithms.optimization.services import loss
+    valid_loss_classes = (loss.Quadratic,)
+    if not isinstance(param, valid_loss_classes):
+        raise TypeError("The loss parameter is not a valid regression loss class.")
+    return True
+# --------------------------------------------------------------------------  #        
+def validate_binary_classification_loss(param):
+    from mlstudio.supervised.algorithms.optimization.services import loss
+    valid_loss_classes = (loss.CrossEntropy,)
+    if not isinstance(param, valid_loss_classes):
+        raise TypeError("The loss parameter is not a valid binary classification loss class.")
+    return True
+# --------------------------------------------------------------------------  #        
+def validate_multiclass_classification_loss(param):
+    from mlstudio.supervised.algorithms.optimization.services import loss
+    valid_loss_classes = (loss.CategoricalCrossEntropy,)
+    if not isinstance(param, valid_loss_classes):
+        raise TypeError("The loss parameter is not a valid multiclass classification loss class.")
+    return True    
+
+
+# --------------------------------------------------------------------------  #        
+def validate_regression_data_processor(param):
+    from mlstudio.utils.data_manager import RegressionDataProcessor    
+    if not isinstance(param, RegressionDataProcessor):
+        raise TypeError("The data_processor parameter is not a valid regression data_processor class.")
+    return True
+# --------------------------------------------------------------------------  #        
+def validate_binary_classification_data_processor(param):
+    from mlstudio.utils.data_manager import LogisticRegressionDataProcessor    
+    if not isinstance(param, LogisticRegressionDataProcessor):
+        raise TypeError("The data_processor parameter is not a valid logistic regression data_processor class.")
+    return True    
+# --------------------------------------------------------------------------  #        
+def validate_multiclass_classification_data_processor(param):
+    from mlstudio.utils.data_manager import MulticlassDataProcessor    
+    if not isinstance(param, MulticlassDataProcessor):
+        raise TypeError("The data_processor parameter is not a valid multiclass classification data_processor class.")
+    return True      
+
+
+# --------------------------------------------------------------------------  #        
+def validate_binary_classification_activation(param):
+    from mlstudio.supervised.algorithms.optimization.services.activations import Sigmoid    
+    if not isinstance(param, Sigmoid):
+        raise TypeError("This class requires the Sigmoid activation function.")
+    return True    
+# --------------------------------------------------------------------------  #        
+def validate_multiclass_classification_activation(param):
+    from mlstudio.supervised.algorithms.optimization.services.activations import Softmax
+    if not isinstance(param, Softmax):
+        raise TypeError("This class requires the Softmax activation function.")
+    return True      
+
+
+# --------------------------------------------------------------------------  #        
+def validate_observer_list(param):
+    from mlstudio.supervised.algorithms.optimization.observers.base import ObserverList    
+    if not isinstance(param, ObserverList):
+        raise ValueError("This class requires an ObserverList object.")
+    return True
 # --------------------------------------------------------------------------  #
 def validate_observers(param, param_name='observers'):
     from mlstudio.supervised.algorithms.optimization.observers.base import Observer
@@ -170,12 +256,12 @@ def validate_regularizer(regularizer):
     else:
         return True   
 # --------------------------------------------------------------------------  #
-def validate_application(application):    
-    from mlstudio.supervised.algorithms.optimization.services.tasks import Application
-    valid_applications = [cls.__name__ for cls in Application.__subclasses__()]
-    if not isinstance(application, Application):
-        msg = "{s} is an invalid Application object. The valid Application \
-        classes include : {v}".format(s=application, v=str(valid_applications))
+def validate_task(task):    
+    from mlstudio.supervised.algorithms.optimization.services.tasks import Task
+    valid_tasks = [cls.__name__ for cls in Task.__subclasses__()]
+    if not isinstance(task, Task):
+        msg = "{s} is an invalid Task object. The valid Task \
+        classes include : {v}".format(s=task, v=str(valid_tasks))
         raise TypeError(msg)
     else:
         return True           

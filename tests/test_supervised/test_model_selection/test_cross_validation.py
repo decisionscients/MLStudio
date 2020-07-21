@@ -21,22 +21,28 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
-from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic
-from mlstudio.supervised.algorithms.optimization.services.regularizers import L2
-from mlstudio.model.development import ModelBuilder
+from mlstudio.supervised.metrics.regression import R2
+from mlstudio.supervised.model.development import ModelBuilder
+from mlstudio.IoC.loss import IoCQuadratic
+from mlstudio.IoC.tasks import Tasks
+from mlstudio.IoC.estimators import Estimators
 # --------------------------------------------------------------------------- #
 @mark.cross_validation
 class CrossValidationTests:
 
     def test_nested_cv(self, get_regression_data_unscaled):
         X, y = get_regression_data_unscaled
-        est = GDRegressor()
+        loss = IoCQuadratic().quadratic()
+        task = Tasks().linear_regression(loss=loss)        
+        estimator = Estimators().gradient_descent_factory(task=task, scorer=R2)
+        print("*************************")
+        print(estimator.fit)
+
         param_set = [
             {"epochs": [100,200,500,1000],
              "batch_size": [32, 64]}
         ]
-        ncv = ModelBuilder(estimator=est, parameters=param_set) 
+        ncv = ModelBuilder(estimator=estimator, parameters=param_set) 
         ncv.fit(X,y)
         print(ncv.results_.get('test_score'))
         print(ncv.results_.get('estimator'))

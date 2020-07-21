@@ -282,7 +282,7 @@ class DataProcessorFactory:
 
     _data_processors = {'LinearRegression': RegressionDataProcessor(),
                         'LogisticRegression': LogisticRegressionDataProcessor(),
-                        'MulticlassLogisticRegression': MulticlassDataProcessor()}
+                        'MulticlassClassification': MulticlassDataProcessor()}
     
     def __call__(self, task):
         data_processor = self._data_processors.get(task)

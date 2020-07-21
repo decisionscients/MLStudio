@@ -280,7 +280,7 @@ class ExponentialStepDecay(LearningRateSchedule):
             eta0=eta0,
             eta_min=eta_min,            
             decay_factor=decay_factor)    
-        self.name = "Exponential Schedule Learning Rate Schedule"
+        self.name = "Exponential Step Decay Learning Rate Schedule"
         self.decay_steps = decay_steps
         self.staircase = staircase
 
@@ -478,7 +478,7 @@ class BottouSchedule(LearningRateSchedule):
             self.decay_factor * epoch)**(-1)
 
 # --------------------------------------------------------------------------- #
-#                             IMPROVEMENT                                     #
+#                               ADAPTIVE                                      #
 # --------------------------------------------------------------------------- #
 class Adaptive(LearningRateSchedule):
     """Decays the learning rate if performance plateaus.
@@ -516,7 +516,8 @@ class Adaptive(LearningRateSchedule):
 
     def __init__(self, eta0=0.1, eta_min=1e-4,
                  decay_factor=0.5, metric='train_cost',  epsilon=0.001, 
-                 patience=10):
+                 patience=10,
+                 observer=None):
         super(Adaptive, self).__init__(
             eta0=eta0,
             eta_min=eta_min,
@@ -525,7 +526,8 @@ class Adaptive(LearningRateSchedule):
         self.name = "Adaptive Learning Rate Schedule"        
         self.metric = metric                
         self.epsilon = epsilon
-        self.patience = patience        
+        self.patience = patience  
+        self._observer = observer      
 
     def on_train_begin(self, log=None):        
         """Sets key variables at beginning of training.
@@ -536,8 +538,13 @@ class Adaptive(LearningRateSchedule):
             Contains no information
         """
         super(Adaptive, self).on_train_begin(log)
-        self._observer = PerformanceObserver(metric=self.metric, \
-            epsilon=self.epsilon, patience=self.patience)    
+        try:
+            self._observer.metric = self.metric
+            self._observer.epsilon = self.epsilon
+            self._observer.patience = self.patience
+        except:
+            raise ValueError("The performance observer object is required for this object.")
+        
         self._observer.on_train_begin()        
 
     def _compute_learning_rate(self, epoch, log):

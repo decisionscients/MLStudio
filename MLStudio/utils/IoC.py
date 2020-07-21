@@ -37,7 +37,7 @@ from mlstudio.supervised.algorithms.optimization.services import optimizers
 from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
 from mlstudio.supervised.algorithms.optimization import gradient_descent
-from mlstudio.supervised.metrics import regression, classification
+from mlstudio.supervised.metrics.regression import regression, classification
 from mlstudio.utils.data_manager import RegressionDataProcessor
 from mlstudio.utils.data_manager import LogisticRegressionDataProcessor
 from mlstudio.utils.data_manager import MulticlassDataProcessor
@@ -112,19 +112,19 @@ class Tasks(containers.DeclarativeContainer):
                                           data_processor=LogisticRegressionDataProcessor,
                                           activation=activations.Sigmoid)                                          
 
-    multiclass_regression = providers.Factory(tasks.MulticlassLogisticRegression,
+    multiclass_classification = providers.Factory(tasks.MulticlassClassification,
                                           loss=LossFunctions.categorical_cross_entropy,
                                           data_processor=MulticlassDataProcessor,
                                           activation=activations.Softmax)
-    multiclass_regression_l1 = providers.Factory(tasks.MulticlassLogisticRegression,
+    multiclass_classification_l1 = providers.Factory(tasks.MulticlassClassification,
                                           loss=LossFunctions.categorical_cross_entropy_l1,
                                           data_processor=MulticlassDataProcessor,
                                           activation=activations.Softmax)                      
-    multiclass_regression_l2 = providers.Factory(tasks.MulticlassLogisticRegression,
+    multiclass_classification_l2 = providers.Factory(tasks.MulticlassClassification,
                                           loss=LossFunctions.categorical_cross_entropy_l2,
                                           data_processor=MulticlassDataProcessor,
                                           activation=activations.Softmax)
-    multiclass_regression_l1_l2 = providers.Factory(tasks.MulticlassLogisticRegression,
+    multiclass_classification_l1_l2 = providers.Factory(tasks.MulticlassClassification,
                                           loss=LossFunctions.categorical_cross_entropy_l1_l2,
                                           data_processor=MulticlassDataProcessor,
                                           activation=activations.Softmax)                                                

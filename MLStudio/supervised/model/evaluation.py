@@ -29,9 +29,9 @@ homedir = str(Path(__file__).parents[2])
 sys.path.append(homedir)
 
 from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
-from mlstudio.model.centre import SModel
-from mlstudio.model.development import ModelBuilder
-from mlstudio.model.data import DataFactory
+from mlstudio.supervised.model.centre import SModel
+from mlstudio.supervised.model.development import ModelBuilder
+from mlstudio.supervised.model.data import DataFactory
 # --------------------------------------------------------------------------- #
 class ModelEvaluation(persistent.Persistent):
     """Contains generalization error statistics for a NestedCV Search."""

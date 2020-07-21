@@ -263,6 +263,7 @@ class ModelBuilder(BaseEstimator, persistent.Persistent):
 
     def _evaluate_model_generalization(self):
         """Performs nested cross validation to estimate model building generalization."""        
+
         cv_results = cross_validate(estimator=self._gridsearch_object,
                                       X=self.X_train_,
                                       y=self.y_train_,
@@ -272,6 +273,7 @@ class ModelBuilder(BaseEstimator, persistent.Persistent):
                                       return_estimator=True,
                                       return_train_score=self.return_train_score,
                                       n_jobs=self.n_jobs)
+        
         self.results_ = cv_results        
 
     def fit(self, X, y):

@@ -24,7 +24,7 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.supervised.machine_learning.gradient_descent import GDPureOptimizer
+from mlstudio.supervised.algorithms.optimization.gradient_descent import GD
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import TimeDecay, StepDecay
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialDecay
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialStepDecay
