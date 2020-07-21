@@ -31,7 +31,6 @@ from pytest import fixture
 from sklearn import datasets
 from sklearn.linear_model import LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_regression, make_classification
 from sklearn.datasets import make_multilabel_classification
@@ -43,6 +42,7 @@ from mlstudio.supervised.algorithms.optimization.services.optimizers import Adag
 from mlstudio.supervised.algorithms.optimization.services.objectives import StyblinskiTank
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import TimeDecay
 from mlstudio.supervised.metrics.regression import MSE
+from mlstudio.utils.data_manager import StandardScaler
 
 
 homedir = str(Path(__file__).parents[0])
@@ -53,8 +53,8 @@ sys.path.append(datadir)
 #                               FILES TO SKIP                                  #
 # ---------------------------------------------------------------------------- #
 
-collect_ignore_glob = ["*test_data*", "*ions.py","*regression.py", "*ss_regression.py", 
-                       "*t_regression.py", "*test_cross_validation.py"]
+collect_ignore_glob = ["*ions.py", "*ic_regression.py", "*ss_regression.py", 
+                       "*test_cross_validation.py", "test_pure*.py"]
 
 # ---------------------------------------------------------------------------- #
 #                                  DATA                                        #
@@ -141,9 +141,12 @@ def get_regression_data_features():
 
 @fixture(scope="session")
 def get_regression_data_split(get_regression_data):
-    X, y = get_regression_data
+    X, y = datasets.load_boston(return_X_y=True)
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.33, random_state=50)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
     return X_train, X_test, y_train, y_test        
 
 

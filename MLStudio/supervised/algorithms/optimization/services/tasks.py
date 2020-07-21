@@ -27,8 +27,6 @@ from mlstudio.supervised.algorithms.optimization.services.activations import Sig
 from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic 
 from mlstudio.supervised.algorithms.optimization.services.loss import CrossEntropy
 from mlstudio.supervised.algorithms.optimization.services.loss import CategoricalCrossEntropy 
-from mlstudio.utils.data_analyzer import n_classes, n_features
-from mlstudio.utils.data_manager import DataProcessorFactory, AddBiasTerm
 from mlstudio.utils import validation
 # --------------------------------------------------------------------------  #
 class Task(ABC, BaseEstimator):
@@ -48,7 +46,7 @@ class Task(ABC, BaseEstimator):
     def name(self):
         pass
 
-    def prepare_data(self, X, y, val_size=None):
+    def prepare_data(self, X, y=None, val_size=None):
         """Prepares data for training.
         
         Parameters
@@ -67,8 +65,9 @@ class Task(ABC, BaseEstimator):
         data : dictionary 
             Dict containing training and optionally validation data
         """
-        data = self._data_processor.fit_transform(X, y)
-        self._n_features = n_features(data.get('X_train_'))
+        data = self._data_processor.fit_transform(X, y, val_size)
+        self._n_features = data.get('n_features_')
+        self._n_classes = data.get('n_classes_')
         self._data_prepared = True
         return data
 
@@ -326,29 +325,6 @@ class MulticlassClassification(Task):
     def activation(self, x):
         validation.validate_multiclass_classification_activation(x)
         self._activation = x                        
-
-    def prepare_data(self, X, y):
-        """Prepares data for training.
-        
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The independent variables from the training set.
-
-        y : array-like of shape (n_samples,) or (n_samples, n_classes)
-            The dependent variable from the training set.
-
-        val_size : float in (0,1) or None
-            Proportion of training data to allocate to validation set.
-
-        Returns 
-        -------
-        data : dictionary 
-            Dict containing training and optionally validation data
-        """
-        data = super(MulticlassClassification, self).prepare_data(X, y)        
-        self._n_classes = n_classes(data.get('y_train_'))        
-        return data      
 
     def init_weights(self, theta_init=None):
         """Initializes parameters to theta_init or to random values.

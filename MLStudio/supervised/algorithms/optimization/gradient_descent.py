@@ -42,8 +42,8 @@ from mlstudio.supervised.algorithms.optimization.services import loss
 from mlstudio.supervised.algorithms.optimization.services import optimizers
 from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
-from mlstudio.utils.data_analyzer import n_classes, n_features, get_features
-from mlstudio.utils.data_manager import AddBiasTerm, unpack_parameters
+from mlstudio.utils.data_analyzer import get_features
+from mlstudio.utils.data_manager import unpack_parameters
 from mlstudio.utils.data_manager import batch_iterator
 from mlstudio.utils import validation
 # =========================================================================== #
@@ -121,7 +121,8 @@ class GradientDescent(BaseEstimator):
     def __init__(self, task, eta0=0.01, epochs=1000,  batch_size=None,  val_size=0.3, 
                  theta_init=None, optimizer=None, scorer=None, early_stop=None, 
                  learning_rate=None,  observer_list=None, progress=None, 
-                 blackbox=None, summary=None, verbose=False, random_state=None):
+                 blackbox=None, summary=None, verbose=False, random_state=None,
+                 check_gradient=False, gradient_check=None):
                 
         self.task = task
         self.eta0 = eta0
@@ -139,6 +140,8 @@ class GradientDescent(BaseEstimator):
         self.summary = summary
         self.verbose = verbose
         self.random_state = random_state    
+        self.check_gradient = check_gradient
+        self.gradient_check = gradient_check
 
     # ----------------------------------------------------------------------- #                
     @property
@@ -202,51 +205,6 @@ class GradientDescent(BaseEstimator):
         self._converged = x       
 
     # ----------------------------------------------------------------------- #
-    def _validate(self, log=None):
-        """Validates input rather than peppering try except everywhere."""
-        validation.check_X_y(log.get('X'), log.get('y'))
-        validation.validate_task(self.task)
-        validation.validate_range(self.eta0, param_name="eta0", minimum=0, 
-                                  maximum=1, left='open', right='close')
-        validation.validate_int(self.epochs, param_name="epochs", minimum=0,
-                                left='open', right='close')                 
-        if self.batch_size:
-            validation.validate_int(self.batch_size, param_name="batch_size", 
-                                    minimum=0, left='open', right='close')            
-        if self.val_size:
-            validation.validate_range(self.val_size, param_name="val_size", 
-                                    minimum=0, maximum=1, left='closed', 
-                                    right='open')
-        validation.validate_optimizer(self.optimizer)
-        validation.validate_scorer(self.scorer)               
-        if self.early_stop:
-            validation.validate.observers(self.early_stop, 
-                                            param_name='early_stop')
-        if self.learning_rate:
-            validation.validate.observers(self.learning_rate, 
-                                            param_name='learning_rate')   
-
-        validation.validate.observer_list(self.observer_list)
-        validation.validate_black_box(self.blackbox)
-        validation.validate_progress(self.progress)
-        validation.validate_summary(self.summary)
-
-        if self.verbose:
-            validation.validate_int(param=self.verbose, param_name='verbose',
-                            minimum=0, left='open')
-        if self.random_state:
-            validation.validate_int(param=self.random_state,
-                                    param_name='random_state')                                            
-
-
-        if not isinstance(self.eta0, float):
-            raise ValueError("The eta0 parameter must be a float in (0,1) object.")   
-
-        if not isinstance(self.eta0, float):
-            raise ValueError("The eta0 parameter must be a float in (0,1) object.")                
-
-
-    # ----------------------------------------------------------------------- #
     def _copy_mutable_parameters(self, log=None):
         """Makes copies of mutable parameters and makes them private members."""
 
@@ -256,6 +214,7 @@ class GradientDescent(BaseEstimator):
         self._optimizer = copy.deepcopy(self.optimizer)
         self._progress = copy.deepcopy(self.progress)
         self._summary = copy.deepcopy(self.summary) 
+        self._gradient_check = copy.deepcopy(self.gradient_check)
 
         # Attributes
         self.blackbox_ = copy.deepcopy(self.blackbox)
@@ -283,6 +242,9 @@ class GradientDescent(BaseEstimator):
 
         if self._early_stop:
             self._observer_list.append(self._early_stop)
+
+        if self.check_gradient:
+            self._observer_list.append(self._gradient_check)
         
         # Publish model parameters and estimator instance on observer objects.
         self._observer_list.set_params(self.get_params())
@@ -314,8 +276,8 @@ class GradientDescent(BaseEstimator):
         log : dict
             Data relevant this part of the process. 
         """
-        log = log or {}
-        self._validate(log)
+        log = log or {}        
+        validation.validate_estimator(self)
         self._compile(log)    
         self._initialize_state(log)
         self._prepare_data(log.get('X'), log.get('y'))
@@ -396,14 +358,10 @@ class GradientDescent(BaseEstimator):
 
     # ----------------------------------------------------------------------- #    
     def _prepare_data(self, X, y):
-        """Prepares X and y data for training."""        
-        data = self._task.prepare_data(X, y, self.val_size)
-        self.features_ = get_features(X)
-        # Make each data set an attribute
+        """Prepares data for training and creates data and metadata attributes."""        
+        data = self._task.prepare_data(X, y, self.val_size)                
         for k, v in data.items():     
             setattr(self, k, v)
-        # Set n_features_ as the number of features plus the intercept term
-        self.n_features_ = n_features(self.X_train_)
 
     # ----------------------------------------------------------------------- #
     def _set_current_state(self):
@@ -490,7 +448,7 @@ class GradientDescent(BaseEstimator):
         -------
         y_pred : prediction
         """
-        check_is_fitted(self)
+        validation.check_is_fitted(self)
         data = self._task.prepare_data(X)
         return self._task.predict(self.theta_, data['X'])    
 
@@ -508,7 +466,7 @@ class GradientDescent(BaseEstimator):
         X : array-like of shape (n_samples, n_features+1)
             The input data
 
-        y : array-like of shape (n_samples,) or (n_samples, n_classes)
+        y : array-like of shape (n_samples,) 
         
         Returns
         -------

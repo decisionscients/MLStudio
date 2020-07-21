@@ -28,10 +28,10 @@ import dependency_injector.containers as containers
 import dependency_injector.providers as providers
 
 from mlstudio.supervised.algorithms.optimization.gradient_descent import GradientDescent
-from mlstudio.supervised.algorithms.optimization.observers import base
+from mlstudio.supervised.algorithms.optimization.observers import base, debug
 from mlstudio.supervised.algorithms.optimization.observers import monitor
 from mlstudio.supervised.algorithms.optimization.services import optimizers
-from mlstudio.supervised.metrics.regression import MSE
+from mlstudio.supervised.metrics.regression import R2
 from mlstudio.supervised.metrics.classification import Accuracy
 from mlstudio.factories.tasks import Task
 
@@ -39,7 +39,7 @@ from mlstudio.factories.tasks import Task
 # --------------------------------------------------------------------------- #
 class GradientDescent(containers.DeclarativeContainer):
     """IoC Container for gradient descent estimator providers."""                                    
-    regression_factory = providers.Factory(GradientDescent,
+    regressor_factory = providers.Factory(GradientDescent,
                                     task=Task.linear_regression_factory(),
                                     eta0=0.01,
                                     epochs=1000,
@@ -47,7 +47,7 @@ class GradientDescent(containers.DeclarativeContainer):
                                     val_size=0.3,
                                     theta_init=None,
                                     optimizer=optimizers.GradientDescentOptimizer(),
-                                    scorer=MSE(),
+                                    scorer=R2(),
                                     early_stop=None,
                                     learning_rate=None,                           
                                     observer_list=base.ObserverList(),
@@ -55,10 +55,12 @@ class GradientDescent(containers.DeclarativeContainer):
                                     blackbox=monitor.BlackBox(),
                                     summary=monitor.Summary(),
                                     verbose=False,
-                                    random_state=None
+                                    random_state=None,
+                                    check_gradient=False,
+                                    gradient_check=debug.GradientCheck()
                                     )
 
-    logistic_regression_factory = providers.Factory(GradientDescent,
+    binary_classifier_factory = providers.Factory(GradientDescent,
                                     task=Task.logistic_regression_factory(),
                                     eta0=0.01,
                                     epochs=1000,
@@ -74,7 +76,9 @@ class GradientDescent(containers.DeclarativeContainer):
                                     blackbox=monitor.BlackBox(),
                                     summary=monitor.Summary(),
                                     verbose=False,
-                                    random_state=None
+                                    random_state=None,
+                                    check_gradient=False,
+                                    gradient_check=debug.GradientCheck()
                                     )
 
     multiclass_classification_factory = providers.Factory(GradientDescent,
@@ -93,5 +97,7 @@ class GradientDescent(containers.DeclarativeContainer):
                                     blackbox=monitor.BlackBox(),
                                     summary=monitor.Summary(),
                                     verbose=False,
-                                    random_state=None
+                                    random_state=None,
+                                    check_gradient=False,
+                                    gradient_check=debug.GradientCheck()
                                     )

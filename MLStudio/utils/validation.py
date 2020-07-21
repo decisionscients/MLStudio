@@ -79,6 +79,9 @@ def is_multilabel(y):
         return False
     if y.shape[1] > 1:
         return True        
+# --------------------------------------------------------------------------  #
+def check_is_fitted(x):
+    return x.converged and X.intercept_ and X.coef_
 
 # --------------------------------------------------------------------------  #
 def validate_bool(param, param_name=""):        
@@ -95,6 +98,15 @@ def validate_array_like(param, param_name=""):
         raise TypeError(msg)
     else:
         return True             
+
+# --------------------------------------------------------------------------  #        
+def validate_gradient_check(param):
+    from mlstudio.supervised.algorithms.optimization.observers import debug
+    if param is None:
+        raise ValueError("The GradientCheck observer from optimization.observers.monitor is required.")
+    if not isinstance(param, debug.GradientCheck):
+        raise TypeError("The GradientCheck observer from optimization.observers.monitor is required.")
+    return True            
 # --------------------------------------------------------------------------  #        
 def validate_summary(param):
     from mlstudio.supervised.algorithms.optimization.observers import monitor    
@@ -197,7 +209,7 @@ def validate_observers(param, param_name='observers'):
     
 # --------------------------------------------------------------------------  #
 def validate_scorer(scorer):    
-    from mlstudio.supervised.metrics.regression import Scorer
+    from mlstudio.supervised.metrics.base import Scorer
     valid_scorers = [cls.__name__ for cls in Scorer.__subclasses__()]
     if not isinstance(scorer, Scorer):
         msg = "{s} is an invalid Scorer object. The valid Scorer classes include : \
@@ -335,4 +347,51 @@ def validate_zero_to_one(param, param_name = "", left='open', right='open'):
 def search_all_subclasses(cls):
     return set(cls.__subclasses__()).union(
         [s for c in cls.__subclasses__() for s in search_all_subclasses(c)])  
+
+# --------------------------------------------------------------------------  #
+#                           CHECK ESTIMATOR                                   # 
+# --------------------------------------------------------------------------  #     
+def validate_estimator(estimator):
+    """Validates an estimator object."""
+    validate_task(estimator.task)
+    validate_range(estimator.eta0, param_name="eta0", minimum=0, 
+                                maximum=1, left='open', right='close')
+    validate_int(estimator.epochs, param_name="epochs", minimum=0,
+                            left='open', right='close')                 
+    if estimator.batch_size:
+        validate_int(estimator.batch_size, param_name="batch_size", 
+                                minimum=0, left='open', right='close')            
+    if estimator.val_size:
+        validate_range(estimator.val_size, param_name="val_size", 
+                                minimum=0, maximum=1, left='closed', 
+                                right='open')
+    validate_optimizer(estimator.optimizer)
+    validate_scorer(estimator.scorer)               
+    if estimator.early_stop:
+        validate.observers(estimator.early_stop, 
+                                        param_name='early_stop')
+    if estimator.learning_rate:
+        validate.observers(estimator.learning_rate, 
+                                        param_name='learning_rate')   
+
+    validate_observer_list(estimator.observer_list)
+    validate_black_box(estimator.blackbox)
+    validate_progress(estimator.progress)
+    validate_summary(estimator.summary)
+    validate_bool(param=estimator.check_gradient, param_name='check_gradient')
+    validate_gradient_check(estimator.gradient_check)
+
+    if estimator.verbose:
+        validate_int(param=estimator.verbose, param_name='verbose',
+                        minimum=0, left='open')
+    if estimator.random_state:
+        validate_int(param=estimator.random_state,
+                                param_name='random_state')                                            
+
+
+    if not isinstance(estimator.eta0, float):
+        raise ValueError("The eta0 parameter must be a float in (0,1) object.")   
+
+    if not isinstance(estimator.eta0, float):
+        raise ValueError("The eta0 parameter must be a float in (0,1) object.")     
      

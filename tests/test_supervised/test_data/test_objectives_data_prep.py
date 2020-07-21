@@ -42,7 +42,7 @@ sys.path.append(datadir)
 
 from mlstudio.utils.data_manager import StandardScaler
 from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic, CrossEntropy
-from mlstudio.supervised.algorithms.optimization.services.objectives import CategoricalCrossEntropy
+from mlstudio.supervised.algorithms.optimization.services.loss import CategoricalCrossEntropy
 from mlstudio.supervised.algorithms.optimization.services.regularizers import L1, L2, L1_L2
 
 # --------------------------------------------------------------------------  #

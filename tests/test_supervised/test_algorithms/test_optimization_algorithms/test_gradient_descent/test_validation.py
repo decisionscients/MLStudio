@@ -21,54 +21,54 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.factories import tasks, estimators
+from mlstudio.factories import tasks, algorithms
 
 # --------------------------------------------------------------------------  #
 @mark.validate_estimator
 def test_estimator_validation(get_regression_data):
     X, y = get_regression_data
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory()
+        est = estimators.GradientDescent.linear_regression_factory()
         est.fit(X,y)
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory(task=tasks.Task.linear_regression_factory(),eta0='hat')
+        est = estimators.GradientDescent.linear_regression_factory(task=tasks.Task.linear_regression_factory(),eta0='hat')
         est.fit(X,y)                
     with pytest.raises(ValueError):        
-        est = estimators.GradientDescent.regression_factory(eta0=5)
+        est = estimators.GradientDescent.linear_regression_factory(eta0=5)
         est.fit(X,y)        
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory(epochs='hat')
+        est = estimators.GradientDescent.linear_regression_factory(epochs='hat')
         est.fit(X,y)                
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory(batch_size='hat')
+        est = estimators.GradientDescent.linear_regression_factory(batch_size='hat')
         est.fit(X,y)        
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory(val_size='hat')
+        est = estimators.GradientDescent.linear_regression_factory(val_size='hat')
         est.fit(X,y)        
     with pytest.raises(ValueError):        
-        est = estimators.GradientDescent.regression_factory(val_size=5)
+        est = estimators.GradientDescent.linear_regression_factory(val_size=5)
         est.fit(X,y)                        
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory(optimizer=tasks.Task.linear_regression_factory())
+        est = estimators.GradientDescent.linear_regression_factory(optimizer=tasks.Task.linear_regression_factory())
         est.fit(X,y)                
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory(scorer=tasks.Task.linear_regression_factory())
+        est = estimators.GradientDescent.linear_regression_factory(scorer=tasks.Task.linear_regression_factory())
         est.fit(X,y)                
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory(learning_rate=tasks.Task.linear_regression_factory())
+        est = estimators.GradientDescent.linear_regression_factory(learning_rate=tasks.Task.linear_regression_factory())
         est.fit(X,y)                
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory(observer_list=tasks.Task.linear_regression_factory())
+        est = estimators.GradientDescent.linear_regression_factory(observer_list=tasks.Task.linear_regression_factory())
         est.fit(X,y)                        
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory(verbose=tasks.Task.linear_regression_factory())
+        est = estimators.GradientDescent.linear_regression_factory(verbose=tasks.Task.linear_regression_factory())
         est.fit(X,y)                        
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.regression_factory(random_state=tasks.Task.linear_regression_factory())
+        est = estimators.GradientDescent.linear_regression_factory(random_state=tasks.Task.linear_regression_factory())
         est.fit(X,y)    
     with pytest.raises(ValueError):        
         X, y = None
-        est = estimators.GradientDescent.regression_factory()
+        est = estimators.GradientDescent.linear_regression_factory()
         est.fit(X,y)                            
 
         
