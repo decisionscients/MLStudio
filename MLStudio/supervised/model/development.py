@@ -148,7 +148,7 @@ class ModelBuilder(BaseEstimator, persistent.Persistent):
             * the best hyperparameters  
             * best score   
             * best index   
-            * scorer (function or dict)
+            * metric (function or dict)
             * n_splits    
             * refit time
 

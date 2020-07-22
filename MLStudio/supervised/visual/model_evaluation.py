@@ -499,7 +499,7 @@ class ModelSummary(BaseVisualizer):
 
         # Create scores subplot
         scores_subplot = ScoreSubplot(fig=self.fig, row=1, col=1, 
-                            yaxis_label=self.estimator.scorer.label)
+                            yaxis_label=self.estimator.metric.label)
         self.fig = scores_subplot.fit(X=cv_results).fig
 
         # Create fit and score times subplot
@@ -588,7 +588,7 @@ class OptimizationCurve(BaseVisualizer):
             d['Training Loss'] = self.estimator.blackbox_.epoch_log.get('train_cost')
 
         else:
-            d['yaxis_title'] = self.estimator.scorer.label
+            d['yaxis_title'] = self.estimator.metric.label
             d['Training Score'] = self.estimator.blackbox_.epoch_log.get('train_score')
             if self.estimator.blackbox_.epoch_log.get('val_score'):
                 d['Validation Score'] = self.estimator.blackbox_.epoch_log.get('val_score')            

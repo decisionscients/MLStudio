@@ -19,9 +19,9 @@
 import math
 import numpy as np
 
-from mlstudio.supervised.metrics.base import RegressionScorer
+from mlstudio.supervised.metrics.base import RegressionMetric
 # --------------------------------------------------------------------------- #
-class SSR(RegressionScorer):
+class SSR(RegressionMetric):
     """Computes sum squared residuals given"""
 
     def __init__(self):
@@ -39,7 +39,7 @@ class SSR(RegressionScorer):
         e = y - y_pred
         return np.sum(e**2)  
 
-class SST(RegressionScorer):
+class SST(RegressionMetric):
     """Computes total sum of squares"""
 
     def __init__(self):
@@ -58,7 +58,7 @@ class SST(RegressionScorer):
         e = y-y_avg                
         return np.sum(e**2)
 
-class R2(RegressionScorer):
+class R2(RegressionMetric):
     """Computes coefficient of determination."""
 
     def __init__(self):
@@ -75,11 +75,11 @@ class R2(RegressionScorer):
     def __call__(self, y, y_pred, *args, **kwargs):
         self._ssr = SSR()
         self._sst = SST()
-        r2 = 1 - (self._ssr(y, y_pred)/self._sst(y, y_pred))        
+        r2 = 1 - (self._ssr(y, y_pred)/self._sst(y, y_pred))     
         return r2
 
 
-class AdjustedR2(RegressionScorer):
+class AdjustedR2(RegressionMetric):
     """Computes adjusted coefficient of determination."""
 
     def __init__(self):
@@ -103,7 +103,7 @@ class AdjustedR2(RegressionScorer):
         ar2 = 1 - ((self._ssr(y, y_pred)/df_e)/(self._sst(y, y_pred)/df_t))        
         return ar2
 
-class VarExplained(RegressionScorer):
+class VarExplained(RegressionMetric):
     """Computes proportion of variance explained."""
 
     def __init__(self):
@@ -121,7 +121,7 @@ class VarExplained(RegressionScorer):
         var_explained = 1 - (np.var(y-y_pred) / np.var(y))
         return var_explained                   
 
-class MAE(RegressionScorer):
+class MAE(RegressionMetric):
     """Computes mean absolute error given data and parameters."""
 
     def __init__(self):
@@ -139,7 +139,7 @@ class MAE(RegressionScorer):
         return np.mean(e)
 
 
-class MSE(RegressionScorer):
+class MSE(RegressionMetric):
     """Computes mean squared error given data and parameters."""
 
     def __init__(self):
@@ -156,7 +156,7 @@ class MSE(RegressionScorer):
         e = y - y_pred
         return np.mean(e**2)
 
-class NMSE(RegressionScorer):
+class NMSE(RegressionMetric):
     """Computes negative mean squared error given data and parameters."""
 
     def __init__(self):
@@ -174,7 +174,7 @@ class NMSE(RegressionScorer):
         e = y - y_pred
         return -np.mean(e**2)
 
-class RMSE(RegressionScorer):
+class RMSE(RegressionMetric):
     """Computes root mean squared error given data and parameters."""
 
     def __init__(self):
@@ -191,7 +191,7 @@ class RMSE(RegressionScorer):
         e = y-y_pred
         return np.sqrt(np.mean(e**2)) 
 
-class NRMSE(RegressionScorer):
+class NRMSE(RegressionMetric):
     """Computes negative root mean squared error given data and parameters."""
 
     def __init__(self):
@@ -209,7 +209,7 @@ class NRMSE(RegressionScorer):
         e = y-y_pred
         return -np.sqrt(np.mean(e**2))
 
-class MSLE(RegressionScorer):
+class MSLE(RegressionMetric):
     """Computes mean squared log error given data and parameters."""
 
     def __init__(self):
@@ -229,7 +229,7 @@ class MSLE(RegressionScorer):
         e = np.log(y)-np.log(y_pred)
         return np.mean(e**2)
 
-class RMSLE(RegressionScorer):
+class RMSLE(RegressionMetric):
     """Computes root mean squared log error given data and parameters."""
 
     def __init__(self):
@@ -248,7 +248,7 @@ class RMSLE(RegressionScorer):
         e = np.log(y)-np.log(y_pred)
         return np.sqrt(np.mean(e**2))
 
-class MEDAE(RegressionScorer):
+class MEDAE(RegressionMetric):
     """Computes median absolute error given data and parameters."""
 
     def __init__(self):
@@ -264,7 +264,7 @@ class MEDAE(RegressionScorer):
     def __call__(self, y, y_pred, *args, **kwargs):        
         return np.median(np.abs(y_pred-y))
 
-class MAPE(RegressionScorer):
+class MAPE(RegressionMetric):
     """Computes mean absolute percentage given data and parameters."""
 
     def __init__(self):

@@ -46,7 +46,7 @@ from mlstudio.supervised.algorithms.optimization.services.optimizers import Adam
 from mlstudio.supervised.algorithms.optimization.services.optimizers import AMSGrad, AdamW, QHAdam
 from mlstudio.supervised.algorithms.optimization.services.optimizers import QuasiHyperbolicMomentum
 from mlstudio.supervised.algorithms.optimization.services.regularizers import L1, L2, L1_L2
-from mlstudio.supervised.algorithms.optimization.services import scorers
+from mlstudio.supervised.algorithms.optimization.services import metrics
 # --------------------------------------------------------------------------  #
 count = 0
 early_stops = [None,EarlyStop()]
@@ -54,7 +54,7 @@ learning_rates = \
             [None, TimeDecay(), StepDecay(), ExponentialDecay(), 
              ExponentialStepDecay(), PolynomialDecay(), PolynomialStepDecay(), 
              PowerSchedule(), BottouSchedule(), Adaptive()]
-scorer_objects = [scorers.Accuracy()]
+metric_objects = [metrics.Accuracy()]
 objectives = [CategoricalCrossEntropy(), CategoricalCrossEntropy(regularizer=L1(alpha=0.01)), 
                         CategoricalCrossEntropy(regularizer=L2(alpha=0.01)), 
                         CategoricalCrossEntropy(regularizer=L1_L2(alpha=0.01, ratio=0.5))]
@@ -64,14 +64,14 @@ objectives = [CategoricalCrossEntropy(), CategoricalCrossEntropy(regularizer=L1(
 #     QuasiHyperbolicMomentum()
 # ]
 
-scenarios = [[scorer, objective, early_stop, learning_rate] \
-    for scorer in scorer_objects
+scenarios = [[metric, objective, early_stop, learning_rate] \
+    for metric in metric_objects
     for objective in objectives
     for early_stop in early_stops
     for learning_rate in learning_rates
         ]
 
-estimators = [GDClassifier(scorer=scenario[0],
+estimators = [GDClassifier(metric=scenario[0],
                                        objective=scenario[1], 
                                        early_stop=scenario[2],
                                        learning_rate=scenario[3])
@@ -82,7 +82,7 @@ estimators = [GDClassifier(scorer=scenario[0],
 #@mark.skip(reason="takes too long")
 @parametrize_with_checks(estimators)
 def test_multiclass_classification_sklearn(estimator, check):    
-    scorer = estimator.scorer.name
+    metric = estimator.metric.name
     objective = estimator.objective.name
     early_stop = estimator.early_stop.name if estimator.early_stop else None
     learning_rate = estimator.learning_rate if estimator.learning_rate else None
@@ -105,15 +105,15 @@ def test_multiclass_classification(get_multiclass_classification_data_split):
 
     for estimator in estimators:
         s_num += 1
-        scorer = estimator.scorer.name
+        metric = estimator.metric.name
         objective = estimator.objective.name
         early_stop = estimator.early_stop.name if estimator.early_stop else None
         learning_rate = estimator.learning_rate if estimator.learning_rate else None
         regularizer = estimator.objective.regularizer.name if estimator.objective.regularizer else\
             None    
         msg = "Checking scenario {s}: objective : {ob}, regularizer : {r}\
-        scorer : {k}".format(
-                s=str(count), ob=str(objective), r=str(regularizer), k=str(scorer))        
+        metric : {k}".format(
+                s=str(count), ob=str(objective), r=str(regularizer), k=str(metric))        
         # Fit the model
         estimator.fit(X_train,y_train)
         mls_score = estimator.score(X_test, y_test)

@@ -192,7 +192,7 @@ class LearningCurves(BaseVisualizer):
 
         # Format axis properties
         self.fig.update_xaxes(title_text="Training Samples", row=1, col=1)
-        self.fig.update_yaxes(title_text=self.estimator.scorer.label, row=1, col=1)
+        self.fig.update_yaxes(title_text=self.estimator.metric.label, row=1, col=1)
 
     def _fit_scalability_curve(self, train_sizes, fit_times):
         """Renders traces for scalability curve."""
@@ -305,7 +305,7 @@ class LearningCurves(BaseVisualizer):
 
         # Format axis properties
         self.fig.update_xaxes(title_text="Fit Times", row=1, col=3)
-        self.fig.update_yaxes(title_text=self.estimator.scorer.label, row=1, col=3)
+        self.fig.update_yaxes(title_text=self.estimator.metric.label, row=1, col=3)
 
     def fit(self, X, y):
         """Fits the estimator to the data and creates the figure object."""    

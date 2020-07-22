@@ -85,8 +85,8 @@ class GradientDescent(BaseEstimator):
         The optimization algorithm to use. If None, the generic 
         GradientDescentOptimizer will be used.
 
-    scorer : a Scorer object (default=None)
-        Supported Scorer object for estimating performance.        
+    metric : a Metric object (default=None)
+        Supported Metric object for estimating performance.        
 
     early_stop : an EarlyStop object or None (default=None)
         Class responsible for stopping the optimization process once
@@ -119,11 +119,11 @@ class GradientDescent(BaseEstimator):
     """
 
     def __init__(self, task, eta0=0.01, epochs=1000,  batch_size=None,  val_size=0.3, 
-                 theta_init=None, optimizer=None, scorer=None, early_stop=None, 
+                 theta_init=None, optimizer=None, metric=None, early_stop=None, 
                  learning_rate=None,  observer_list=None, progress=None, 
                  blackbox=None, summary=None, verbose=False, random_state=None,
                  check_gradient=False, gradient_check=None):
-                
+
         self.task = task
         self.eta0 = eta0
         self.epochs = epochs
@@ -131,7 +131,7 @@ class GradientDescent(BaseEstimator):
         self.val_size = val_size
         self.theta_init = theta_init
         self.optimizer = optimizer            
-        self.scorer = scorer
+        self.metric = metric
         self.early_stop=early_stop            
         self.learning_rate = learning_rate
         self.observer_list = observer_list
@@ -218,7 +218,7 @@ class GradientDescent(BaseEstimator):
 
         # Attributes
         self.blackbox_ = copy.deepcopy(self.blackbox)
-        self.scorer_ = copy.deepcopy(self.scorer)
+        self.metric_ = copy.deepcopy(self.metric)
 
         # Optional dependencies
         self._learning_rate = copy.deepcopy(self.learning_rate) if \
@@ -449,12 +449,12 @@ class GradientDescent(BaseEstimator):
         y_pred : prediction
         """
         validation.check_is_fitted(self)
-        data = self._task.prepare_data(X)
+        data = self._task.prepare_data(X)        
         return self._task.predict(self.theta_, data['X'])    
 
     # ----------------------------------------------------------------------- #    
     def _score(self, X, y):
-        """Computes the score using the designated scorer object.
+        """Computes the score using the designated metric object.
 
         This private method computes scores during training to monitor 
         optimization performance. Unlike the public score method, the 
@@ -474,7 +474,7 @@ class GradientDescent(BaseEstimator):
         """        
         y_pred = self._task.predict(self._theta, X)
         try:
-            return self.scorer_(y, y_pred, X)
+            return self.metric_(y, y_pred, X)
         except Exception as e:            
             print(e)
         
@@ -493,18 +493,18 @@ class GradientDescent(BaseEstimator):
         
         Returns
         -------
-        score based upon the scorer object.
+        score based upon the metric object.
         
         """
         y_pred = self.predict(X)        
         try:
-            return self.scorer_(y, y_pred, X)    
+            return self.metric_(y, y_pred, X)    
         except Exception as e:
             print(e)
         
 
     # ----------------------------------------------------------------------- #    
-    def summary(self):  
+    def summarize(self):  
         """Prints and optimization report. """
         self._summary.report()      
 

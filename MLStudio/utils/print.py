@@ -19,13 +19,12 @@
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
 """ Print utilities."""
-from abc import ABC, abstractmethod
 import math
 import statistics
 # --------------------------------------------------------------------------- #
 #                                Print                                        #
 # --------------------------------------------------------------------------- #
-class Printer(ABC):
+class Printer:
     """Abstract base class defining behaviors and interface for print classes."""
 
     def __init__(self, line_length = 80, title_separator='='):

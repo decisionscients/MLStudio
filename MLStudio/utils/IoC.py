@@ -155,7 +155,7 @@ class Estimators(containers.DeclarativeContainer):
     GradientDescent = collections.namedtuple('GradientDescent',[
                                         'task', 'eta0', 'epochs', 'batch_size',
                                         'val_size', 'theta_init',  'optimizer', 
-                                        'scorer', 'early_stop', 'learning_rate', 
+                                        'metric', 'early_stop', 'learning_rate', 
                                         'observer_list', 'progress', 'blackbox',
                                         'summary', 'verbose', 'random_state'], 
                                         defaults=[
@@ -175,8 +175,8 @@ class Estimators(containers.DeclarativeContainer):
 
 # Obtain some dependencies
 linear_regression = Tasks.linear_regression()
-estimator = Estimators.gradient_descent_factory(task=linear_regression, scorer=regression.R2)
-print(estimator.scorer().name)
+estimator = Estimators.gradient_descent_factory(task=linear_regression, metric=regression.R2)
+print(estimator.metric().name)
     
 
 # %%

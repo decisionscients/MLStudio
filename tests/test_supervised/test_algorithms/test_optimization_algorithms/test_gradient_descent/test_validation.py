@@ -52,7 +52,7 @@ def test_estimator_validation(get_regression_data):
         est = estimators.GradientDescent.linear_regression_factory(optimizer=tasks.Task.linear_regression_factory())
         est.fit(X,y)                
     with pytest.raises(TypeError):        
-        est = estimators.GradientDescent.linear_regression_factory(scorer=tasks.Task.linear_regression_factory())
+        est = estimators.GradientDescent.linear_regression_factory(metric=tasks.Task.linear_regression_factory())
         est.fit(X,y)                
     with pytest.raises(TypeError):        
         est = estimators.GradientDescent.linear_regression_factory(learning_rate=tasks.Task.linear_regression_factory())

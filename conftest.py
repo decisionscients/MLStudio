@@ -125,7 +125,7 @@ def get_data_management_data(get_target_2d_vector,
 @fixture(scope="session")
 def get_regression_data():
     X, y = datasets.load_boston(return_X_y=True)
-    scaler = StandardScaler()    
+    scaler = StandardScaler(scale_std=False)    
     X = scaler.fit_transform(X)
     return X, y
 
@@ -287,7 +287,7 @@ class MockEstimator:
         self.verbose = verbose
         self.random_state = random_state
         # Initialize attributes and variables required
-        self.scorer_ = MSE()
+        self.metric_ = MSE()
         self.blackbox_ = MockBlackBox()
         self._eta = eta0
     # ----------------------------------------------------------------------- #

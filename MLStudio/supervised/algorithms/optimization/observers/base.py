@@ -30,13 +30,14 @@ warnings.filterwarnings("once", category=UserWarning, module='base')
 import datetime
 import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator
 
 from mlstudio.utils.validation import validate_int, validate_zero_to_one
 from mlstudio.utils.validation import validate_metric
 # --------------------------------------------------------------------------- #
 #                             OBSERVER LIST                                   #
 # --------------------------------------------------------------------------- #
-class ObserverList:
+class ObserverList(BaseEstimator):
     """Container of observers."""
 
     def __init__(self, observers=None):
@@ -179,7 +180,7 @@ class ObserverList:
 # --------------------------------------------------------------------------- #
 #                             OBSERVER CLASS                                  #
 # --------------------------------------------------------------------------- #
-class Observer(ABC):
+class Observer(ABC, BaseEstimator):
     """Abstract base class used to build new observers."""
     def __init__(self):
         """Observer class constructor."""
@@ -344,10 +345,10 @@ class PerformanceObserver(Observer):
         self._stabilized = False
 
         # If score metric is designated, obtain what constitutes a better
-        # or best scores from the model's scorer object. 
+        # or best scores from the model's metric object. 
         if 'score' in self.metric:
-            self._best = self.model.scorer.best
-            self._better = self.model.scorer.better
+            self._best = self.model.metric.best
+            self._better = self.model.metric.better
         # Otherwise, the metric is cost and best and better costs are min and
         # less, respectively
         else:

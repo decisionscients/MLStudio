@@ -448,7 +448,7 @@ class StandardScaler(TransformerMixin, BaseEstimator):
         z = (x - u) / s
     where 'u' is either the mean of the training samples 'x', or zero of 
     'center=False' and 's' is the standard deviation of the training samples
-    or one if 'scale_std=False'.
+    or one if 'scale_std=False' (Default).
 
     Parameters
     ----------
@@ -469,7 +469,7 @@ class StandardScaler(TransformerMixin, BaseEstimator):
         Equal to one if 'scale=False'.
     """        
 
-    def __init__(self, center=True, scale_std=False):
+    def __init__(self, center=True, scale_std=True):
         self.center = center
         self.scale_std = scale_std
         self.mean_=0
@@ -492,7 +492,7 @@ class StandardScaler(TransformerMixin, BaseEstimator):
         if self.scale_std:
             self.std_ = np.std(X,axis=0)
         else:
-            self.std_ = np.ones(shape=(X.shape[1],))
+            self.std_ = np.ones(shape=(X.shape[1],))            
         return self
 
     def transform(self, X):

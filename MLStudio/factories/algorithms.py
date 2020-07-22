@@ -34,6 +34,7 @@ from mlstudio.supervised.algorithms.optimization.services import optimizers
 from mlstudio.supervised.metrics.regression import R2
 from mlstudio.supervised.metrics.classification import Accuracy
 from mlstudio.factories.tasks import Task
+from mlstudio.factories.observers import Summary
 
 
 # --------------------------------------------------------------------------- #
@@ -47,13 +48,13 @@ class GradientDescent(containers.DeclarativeContainer):
                                     val_size=0.3,
                                     theta_init=None,
                                     optimizer=optimizers.GradientDescentOptimizer(),
-                                    scorer=R2(),
+                                    metric=R2(),
                                     early_stop=None,
                                     learning_rate=None,                           
                                     observer_list=base.ObserverList(),
                                     progress=monitor.Progress(),
                                     blackbox=monitor.BlackBox(),
-                                    summary=monitor.Summary(),
+                                    summary=Summary.factory(),
                                     verbose=False,
                                     random_state=None,
                                     check_gradient=False,
@@ -68,13 +69,13 @@ class GradientDescent(containers.DeclarativeContainer):
                                     val_size=0.3,
                                     theta_init=None,
                                     optimizer=optimizers.GradientDescentOptimizer(),
-                                    scorer=Accuracy(),
+                                    metric=Accuracy(),
                                     early_stop=None,
                                     learning_rate=None,                           
                                     observer_list=base.ObserverList(),
                                     progress=monitor.Progress(),
                                     blackbox=monitor.BlackBox(),
-                                    summary=monitor.Summary(),
+                                    summary=Summary.factory(),
                                     verbose=False,
                                     random_state=None,
                                     check_gradient=False,
@@ -89,13 +90,13 @@ class GradientDescent(containers.DeclarativeContainer):
                                     val_size=0.3,
                                     theta_init=None,
                                     optimizer=optimizers.GradientDescentOptimizer(),
-                                    scorer=Accuracy(),
+                                    metric=Accuracy(),
                                     early_stop=None,
                                     learning_rate=None,                           
                                     observer_list=base.ObserverList(),
                                     progress=monitor.Progress(),
                                     blackbox=monitor.BlackBox(),
-                                    summary=monitor.Summary(),
+                                    summary=Summary.factory(),
                                     verbose=False,
                                     random_state=None,
                                     check_gradient=False,

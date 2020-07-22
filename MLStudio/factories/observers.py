@@ -28,8 +28,9 @@ import dependency_injector.containers as containers
 import dependency_injector.providers as providers
 
 from mlstudio.supervised.algorithms.optimization.observers import early_stop
-from mlstudio.supervised.algorithms.optimization.observers import base
+from mlstudio.supervised.algorithms.optimization.observers import base, monitor
 from mlstudio.supervised.algorithms.optimization.observers import learning_rate
+from mlstudio.utils.print import Printer
 
 # --------------------------------------------------------------------------- #
 class EarlyStop(containers.DeclarativeContainer):
@@ -38,6 +39,12 @@ class EarlyStop(containers.DeclarativeContainer):
     factory = providers.Factory(early_stop.EarlyStop,
                                     observer=base.PerformanceObserver) 
 
+# --------------------------------------------------------------------------- #
+class Summary(containers.DeclarativeContainer):
+    """IoC Container for observer providers."""
+    
+    factory = providers.Factory(monitor.Summary,
+                                    printer=providers.Factory(Printer)) 
 # --------------------------------------------------------------------------- #
 class LearningRate(containers.DeclarativeContainer):
     """IoC container for learning rate schedule providers."""

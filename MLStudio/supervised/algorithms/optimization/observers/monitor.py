@@ -20,17 +20,23 @@
 # =========================================================================== #
 """Module containing observers that monitor and report on optimization."""
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 import datetime
+import itertools
 import numpy as np
 import pandas as pd
 
-from mlstudio.supervised.algorithms.optimization.observers.base import Observer, PerformanceObserver
+from mlstudio.supervised.algorithms.optimization.observers import base, debug
+from mlstudio.utils.data_manager import DataProcessor
 from mlstudio.utils.validation import validate_metric, validate_int
 from mlstudio.utils.validation import validate_zero_to_one
+from mlstudio.utils.format import proper
+from mlstudio.utils.print import Printer
+from mlstudio.supervised.metrics.base import Metric
 # --------------------------------------------------------------------------- #
 #                                BLACKBOX                                     #
 # --------------------------------------------------------------------------- #
-class BlackBox(Observer):
+class BlackBox(base.Observer):
     """Repository for data obtained during optimization."""
 
     def __init__(self):
@@ -105,7 +111,7 @@ class BlackBox(Observer):
 # --------------------------------------------------------------------------- #
 #                                PROGRESS                                     #
 # --------------------------------------------------------------------------- #              
-class Progress(Observer):
+class Progress(base.Observer):
     """Class that reports progress at designated points during training."""
 
     def __init__(self):
@@ -139,8 +145,12 @@ class Progress(Observer):
 # --------------------------------------------------------------------------- #
 #                                SUMMARY                                      #
 # --------------------------------------------------------------------------- #           
-class Summary(Observer):
+class Summary(base.Observer):
     """Optimization summary class."""
+
+    _implicit_dependencies = (debug.GradientCheck, BlackBox, Printer, 
+                              Progress, base.ObserverList, Metric,
+                              DataProcessor)
     
     def __init__(self, printer=None):
         super(Summary, self).__init__()
@@ -176,8 +186,8 @@ class Summary(Observer):
             if log.get(key):
                 label = datasets[performance[0]] + ' ' + proper(performance[1]) 
                 d['label'] = label
-                if performance[1] == 'score' and hasattr(self.model, 'scorer'):                    
-                    d['data'] = str(np.round(log.get(key)[-1],4)) + " " + self.model.scorer.name
+                if performance[1] == 'score' and hasattr(self.model, 'metric'):                    
+                    d['data'] = str(np.round(log.get(key)[-1],4)) + " " + self.model.metric.name
                 else:
                     d['data'] = str(np.round(log.get(key)[-1],4)) 
                 print_data.append(d) 
@@ -201,13 +211,17 @@ class Summary(Observer):
                     k = o.__class__.__name__ + '__' + k
                     hyperparameters[k] = str(v)
                 else:
-                    get_params(v)
+                    if not isinstance(v, self._implicit_dependencies) and\
+                        self.__class__.__name__ != v.__class__.__name__:
+                        k = v.__class__.__name__
+                        hyperparameters[k] = ""                        
+                        get_params(v)
         get_params(self.model)
 
         self.printer.print_dictionary(hyperparameters, "Model HyperParameters")             
 
     def report(self):
           
-        self._optimization_summary(model=self.model).report()
-        self._early_stop_summary(model=self.model).report()
-        self._hyperparameter_summary(model=self.model).report()
+        self._optimization_summary()
+        self._early_stop_summary()
+        self._hyperparameter_summary()

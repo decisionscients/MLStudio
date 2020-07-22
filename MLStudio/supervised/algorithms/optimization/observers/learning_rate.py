@@ -29,7 +29,7 @@ from mlstudio.supervised.metrics.regression import MSE
 from mlstudio.utils.validation import validate_bool
 from mlstudio.utils.validation import validate_int
 from mlstudio.utils.validation import validate_objective, validate_optimizer
-from mlstudio.utils.validation import validate_scorer, validate_string
+from mlstudio.utils.validation import validate_metric, validate_string
 from mlstudio.utils.validation import validate_zero_to_one, validate_int
 from mlstudio.utils.validation import validate_metric
 # --------------------------------------------------------------------------  #

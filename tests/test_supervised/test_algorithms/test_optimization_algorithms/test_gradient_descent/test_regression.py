@@ -42,7 +42,7 @@ class GradientRegressorTests:
         est = algorithms.GradientDescent.regressor_factory()       
         assert isinstance(est.task, tasks.LinearRegression), "Error GradientRegressorTest: task is invalid."        
         assert isinstance(est.optimizer, optimizers.GradientDescentOptimizer), "Error GradientRegressorTest: optimizer is invalid."        
-        assert isinstance(est.scorer, regression.RegressionScorer), "Error GradientRegressorTest: scorer is invalid."        
+        assert isinstance(est.metric, regression.RegressionMetric), "Error GradientRegressorTest: metric is invalid."        
         assert isinstance(est.observer_list, base.ObserverList), "Error GradientRegressorTest: observer_list is invalid."        
         assert isinstance(est.progress, monitor.Progress), "Error GradientRegressorTest: progress is invalid."        
         assert isinstance(est.blackbox, monitor.BlackBox), "Error GradientRegressorTest: blackbox is invalid."
@@ -57,7 +57,7 @@ class GradientRegressorTests:
 
     def test_regressor_fit(self, get_regression_data_split):
         X_train, X_test, y_train, y_test = get_regression_data_split
-        est = algorithms.GradientDescent.regressor_factory(check_gradient=True)        
+        est = algorithms.GradientDescent.regressor_factory(check_gradient=False, epochs=5000)        
         est.fit(X_train, y_train)
         skl = SGDRegressor()
         skl.fit(X_train, y_train)
@@ -69,28 +69,25 @@ class GradientRegressorTests:
         assert est.X_val_.shape[0] == len(est.y_val_), "Regressor: X_val,y_val shape mismatch "
         # Test blackbox
         bb = est.blackbox_
-        assert bb.total_epochs == 1000, "Regressor: blackbox error, num epochs incorrect"
-        assert bb.total_batches == 1000, "Regressor: blackbox error, num batches incorrect"
-        assert len(bb.epoch_log.get('train_cost')) == 1000, "Regressor: blackbox error, train_cost length != num epochs"
-        assert len(bb.epoch_log.get('val_cost')) == 1000, "Regressor: blackbox error, val_cost length != num epochs"
-        assert len(bb.epoch_log.get('train_score')) == 1000, "Regressor: blackbox error, train_score length != num epochs"
-        assert len(bb.epoch_log.get('val_score')) == 1000, "Regressor: blackbox error, val_score length != num epochs"        
-        assert len(bb.epoch_log.get('theta')) == 1000, "Regressor: blackbox error, theta shape incorrect"
-        assert len(bb.epoch_log.get('gradient')) == 1000, "Regressor: blackbox error, gradient shape incorrect"
-        assert len(bb.epoch_log.get('gradient_norm')) == 1000, "Regressor: blackbox error, gradient_norm length != num epochs"        
-        # Test scorer
-        assert isinstance(est.scorer_, regression.R2), "Regressor: scorer incorrect."
+        assert bb.total_epochs == 5000, "Regressor: blackbox error, num epochs incorrect"
+        assert bb.total_batches == 5000, "Regressor: blackbox error, num batches incorrect"
+        assert len(bb.epoch_log.get('train_cost')) == 5000, "Regressor: blackbox error, train_cost length != num epochs"
+        assert len(bb.epoch_log.get('val_cost')) == 5000, "Regressor: blackbox error, val_cost length != num epochs"
+        assert len(bb.epoch_log.get('train_score')) == 5000, "Regressor: blackbox error, train_score length != num epochs"
+        assert len(bb.epoch_log.get('val_score')) == 5000, "Regressor: blackbox error, val_score length != num epochs"        
+        assert len(bb.epoch_log.get('theta')) == 5000, "Regressor: blackbox error, theta shape incorrect"
+        assert len(bb.epoch_log.get('gradient')) == 5000, "Regressor: blackbox error, gradient shape incorrect"
+        assert len(bb.epoch_log.get('gradient_norm')) == 5000, "Regressor: blackbox error, gradient_norm length != num epochs"        
+        # Test metric
+        assert isinstance(est.metric_, regression.R2), "Regressor: metric incorrect."
         skl_scores = skl.score(X_train, y_train)
         est_scores = est.score(X_train, y_train)
         d = (skl_scores-est_scores)/skl_scores
         print("SKL {k}     MLS {m}     RDIF {d}".format(k=str(skl_scores), m=str(est_scores), d=str(d)))
-        assert np.allclose(skl.score(X_train,y_train), est.score(X_train, y_train), rtol=1e-3), "Regressor: inaccurate train scores "
-        assert np.allclose(skl.score(X_test,y_test), est.score(X_test, y_test), rtol=1e-3), "Regressor: inaccurate test scores "
+        assert np.isclose(skl.score(X_train,y_train), est.score(X_train, y_train), rtol=1e-2), "Regressor: inaccurate train scores "
+        assert np.isclose(skl.score(X_test,y_test), est.score(X_test, y_test), rtol=1e-2), "Regressor: inaccurate test scores "
         # Test summary
-        est.summary()
-        # Test results
-        assert np.isclose(skl.intercept_, est.intercept_), "Regressor: intercept inaccurate"
-        assert np.allclose(skl.coef_, est.coef_), "Regressor: coeficients inaccurate"
+        est.summarize()
 
 
 

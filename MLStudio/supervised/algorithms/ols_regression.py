@@ -49,7 +49,7 @@ class OLSRegression(BaseEstimator, RegressorMixin):
     """Ordinary least squares closed form linear regression."""
 
     def __init__(self, metric=R2()):
-        self.scorer_ = scorer
+        self.metric_ = metric
 
     def fit(self, X, y):
         """Fits the linear regression ordinary least squares solution.
@@ -118,7 +118,7 @@ class OLSRegression(BaseEstimator, RegressorMixin):
         return y_pred
 
     def score(self, X, y):
-        """Computes scores using the scorer parameter.
+        """Computes scores using the metric parameter.
 
         Parameters
         ----------
@@ -130,12 +130,12 @@ class OLSRegression(BaseEstimator, RegressorMixin):
 
         Returns
         -------
-        score based upon the scorer object.
+        score based upon the metric object.
         
         """
         X, y = check_X_y(X,y)
         y_pred = self.predict(X)        
-        score = self.scorer_(y, y_pred)
+        score = self.metric_(y, y_pred)
         return score
 
 

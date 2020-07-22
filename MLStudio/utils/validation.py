@@ -208,12 +208,12 @@ def validate_observers(param, param_name='observers'):
     return True
     
 # --------------------------------------------------------------------------  #
-def validate_scorer(scorer):    
-    from mlstudio.supervised.metrics.base import Scorer
-    valid_scorers = [cls.__name__ for cls in Scorer.__subclasses__()]
-    if not isinstance(scorer, Scorer):
-        msg = "{s} is an invalid Scorer object. The valid Scorer classes include : \
-            {v}".format(s=scorer, v=str(valid_scorers))
+def validate_metric(metric):    
+    from mlstudio.supervised.metrics.base import Metric
+    valid_metrics = [cls.__name__ for cls in Metric.__subclasses__()]
+    if not isinstance(metric, Metric):
+        msg = "{s} is an invalid Metric object. The valid Metric classes include : \
+            {v}".format(s=metric, v=str(valid_metrics))
         raise TypeError(msg)
     else:
         return True
@@ -366,7 +366,7 @@ def validate_estimator(estimator):
                                 minimum=0, maximum=1, left='closed', 
                                 right='open')
     validate_optimizer(estimator.optimizer)
-    validate_scorer(estimator.scorer)               
+    validate_metric(estimator.metric)               
     if estimator.early_stop:
         validate.observers(estimator.early_stop, 
                                         param_name='early_stop')

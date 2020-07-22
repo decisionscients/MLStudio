@@ -34,7 +34,7 @@ class CrossValidationTests:
         X, y = get_regression_data_unscaled
         loss = IoCQuadratic().quadratic()
         task = Tasks().linear_regression(loss=loss)        
-        estimator = Estimators().gradient_descent_factory(task=task, scorer=R2)
+        estimator = Estimators().gradient_descent_factory(task=task, metric=R2)
         print("*************************")
         print(estimator.fit)
 
