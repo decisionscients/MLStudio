@@ -209,7 +209,7 @@ def validate_observers(param, param_name='observers'):
     
 # --------------------------------------------------------------------------  #
 def validate_metric(metric):    
-    from mlstudio.supervised.metrics.base import Metric
+    from mlstudio.supervised.performance.base import Metric
     valid_metrics = [cls.__name__ for cls in Metric.__subclasses__()]
     if not isinstance(metric, Metric):
         msg = "{s} is an invalid Metric object. The valid Metric classes include : \

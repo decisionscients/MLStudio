@@ -31,8 +31,8 @@ from mlstudio.supervised.algorithms.optimization.gradient_descent import Gradien
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
 from mlstudio.supervised.algorithms.optimization.observers import monitor
 from mlstudio.supervised.algorithms.optimization.services import optimizers
-from mlstudio.supervised.metrics.regression import R2
-from mlstudio.supervised.metrics.classification import Accuracy
+from mlstudio.supervised.performance.regression import R2
+from mlstudio.supervised.performance.classification import Accuracy
 from mlstudio.factories.tasks import Task
 from mlstudio.factories.observers import Summary
 

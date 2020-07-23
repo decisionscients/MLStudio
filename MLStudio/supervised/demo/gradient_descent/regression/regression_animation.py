@@ -32,7 +32,7 @@ import numpy as np
 from sklearn.linear_model import SGDRegressor
 
 from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
-from mlstudio.supervised.metrics.regression import R2
+from mlstudio.supervised.performance.regression import R2
 from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic
 from mlstudio.utils.data_manager import StandardScaler, data_split
 from mlstudio.supervised.visual.animations import animate_optimization_regression

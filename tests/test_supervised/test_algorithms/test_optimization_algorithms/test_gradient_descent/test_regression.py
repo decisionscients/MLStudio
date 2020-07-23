@@ -33,7 +33,7 @@ from mlstudio.supervised.algorithms.optimization.observers import monitor
 from mlstudio.supervised.algorithms.optimization.services import loss, tasks
 from mlstudio.supervised.algorithms.optimization.services import optimizers
 from mlstudio.supervised.algorithms.optimization.services import regularizers
-from mlstudio.supervised.metrics import regression, classification
+from mlstudio.supervised.performance import regression, classification
 # --------------------------------------------------------------------------  #
 @mark.regressor
 class GradientRegressorTests:

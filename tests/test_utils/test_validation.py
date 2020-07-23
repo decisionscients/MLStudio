@@ -158,7 +158,7 @@ def test_validate_regularizer():
 @mark.validation
 def test_validate_metric():    
     from mlstudio.utils.validation import validate_metric
-    from mlstudio.supervised.metrics.regression import MSE    
+    from mlstudio.supervised.performance.regression import MSE    
     with pytest.raises(TypeError) as v:
         validate_metric('hand')
         assert "value error"  in str(v.value)

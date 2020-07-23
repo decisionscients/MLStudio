@@ -32,6 +32,8 @@ classes are derived from Measures and Metrics.
 """
 from abc import ABC, abstractmethod
 from sklearn.base import BaseEstimator
+import numpy as np
+import pandas as pd
 # --------------------------------------------------------------------------- #
 class BasePerformance(ABC, BaseEstimator):
     """Abstract base class for performance analytics."""
@@ -132,7 +134,7 @@ class BaseClassificationMetric(BaseMetric):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
-class ClassificationMetric(Metric):
+class ClassificationMetric(BaseMetric):
     """Base class for classification metrics."""
 
     @abstractmethod

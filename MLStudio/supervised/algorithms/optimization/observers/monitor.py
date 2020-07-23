@@ -32,7 +32,7 @@ from mlstudio.utils.validation import validate_metric, validate_int
 from mlstudio.utils.validation import validate_zero_to_one
 from mlstudio.utils.format import proper
 from mlstudio.utils.print import Printer
-from mlstudio.supervised.metrics.base import Metric
+from mlstudio.supervised.performance.base import BaseMeasure, BaseMetric
 # --------------------------------------------------------------------------- #
 #                                BLACKBOX                                     #
 # --------------------------------------------------------------------------- #
@@ -149,8 +149,8 @@ class Summary(base.Observer):
     """Optimization summary class."""
 
     _implicit_dependencies = (debug.GradientCheck, BlackBox, Printer, 
-                              Progress, base.ObserverList, Metric,
-                              DataProcessor)
+                              Progress, base.ObserverList, BaseMetric,
+                              BaseMeasure, DataProcessor)
     
     def __init__(self, printer=None):
         super(Summary, self).__init__()
