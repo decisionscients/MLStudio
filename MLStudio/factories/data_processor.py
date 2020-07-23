@@ -26,18 +26,20 @@ site.addsitedir(PROJECT_DIR)
 import collections
 import dependency_injector.containers as containers
 import dependency_injector.providers as providers
-from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import LabelBinarizer, LabelEncoder
 
-from mlstudio.utils.data_manager import RegressionDataProcessor
-from mlstudio.utils.data_manager import LogisticRegressionDataProcessor
-from mlstudio.utils.data_manager import MulticlassDataProcessor
+from mlstudio.utils.data_manager import RegressionData
+from mlstudio.utils.data_manager import BinaryClassData
+from mlstudio.utils.data_manager import MultiClassData
 # --------------------------------------------------------------------------- #
 class DataProcessors(containers.DeclarativeContainer):
     """IoC container for data processor providers."""
 
-    regression = providers.Factory(RegressionDataProcessor)
+    regression = providers.Factory(RegressionData)
 
-    binary_classification = providers.Factory(LogisticRegressionDataProcessor)
+    binary_classification = providers.Factory(BinaryClassData,
+                                            encoder=LabelEncoder())
 
-    multiclass_classification = providers.Factory(MulticlassDataProcessor,
-                                        encoder=LabelBinarizer())                             
+    multiclass_classification = providers.Factory(MultiClassData,
+                                        encoder=LabelEncoder(),
+                                        binarizer=LabelBinarizer())                             

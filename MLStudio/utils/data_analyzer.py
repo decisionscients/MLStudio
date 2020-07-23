@@ -19,6 +19,8 @@
 # Copyright (c) 2020 DecisionScients                                          #
 # =========================================================================== #
 """Data analysis helper functions."""
+from collections import OrderedDict
+
 import numpy as np
 import pandas as pd
 from scipy.stats import skew, kurtosis, ttest_1samp, t
@@ -130,15 +132,38 @@ def n_features(X):
 
 def get_features(X):
     """Attempts to retrieve the feature names from the dataset."""
+    features = OrderedDict()
     if isinstance(X, pd.DataFrame):
         features = X.columns
     elif isinstance(X, (np.ndarray, np.generic)):
-        try:
-            features = X.dtype.names
-        except:
-            features = None
+        features = X.dtype.names
+    if features is None:
+        features = ['X_' + str(i) for i in range(X.shape[1])]
     return features
 
+def get_target_info(y):
+    """Obtains target data type and class information for classification data."""
+    
+    if isinstance(y, (pd.DataFrame, pd.Series)):
+        y = y.to_numpy()        
+    elif isinstance(y, list):
+        y = np.array(y)
+    
+    if 'float' in str(y.dtype):
+        data_type = 'Continuous'
+        classes = None
+        n_classes = None
+    else:
+        classes = np.unique(y)
+        n_classes = len(classes)
+        if n_classes == 2:
+            data_type = 'Binary'
+        else:
+            data_type = 'Nominal'        
+    return data_type, classes, n_classes
+    
+
+    
 
 
 

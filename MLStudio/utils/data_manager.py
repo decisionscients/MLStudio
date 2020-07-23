@@ -21,8 +21,9 @@
 #%%
 """Data manipulation functions."""
 from abc import ABC, abstractmethod
-from itertools import combinations_with_replacement
-from math import ceil, floor
+from collections import OrderedDict
+from math import ceil
+import sys
 
 import numpy as np
 from numpy.random import RandomState
@@ -32,7 +33,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils import check_array
 from sklearn.preprocessing import LabelBinarizer
 
-from mlstudio.utils.data_analyzer import get_features
+from mlstudio.utils.data_analyzer import get_features, get_target_type
 from mlstudio.utils.validation import check_X_y, check_X
 # --------------------------------------------------------------------------- #
 #                           DATA PREPARATION                                  #
@@ -68,197 +69,6 @@ def unpack_parameters(theta):
 # --------------------------------------------------------------------------- #
 #                               TRANSFORMERS                                  #
 # --------------------------------------------------------------------------- #
-class AddBiasTerm(BaseEstimator, TransformerMixin):
-    """Adds bias term of ones to matrix."""
-
-    def fit(self, X, y=None):
-        """Fits data to the transformer."""
-        return self
-
-    def _transform_numpy(self, X):
-        """Adds bias term to numpy matrix."""
-        return np.insert(X, 0, 1.0, axis=1)
-    
-    def _transform_csr(self, X):
-        """Adds bias term to csr matrix."""
-        X = check_coo(X)
-        ones = np.ones((X.shape[0],1))
-        bias_term = csr_matrix(ones, dtype=float)
-        X = hstack((bias_term, X)) 
-        X = check_coo(X)
-        return X
-
-    def transform(self, X, y=None):
-        """Adds bias term to matrix and returns it to the caller."""
-        X = check_array(X, accept_sparse=True, accept_large_sparse=True)
-        if issparse(X):
-            X = self._transform_csr(X)
-        else:
-            X = self._transform_numpy(X)
-        return X        
-    
-    def inverse_transform(self, X):
-        """Removes bias term from matrix and returns it to caller."""
-        X = check_coo(X)
-        return X[:,1:]
-                        
-# --------------------------------------------------------------------------- #
-class ZeroBiasTerm(BaseEstimator, TransformerMixin):
-    """Zeros out bias term in a parameters matrix or tensor."""
-
-    def fit(self, X, y=None):
-        """Fits data to the transformer."""
-        return self
-
-    def transform(self, X):
-        """Zero out bias term in numpy matrix."""
-        if np.ndim(X) == 1:
-            X[0] = 0
-        else:
-            X[0,:] = np.zeros(shape=X.shape[1])
-        return X
-           
-
-# --------------------------------------------------------------------------- #
-class DataProcessor(ABC, TransformerMixin, BaseEstimator):
-    """Prepares data for training"""
-
-    def __init__(self):
-        self._data = {}
-
-    def fit(self, X, y=None):
-        """Extracts metadata."""
-        self._data['features_'] = get_features(X)
-        self._data['n_features_'] = X.shape[1]
-        self._data['n_features_plus_bias_'] = X.shape[1] + 1        
-        self._data['n_total_observations_'] = X.shape[0]
-        return self
-
-    def _transform_X(self, X, shuffle=None, random_state=None):
-        """Transforms X only. This is likely a call from predict."""
-        X = check_X(X)        
-        X = AddBiasTerm().fit_transform(X)         
-        if shuffle:
-            X, _ = shuffle_data(X=X, random_state=random_state)        
-        self._data['X'] = X
-
-    def _transform_wo_split(self, X, y, shuffle=None, random_state=None):          
-        X, y = check_X_y(X, y)      
-        if shuffle:
-            X, y = shuffle_data(X=X, y=y, random_state=random_state)
-        self._data['X_train_'] = AddBiasTerm().fit_transform(X) 
-        self._data['y_train_'] = check_array(y, ensure_2d=False)
-        self._data['n_training_observations_'] = X.shape[0]
-
-    @abstractmethod
-    def _transform_split(self, X, y, val_size=None, shuffle=None, random_state=None):
-        pass
-    
-    def transform(self, X, y=None, val_size=None, shuffle=False, random_state=None):
-        """Processes data and returns a dictionary to the calling object.
-        
-        Parameters
-        ----------
-        X : array_like of shape (n_samples,n_features)
-            The matrix of inputs 
-
-        y : array_like of shape(n_samples,)
-            An array of target values.
-
-        val_size : float (default=0.3)
-            The proportion of the training set to be designated for validation set. 
-
-        random_state : int or None(default=None)
-            If not None, fixes random state for reproducibility
-
-        Returns
-        -------
-        dict : Dictionary containing transformed data.           
-
-        """
-        
-        if (y is not None) and val_size:
-            self._transform_split(X=X, y=y, val_size=val_size, 
-                                  shuffle=shuffle, 
-                                  random_state=random_state)
-        elif y is not None:
-            self._transform_wo_split(X=X, y=y, shuffle=shuffle, 
-                                     random_state=random_state)
-        else:
-            self._transform_X(X=X, shuffle=shuffle, random_state=random_state)
-
-        return self._data
-
-    
-    def fit_transform(self, X, y=None, val_size=None, shuffle=False, random_state=None):
-        """Calls fit and transform."""
-        return self.fit(X, y).transform(X=X, y=y, val_size=val_size, 
-                                        shuffle=shuffle, random_state=random_state)        
-
-# --------------------------------------------------------------------------- #
-class RegressionDataProcessor(DataProcessor):
-    """Prepares data for regression."""
-
-    def _transform_split(self, X, y, val_size=None, shuffle=None, random_state=None):   
-        X, y = check_X_y(X, y)     
-        X = AddBiasTerm().fit_transform(X)         
-        self._data['X_train_'], self._data['X_val_'], self._data['y_train_'], \
-            self._data['y_val_'] = data_split(X, y, test_size=val_size, \
-                shuffle=shuffle, stratify=False, random_state=random_state)                    
-
-        self._data['n_training_observations_'] = self._data['X_train_'].shape[0]
-        self._data['n_validation_observations_'] = self._data['X_val_'].shape[0]
-
-# --------------------------------------------------------------------------- #
-class LogisticRegressionDataProcessor(DataProcessor):
-    """Prepares data for regression."""
-
-    def _transform_split(self, X, y, val_size=None, shuffle=None, random_state=None):   
-        X, y = check_X_y(X, y)     
-        X = AddBiasTerm().fit_transform(X)         
-        self._data['X_train_'], self._data['X_val_'], self._data['y_train_'], \
-            self._data['y_val_'] = data_split(X, y, test_size=val_size, \
-                shuffle=shuffle, stratify=True, random_state=random_state)  
-
-        self._data['n_training_observations_'] = self._data['X_train_'].shape[0]
-        self._data['n_validation_observations_'] = self._data['X_val_'].shape[0]                
-        self._data['n_classes_'] = len(np.unique(y))                       
-
-# --------------------------------------------------------------------------- #
-class MulticlassDataProcessor(DataProcessor):
-    """Prepares data for multi-class classification."""
-
-    def __init__(self, encoder):
-        super(MulticlassDataProcessor, self).__init__()
-        self._encoder = encoder
-
-    def _validate(self, X, y):
-        X, y = super(MulticlassDataProcessor, self)._validate(X, y)
-        if len(np.unique(y)) < 3:
-            msg = "This data processor is for multi-class settings with classes\
-                >2. Please use the LogisticRegressionDataProcessor instead."
-            raise Exception(msg)
-
-    def _transform_wo_split(self, X, y, shuffle=None, random_state=None):        
-        super(MulticlassDataProcessor, self)._transform_wo_split(X, y, shuffle=shuffle, random_state=random_state)        
-        self._data['y_train_'] = self._encoder.fit_transform(self._data['y_train_'])       
-        self._data['n_classes_'] = len(np.unique(y))        
-
-    def _transform_split(self, X, y, val_size=None, shuffle=None, random_state=None):
-        X, y = check_X_y(X, y)
-        X = AddBiasTerm().fit_transform(X)                 
-        self._data['X_train_'], self._data['X_val_'], self._data['y_train_'], \
-            self._data['y_val_'] = data_split(X, y, test_size=val_size, \
-                shuffle=shuffle, stratify=True, random_state=random_state)    
-
-        self._data['y_train_'] = self._encoder.fit_transform(self._data['y_train_'])       
-        self._data['y_val_'] = self._encoder.transform(self._data['y_val_'])       
-
-
-        self._data['n_training_observations_'] = self._data['X_train_'].shape[0]
-        self._data['n_validation_observations_'] = self._data['X_val_'].shape[0]                
-        self._data['n_classes_'] = len(np.unique(y))                               
-
 # --------------------------------------------------------------------------- #
 class NormScaler(TransformerMixin, BaseEstimator):
     """Scalers a vector to unit length.  
@@ -579,6 +389,282 @@ class GradientScaler(BaseEstimator, TransformerMixin):
             X = X  * self._r / self.upper_threshold                    
         return X
 
+class AddBiasTerm(BaseEstimator, TransformerMixin):
+    """Adds bias term of ones to matrix."""
+
+    def fit(self, X, y=None):
+        """Fits data to the transformer."""
+        return self
+
+    def _transform_numpy(self, X):
+        """Adds bias term to numpy matrix."""
+        return np.insert(X, 0, 1.0, axis=1)
+    
+    def _transform_csr(self, X):
+        """Adds bias term to csr matrix."""
+        X = check_coo(X)
+        ones = np.ones((X.shape[0],1))
+        bias_term = csr_matrix(ones, dtype=float)
+        X = hstack((bias_term, X)) 
+        X = check_coo(X)
+        return X
+
+    def transform(self, X, y=None):
+        """Adds bias term to matrix and returns it to the caller."""
+        X = check_array(X, accept_sparse=True, accept_large_sparse=True)
+        if issparse(X):
+            X = self._transform_csr(X)
+        else:
+            X = self._transform_numpy(X)
+        return X        
+    
+    def inverse_transform(self, X):
+        """Removes bias term from matrix and returns it to caller."""
+        X = check_coo(X)
+        return X[:,1:]
+                        
+# --------------------------------------------------------------------------- #
+class ZeroBiasTerm(BaseEstimator, TransformerMixin):
+    """Zeros out bias term in a parameters matrix or tensor."""
+
+    def fit(self, X, y=None):
+        """Fits data to the transformer."""
+        return self
+
+    def transform(self, X):
+        """Zero out bias term in numpy matrix."""
+        if np.ndim(X) == 1:
+            X[0] = 0
+        else:
+            X[0,:] = np.zeros(shape=X.shape[1])
+        return X
+           
+# --------------------------------------------------------------------------- #
+#                            BASE DATA PROCESSOR                              #
+# --------------------------------------------------------------------------- #
+class BaseDataProcessor(ABC, TransformerMixin, BaseEstimator):
+    """Abstract base class for all data preparation subclasses."""
+
+    def __init__(self):
+        self._data = OrderedDict()        
+
+    def _add_bias_term(self, X):
+        """Adds bias term to the feature set."""
+        return AddBiasTerm().fit_transform(X)         
+
+    def _shuffle_X_y(self, X, y, random_state=None):
+        """Shuffles X data using numpy random generator."""
+        rg = np.random.default_rng(seed=random_state)
+        n_samples = X.shape[0]
+        idx =  rg.permutation(n_samples)           
+        X_new = X[idx]
+        y_new = y[idx]
+        return X_new, y_new
+
+    def _split_data(X, y, val_size=None, stratify=False, random_state=None):
+        """Splits the data into training and validation sets."""
+        X_train, X_val, y_train, y_val = data_split(X, y, test_size=val_size, \
+                stratify=stratify, random_state=random_state)  
+        return X_train, X_val, y_train, y_val           
+
+    def _package_training_data(X, y, dataset):
+        """Packages training data for return to calling environment."""
+        self._data[dataset] = OrderedDict()
+        self._data[dataset]['X'] = X
+        self._data[dataset]['y'] = y
+
+        d = OrderedDict()
+        d['Features'] = get_features(X)           
+        d['Num Features'] = X.shape[1]
+        d['Num Observations'] = X.shape[0]
+        d['Size'] = sys.getsizeof(X)
+        d['Object Class X'] = X.__class__.__name__
+        d['Object Class y'] = y.__class__.__name__
+        d['Target Type'], d['Classes'], d['Num Classes'] = get_target_info(y)
+
+        self._data[dataset]['metadata'] = d
+    
+    def _package_test_data(X, y=None, dataset=None):
+        """Packages test data for return to calling environment."""
+        self._data['test'] = OrderedDict()
+        self._data['test']['X'] = X
+        self._data['test']['y'] = y
+
+    def _package_data(X, y=None, dataset='train'):
+        if dataset in ['train', 'validation']:
+            self._package_training_data(X, y, dataset)
+        else:
+            self._package_test_data(X, y, dataset)
+
+    def fit(self, X, y=None):
+        """Saves the original data."""             
+        self._package_data(X, y, dataset='original')        
+        return self 
+
+    def fit_transform(self, X, y, dataset, val_size=None, shuffle=False, 
+                      random_state=None):
+        return self.fit(X, y).transform(X, y, dataset, val_size, shuffle, 
+                                        random_state)        
+
+    @abstractmethod
+    def _transform_test(self, X, y=None):
+        """Preprocesses test data"""
+        pass
+
+    @abstractmethod
+    def _transform_train(self, X, y, shuffle=False, random_state=None):
+        """Preprocesses training data"""
+        pass
+
+    @abstractmethod
+    def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
+                              random_state=None):
+        """Preprocesses training and validation data."""
+        pass
+    
+    def transform(self, X, y=None, dataset='train', val_size=None, 
+                  shuffle=False,  random_state=None):
+        """Entry point for data transformation. """
+        if dataset == 'train' and val_size:
+            self._transform_train_test(X, y, val_size, shuffle, random_state)
+        elif dataset == 'train' and not val_size:
+            self._transform_train(X, y, shuffle, random_state)
+        else:
+            self._transform_test(X, y)
+
+    
+
+# --------------------------------------------------------------------------- #
+#                            REGRESSION DATA                                  #
+# --------------------------------------------------------------------------- #
+class RegressionData(BaseDataProcessor):
+    """Performs data processing for regression training."""
+
+    def _transform_test(self, X, y=None):
+        """Transforms regression test data."""
+        X, y = check_X_y(X, y)
+        X = self._add_bias_term(X)        
+        self._package_data(X, y, dataset='test')
+    
+    def _transform_train(self, X, y, shuffle=False, random_state=None):
+        """Prepares training data for regression."""
+
+        X, y = check_X_y(X, y)
+        X = self._add_bias_term(X)        
+        if shuffle:
+            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)                        
+        self._package_data(X=X_train, y_train, dataset='train')
+    
+    def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
+                              random_state=None):
+        """Prepares training and validation data for regression."""
+
+        X, y = check_X_y(X, y)
+        X = self._add_bias_term(X)        
+        if shuffle:
+            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)                
+        
+        X_train, X_val, y_train, y_val = self._split_data(X, y, 
+                val_size=val_size, random_state=random_state)
+        
+        self._package_data(X=X_train, y_train, dataset='train')
+        self._package_data(X=X_val, y_val, dataset='validation')
+
+# --------------------------------------------------------------------------- #
+#                          BINARY CLASS DATA                                  #
+# --------------------------------------------------------------------------- #
+class BinaryClassData(BaseDataProcessor):
+    """Prepares binary classification data for training."""
+
+    def __init__(self, encoder):
+        super(BinaryClassData, self).__init__()
+        self._encoder = encoder
+
+    def _transform_test(self, X, y=None):
+        """Transforms binary classification test data."""
+        X, y = check_X_y(X, y)
+        X = self._add_bias_term(X)        
+        y = self._encoder.transform(y)
+        self._package_data(X, y, dataset='test')
+
+    def _transform_train(self, X, y, shuffle=False, random_state=None):
+        """Prepares binary classification data for training. """
+        X, y = check_X_y(X, y)
+        X = self._add_bias_term(X)        
+        y = self._encoder.fit_transform(y)
+        if shuffle:
+            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)          
+        self._package_data(X=X, y, dataset='train')
+
+    def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
+                              random_state=None):
+        """Prepares binary classification training and validation data."""
+
+        X, y = check_X_y(X, y)
+        X = self._add_bias_term(X)        
+        if shuffle:
+            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)                
+        
+        X_train, X_val, y_train, y_val = self._split_data(X, y, 
+                stratify=True, val_size=val_size, random_state=random_state)
+
+        y_train = self._encoder.fit_transform(y_train)
+        y_val = self._encoder.transform(y_val)
+        
+        self._package_data(X=X_train, y_train, dataset='train')
+        self._package_data(X=X_val, y_val, dataset='validation')        
+
+
+# --------------------------------------------------------------------------- #
+#                          MULTI CLASS DATA                                   #
+# --------------------------------------------------------------------------- #
+class MultiClassData(BaseDataProcessor):
+    """Prepares multi classification data for training."""
+
+    def __init__(self, encoder, binarizer):
+        super(MultiClassData, self).__init__()
+        self._encoder = encoder
+        self._binarizer = binarizer
+
+    def _transform_test(self, X, y=None):
+        """Transforms multiclass classification test data."""
+        X, y = check_X_y(X, y)
+        X = self._add_bias_term(X)        
+        y = self._encoder.transform(y)
+        y = self._binarizer.transform(y)
+        self._package_data(X, y, dataset='test')
+
+    def _transform_train(self, X, y, shuffle=False, random_state=None):
+        """Prepares multiclass classification data for training. """
+        X, y = check_X_y(X, y)
+        X = self._add_bias_term(X)        
+        y = self._encoder.fit_transform(y)
+        y = self._binarizer.fit_transform(y)
+        if shuffle:
+            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)          
+        self._package_data(X=X, y, dataset='train')
+
+    def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
+                              random_state=None):
+        """Prepares multiclass classification training and validation data."""
+
+        X, y = check_X_y(X, y)
+        X = self._add_bias_term(X)      
+        if shuffle:
+            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)                
+        
+        X_train, X_val, y_train, y_val = self._split_data(X, y, 
+                stratify=True, val_size=val_size, random_state=random_state)
+
+        y_train = self._encoder.fit_transform(y_train)
+        y_val = self._encoder.transform(y_val)
+
+        y_train = self._binarizer.fit_transform(y_train)
+        y_val = self._binarizer.transform(y_val)
+        
+        self._package_data(X=X_train, y_train, dataset='train')
+        self._package_data(X=X_val, y_val, dataset='validation')        
+
 # --------------------------------------------------------------------------- #
 #                            SHUFFLE DATA                                     #
 # --------------------------------------------------------------------------- #
@@ -643,7 +729,7 @@ def sampler(X, y, size=1, replace=True, random_state=None):
 # --------------------------------------------------------------------------- #
 #                            SPLIT DATA                                       #
 # --------------------------------------------------------------------------- #
-def data_split(X, y, test_size=0.3, shuffle=False, stratify=False, random_state=None):
+def data_split(X, y, test_size=0.3, stratify=False, random_state=None):
     """ Split the data into train and test sets 
     
     Splits inputs X, and y into training and test sets of proportions
@@ -694,8 +780,6 @@ def data_split(X, y, test_size=0.3, shuffle=False, stratify=False, random_state=
                          " and y.shape[0] = %d." % (X.shape[0], y.shape[0]))
 
     if not stratify:
-        if shuffle:
-            X, y = shuffle_data(X=X, y=y, random_state=random_state)
         split_i = len(y) - int(len(y) // (1 / test_size))
         X_train, X_test = X[:split_i], X[split_i:]
         y_train, y_test = y[:split_i], y[split_i:]
@@ -710,9 +794,6 @@ def data_split(X, y, test_size=0.3, shuffle=False, stratify=False, random_state=
             # Compute number of training and test samples
             n_train_samples_k = ceil(n_samples_k * (1-test_size))
             n_test_samples_k = n_samples_k - n_train_samples_k
-            # Shuffle the data
-            if shuffle:
-                idx_k, _ = shuffle_data(X = idx_k, random_state=random_state)
             # Allocate corresponding indices to training and test set indices
             train_idx_k = idx_k[0:n_train_samples_k]
             test_idx_k = idx_k[n_train_samples_k:n_train_samples_k+n_test_samples_k]
@@ -797,4 +878,4 @@ def todf(x, stub):
         vec = [item[i] for item in x]
         df_vec = pd.DataFrame(vec, columns=[colname])
         df = pd.concat([df, df_vec], axis=1)
-    return(df)  
+    return df  

@@ -23,6 +23,8 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 import datetime
 import itertools
+import sys
+
 import numpy as np
 import pandas as pd
 
@@ -87,7 +89,7 @@ class BlackBox(base.Observer):
         """
         self.total_batches += 1
         for k,v in log.items():
-            self.batch_log.setdefault(k,[]).append(v)        
+            self.batch_log.setdefault(k,[]).append(v)            
 
     def on_epoch_begin(self, epoch, log=None):
         """Updates data and statistics relevant to the training epoch.
@@ -106,6 +108,29 @@ class BlackBox(base.Observer):
         self.total_epochs += 1
         for k,v in log.items():
             self.epoch_log.setdefault(k,[]).append(v)
+
+    def _evaluate(self, epoch, log=None):
+        """Performs an evaluation of the estimator at current epoch.""" 
+        d = {}
+        d['epoch'] = epoch
+        d['eta'] = self.model.eta
+        d['theta'] = self.model.theta_
+
+        y_out = self.model.compute_output(self.model.theta_, self.model.X_train_)
+        d['train_cost'] = self.model.compute_loss(self.model.theta_, self.model.y_train_, y_out)        
+        d['train_score'] = self.score_internal(self.model.X_train_, self.model.y_train_)
+
+        # Check not only val_size but also for empty validation sets 
+        if self.val_size:
+            if self.X_val_.shape[0] > 0:                
+                y_out_val = self._task.compute_output(self.theta_, self.X_val_)
+                s['val_cost'] = self._task.compute_loss(self.theta_, self.y_val_, y_out_val)                                
+                s['val_score'] = self._score(self.X_val_, self.y_val_)
+
+        s['gradient'] = self._gradient
+        s['gradient_norm'] = None
+        if self._gradient is not None:
+            s['gradient_norm'] = np.linalg.norm(self._gradient) 
 
 
 # --------------------------------------------------------------------------- #
@@ -170,8 +195,29 @@ class Summary(base.Observer):
                                 'Batches': str(bb.total_batches)}
         self.printer.print_dictionary(optimization_summary, "Optimization Summary")             
 
+    def _data_summary(self):
+        """Prints summary of the data used for training (and validation)."""
+        d = OrderedDict()
+        d['Num Features'] = self.model.n_features_
+        if self.model.n_classes_:
+            d['Num Classes'] = self.model.n_classes_
 
-    def _early_stop_summary(self):        
+        if self.model.val_size:
+            d['Total Observations'] = self.model.n_total_observations_
+            d['Training Observations'] = self.model.n_training_observations_
+            d['Training Set Size'] = sys.getsizeof(self.model.X_train_)
+            d['Validation Observations'] = self.model.n_validation_observations_
+            d['Validation Set Size'] = sys.getsizeof(self.model.X_val_)
+            d['Validation Proportion'] = self.model.val_size,
+                 } 
+        else:
+            d['Training Observations'] = self.model.n_training_observations_
+            d['Training Set Size'] = sys.getsizeof(self.model.X_train_)
+
+        self.printer.print_dictionary(d, "Data Summary")
+
+
+    def _performance_summary(self):        
         """Renders early stop optimization data."""
 
         log = self.model.blackbox_.epoch_log
@@ -223,5 +269,6 @@ class Summary(base.Observer):
     def report(self):
           
         self._optimization_summary()
-        self._early_stop_summary()
+        self._data_summary()
+        self._performance_summary()
         self._hyperparameter_summary()
