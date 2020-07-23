@@ -33,7 +33,7 @@ from sklearn.utils import check_array
 from sklearn.preprocessing import LabelBinarizer
 
 from mlstudio.utils.data_analyzer import get_features
-from mlstudio.utils.validation import check_X_y
+from mlstudio.utils.validation import check_X_y, check_X
 # --------------------------------------------------------------------------- #
 #                           DATA PREPARATION                                  #
 # --------------------------------------------------------------------------- #
@@ -121,39 +121,34 @@ class ZeroBiasTerm(BaseEstimator, TransformerMixin):
 
 # --------------------------------------------------------------------------- #
 class DataProcessor(ABC, TransformerMixin, BaseEstimator):
-    """Prepares data for training.
-    
-    Parameters
-    ----------
-    random_state : int or None (default = None)
-        The seed for pseudo randomization.
-    
-    """
+    """Prepares data for training"""
+
+    def __init__(self):
+        self._data = {}
+
     def fit(self, X, y=None):
-        """Returns self."""
+        """Extracts metadata."""
+        self._data['features_'] = get_features(X)
+        self._data['n_features_'] = X.shape[1]
+        self._data['n_features_plus_bias_'] = X.shape[1] + 1        
+        self._data['n_total_observations_'] = X.shape[0]
         return self
 
     def _transform_X(self, X, shuffle=None, random_state=None):
-        """Transforms X only. This is likely a call from predict."""                
-        d = {}
-        X = check_array(X)     
+        """Transforms X only. This is likely a call from predict."""
+        X = check_X(X)        
+        X = AddBiasTerm().fit_transform(X)         
         if shuffle:
             X, _ = shuffle_data(X=X, random_state=random_state)        
-        d['X'] = AddBiasTerm().fit_transform(X) 
-        d['features_'] = get_features(d['X']) 
-        d['n_features_'] = d['X'].shape[1]                                
-        return d
+        self._data['X'] = X
 
-    def _transform_wo_split(self, X, y, shuffle=None, random_state=None):        
-        d = {}
-        X = check_array(X)     
+    def _transform_wo_split(self, X, y, shuffle=None, random_state=None):          
+        X, y = check_X_y(X, y)      
         if shuffle:
             X, y = shuffle_data(X=X, y=y, random_state=random_state)
-        d['X_train_'] = AddBiasTerm().fit_transform(X) 
-        d['y_train_'] = check_array(y, ensure_2d=False)
-        d['features_'] = get_features(d['X_train_']) 
-        d['n_features_'] = d['X_train_'].shape[1]            
-        return d
+        self._data['X_train_'] = AddBiasTerm().fit_transform(X) 
+        self._data['y_train_'] = check_array(y, ensure_2d=False)
+        self._data['n_training_observations_'] = X.shape[0]
 
     @abstractmethod
     def _transform_split(self, X, y, val_size=None, shuffle=None, random_state=None):
@@ -181,89 +176,88 @@ class DataProcessor(ABC, TransformerMixin, BaseEstimator):
         dict : Dictionary containing transformed data.           
 
         """
+        
         if (y is not None) and val_size:
-            self._data = self._transform_split(X=X, y=y, val_size=val_size, 
-                                                shuffle=shuffle, 
-                                                random_state=random_state)
+            self._transform_split(X=X, y=y, val_size=val_size, 
+                                  shuffle=shuffle, 
+                                  random_state=random_state)
         elif y is not None:
-            self._data = self._transform_wo_split(X=X, y=y, shuffle=shuffle, 
-                                                random_state=random_state)
+            self._transform_wo_split(X=X, y=y, shuffle=shuffle, 
+                                     random_state=random_state)
         else:
-            self._data = self._transform_X(X=X, shuffle=shuffle, random_state=random_state)
+            self._transform_X(X=X, shuffle=shuffle, random_state=random_state)
 
         return self._data
 
     
     def fit_transform(self, X, y=None, val_size=None, shuffle=False, random_state=None):
         """Calls fit and transform."""
-        return self.transform(X=X, y=y, val_size=val_size, 
+        return self.fit(X, y).transform(X=X, y=y, val_size=val_size, 
                                         shuffle=shuffle, random_state=random_state)        
 
 # --------------------------------------------------------------------------- #
 class RegressionDataProcessor(DataProcessor):
     """Prepares data for regression."""
 
-    def _transform_split(self, X, y, val_size=None, shuffle=None, random_state=None):
-        d = {}
+    def _transform_split(self, X, y, val_size=None, shuffle=None, random_state=None):   
         X, y = check_X_y(X, y)     
         X = AddBiasTerm().fit_transform(X)         
-        d['X_train_'], d['X_val_'], d['y_train_'], d['y_val_'] = \
-            data_split(X, y, test_size=val_size, shuffle=shuffle,
-              stratify=False, random_state=random_state)    
-        d['features_'] = get_features(d['X_train_']) 
-        d['n_features_'] = d['X_train_'].shape[1]   
-        return d
+        self._data['X_train_'], self._data['X_val_'], self._data['y_train_'], \
+            self._data['y_val_'] = data_split(X, y, test_size=val_size, \
+                shuffle=shuffle, stratify=False, random_state=random_state)                    
+
+        self._data['n_training_observations_'] = self._data['X_train_'].shape[0]
+        self._data['n_validation_observations_'] = self._data['X_val_'].shape[0]
 
 # --------------------------------------------------------------------------- #
 class LogisticRegressionDataProcessor(DataProcessor):
     """Prepares data for regression."""
 
-    def _transform_split(self, X, y, val_size=None, shuffle=None, random_state=None):
-        d = {}
+    def _transform_split(self, X, y, val_size=None, shuffle=None, random_state=None):   
         X, y = check_X_y(X, y)     
-        X = AddBiasTerm().fit_transform(X)                 
-        d['X_train_'], d['X_val_'], d['y_train_'], d['y_val_'] = \
-            data_split(X, y, test_size=val_size, shuffle=shuffle,
-              stratify=True, random_state=random_state)    
-        d['features_'] = get_features(d['X_train_']) 
-        d['n_features_'] = d['X_train_'].shape[1]   
-        d['n_classes_'] = len(np.unique(y))             
-        return d    
+        X = AddBiasTerm().fit_transform(X)         
+        self._data['X_train_'], self._data['X_val_'], self._data['y_train_'], \
+            self._data['y_val_'] = data_split(X, y, test_size=val_size, \
+                shuffle=shuffle, stratify=True, random_state=random_state)  
+
+        self._data['n_training_observations_'] = self._data['X_train_'].shape[0]
+        self._data['n_validation_observations_'] = self._data['X_val_'].shape[0]                
+        self._data['n_classes_'] = len(np.unique(y))                       
 
 # --------------------------------------------------------------------------- #
 class MulticlassDataProcessor(DataProcessor):
     """Prepares data for multi-class classification."""
 
-    def __init__(self):
-        self.encoder = LabelBinarizer()
+    def __init__(self, encoder):
+        super(MulticlassDataProcessor, self).__init__()
+        self._encoder = encoder
 
-    def _validate_data(self, X, y):
+    def _validate(self, X, y):
+        X, y = super(MulticlassDataProcessor, self)._validate(X, y)
         if len(np.unique(y)) < 3:
             msg = "This data processor is for multi-class settings with classes\
                 >2. Please use the LogisticRegressionDataProcessor instead."
             raise Exception(msg)
 
-    def _transform_wo_split(self, X, y, shuffle=None, random_state=None):
-        self._validate_data(X, y)
-        d = super(MulticlassDataProcessor, self)._transform_wo_split(X, y, shuffle=shuffle, random_state=random_state)        
-        d['y_train_'] = self.encoder.fit_transform(d['y_train_'])       
-        d['n_classes_'] = len(np.unique(y))
-        return d
+    def _transform_wo_split(self, X, y, shuffle=None, random_state=None):        
+        super(MulticlassDataProcessor, self)._transform_wo_split(X, y, shuffle=shuffle, random_state=random_state)        
+        self._data['y_train_'] = self._encoder.fit_transform(self._data['y_train_'])       
+        self._data['n_classes_'] = len(np.unique(y))        
 
     def _transform_split(self, X, y, val_size=None, shuffle=None, random_state=None):
-        self._validate_data(X, y)
-        d = {}
-        X, y = check_X_y(X, y)     
+        X, y = check_X_y(X, y)
         X = AddBiasTerm().fit_transform(X)                 
-        d['X_train_'], d['X_val_'], d['y_train_'], d['y_val_'] = \
-            data_split(X, y, test_size=val_size, shuffle=shuffle,
-              stratify=True, random_state=random_state)    
-        d['y_train_'] = self.encoder.fit_transform(d['y_train_'])       
-        d['y_val_'] = self.encoder.transform(d['y_val_'])       
-        d['features_'] = get_features(d['X_train_'])
-        d['n_features_'] = d['X_train_'].shape[1]
-        d['n_classes_'] = len(np.unique(y))
-        return d        
+        self._data['X_train_'], self._data['X_val_'], self._data['y_train_'], \
+            self._data['y_val_'] = data_split(X, y, test_size=val_size, \
+                shuffle=shuffle, stratify=True, random_state=random_state)    
+
+        self._data['y_train_'] = self._encoder.fit_transform(self._data['y_train_'])       
+        self._data['y_val_'] = self._encoder.transform(self._data['y_val_'])       
+
+
+        self._data['n_training_observations_'] = self._data['X_train_'].shape[0]
+        self._data['n_validation_observations_'] = self._data['X_val_'].shape[0]                
+        self._data['n_classes_'] = len(np.unique(y))                               
 
 # --------------------------------------------------------------------------- #
 class NormScaler(TransformerMixin, BaseEstimator):
@@ -607,7 +601,7 @@ def shuffle_data(X, y=None, random_state=None):
     
     """    
     rg = np.random.default_rng(seed=random_state)
-    X = rg.permutation(X)
+    X = rg.permutation(X)   
     if y is not None:
         y = rg.permutation(y)    
     return X, y

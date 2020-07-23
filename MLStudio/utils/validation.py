@@ -208,15 +208,26 @@ def validate_observers(param, param_name='observers'):
     return True
     
 # --------------------------------------------------------------------------  #
-def validate_metric(metric):    
-    from mlstudio.supervised.performance.base import Metric
-    valid_metrics = [cls.__name__ for cls in Metric.__subclasses__()]
-    if not isinstance(metric, Metric):
-        msg = "{s} is an invalid Metric object. The valid Metric classes include : \
-            {v}".format(s=metric, v=str(valid_metrics))
+def validate_regression_scorer(scorer):    
+    from mlstudio.supervised.performance.base import BaseRegressionMetric
+    valid_scorers = [cls.__name__ for cls in BaseRegressionMetric.__subclasses__()]
+    if not isinstance(scorer, BaseRegressionMetric):
+        msg = "{s} is an invalid scorer object. The valid scorer classes include : \
+            {v}".format(s=scorer, v=str(valid_scorers))
         raise TypeError(msg)
     else:
         return True
+# --------------------------------------------------------------------------  #
+def validate_classification_scorer(scorer):    
+    from mlstudio.supervised.performance.base import BaseClassificationMetric
+    valid_scorers = [cls.__name__ for cls in BaseClassificationMetric.__subclasses__()]
+    if not isinstance(scorer, BaseClassificationMetric):
+        msg = "{s} is an invalid scorer object. The valid scorer classes include : \
+            {v}".format(s=scorer, v=str(valid_scorers))
+        raise TypeError(msg)
+    else:
+        return True
+
 # --------------------------------------------------------------------------  #
 def validate_activation(activation):    
     from mlstudio.supervised.algorithms.optimization.services.activations import Activation
@@ -366,7 +377,7 @@ def validate_estimator(estimator):
                                 minimum=0, maximum=1, left='closed', 
                                 right='open')
     validate_optimizer(estimator.optimizer)
-    validate_metric(estimator.metric)               
+    validate_scorer(estimator.scorer)               
     if estimator.early_stop:
         validate.observers(estimator.early_stop, 
                                         param_name='early_stop')

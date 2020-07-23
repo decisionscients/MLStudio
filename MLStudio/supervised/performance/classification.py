@@ -43,7 +43,7 @@ class TruePositives(BaseClassificationMeasure):
         self.name = "True Positives (Power)"
         self.category = "Base Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         df = self._format_results(y=y, y_pred=y_pred)
         result = df[(df['y'] == positive) & (df['y_pred'] == positive)]
         return len(result.index)    
@@ -56,7 +56,7 @@ class TrueNegatives(BaseClassificationMeasure):
         self.name = "True Negatives"
         self.category = "Base Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         df = self._format_results(y=y, y_pred=y_pred)
         result = df[(df['y'] == negative) & (df['y_pred'] == negative)]
         return len(result.index)    
@@ -69,7 +69,7 @@ class FalsePositives(BaseClassificationMeasure):
         self.name = "False Positives (Type I Error)"
         self.category = "Base Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         df = self._format_results(y=y, y_pred=y_pred)
         result = df[(df['y'] == negative) & (df['y_pred'] == positive)]
         return len(result.index)    
@@ -82,7 +82,7 @@ class FalseNegatives(BaseClassificationMeasure):
         self.name = "False Negatives (Type II Error)"
         self.category = "Base Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         df = self._format_results(y=y, y_pred=y_pred)
         result = df[(df['y'] == positive) & (df['y_pred'] == negative)]
         return len(result.index)            
@@ -96,7 +96,7 @@ class PositiveCondition(BaseClassificationMeasure):
         self.name = "Positive Condition"
         self.category = "1st Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         tp = TruePositives()(y=y, y_pred=y_pred, negative=negative, 
                               positive=positive)
         fn = FalseNegatives()(y=y, y_pred=y_pred, negative=negative, 
@@ -111,7 +111,7 @@ class NegativeCondition(BaseClassificationMeasure):
         self.name = "Negative Condition"
         self.category = "1st Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         fp = FalsePositives()(y=y, y_pred=y_pred, negative=negative, 
                               positive=positive)
         tn = TrueNegatives()(y=y, y_pred=y_pred, negative=negative, 
@@ -127,7 +127,7 @@ class OutcomePositive(BaseClassificationMeasure):
         self.name = "Outcome Positive"
         self.category = "1st Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         tp = TruePositives()(y=y, y_pred=y_pred, negative=negative, 
                               positive=positive)
         fp = FalsePositives()(y=y, y_pred=y_pred, negative=negative, 
@@ -142,7 +142,7 @@ class OutcomeNegative(BaseClassificationMeasure):
         self.name = "Outcome Negative"
         self.category = "1st Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         fn = FalseNegatives()(y=y, y_pred=y_pred, negative=negative, 
                               positive=positive)
         tn = TrueNegatives()(y=y, y_pred=y_pred, negative=negative, 
@@ -158,7 +158,7 @@ class TrueClassification(BaseClassificationMeasure):
         self.name = "True Classification"
         self.category = "1st Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         tp = TruePositives()(y=y, y_pred=y_pred, negative=negative, 
                               positive=positive)
         tn = TrueNegatives()(y=y, y_pred=y_pred, negative=negative, 
@@ -173,7 +173,7 @@ class FalseClassification(BaseClassificationMeasure):
         self.name = "False Classification"
         self.category = "1st Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         fp = FalsePositives()(y=y, y_pred=y_pred, negative=negative, 
                               positive=positive)
         fn = FalseNegatives()(y=y, y_pred=y_pred, negative=negative, 
@@ -189,7 +189,7 @@ class PositiveLikelihoodRatio(BaseClassificationMeasure):
         self.name = "Positive Likelihood Ratio"
         self.category = "2nd Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         tpr = TruePositiveRate()(y, y_pred, positive=positive, negative=negative)
         fpr = FalsePositiveRate()(y, y_pred, positive=positive, negative=negative)
         return tpr / fpr    
@@ -202,7 +202,7 @@ class NegativeLikelihoodRatio(BaseClassificationMeasure):
         self.name = "Positive Likelihood Ratio"
         self.category = "2nd Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         fnr = FalseNegativeRate()(y, y_pred, positive=positive, negative=negative)
         tnr = TrueNegativeRate()(y, y_pred, positive=positive, negative=negative)
         return fnr / tnr
@@ -216,7 +216,7 @@ class Bias(BaseClassificationMeasure):
         self.name = "Bias"
         self.category = "2nd Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         op = OutcomePositive()(y, y_pred, positive=positive, negative=negative)        
         return op / y.shape[0]
 
@@ -229,7 +229,7 @@ class Prevalence(BaseClassificationMeasure):
         self.name = "Prevalence"
         self.category = "2nd Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         p = PositiveCondition()(y, y_pred, positive=positive, negative=negative)        
         return p / y.shape[0]
 
@@ -241,7 +241,7 @@ class Skew(BaseClassificationMeasure):
         self.name = "Skew"
         self.category = "2nd Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         n = NegativeCondition()(y, y_pred, positive=positive, negative=negative)        
         p = PositiveCondition()(y, y_pred, positive=positive, negative=negative)        
         return n / p
@@ -254,7 +254,7 @@ class CohensKappaChance(BaseClassificationMeasure):
         self.name = "Cohen's Kappa Chance"
         self.category = "2nd Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         n = NegativeCondition()(y, y_pred, positive=positive, negative=negative)        
         p = PositiveCondition()(y, y_pred, positive=positive, negative=negative)        
         op = OutcomePositive()(y, y_pred, positive=positive, negative=negative)        
@@ -270,7 +270,7 @@ class OddsRatio(BaseClassificationMeasure):
         self.name = "Odds Ratio"
         self.category = "3rd Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         tp = TruePositives()(y, y_pred, positive=positive, negative=negative)
         tn = TrueNegatives()(y, y_pred, positive=positive, negative=negative)        
         fp = FalsePositives()(y, y_pred, positive=positive, negative=negative)        
@@ -289,7 +289,7 @@ class DiscrimitivePower(BaseClassificationMeasure):
         self.name = "Discrimitive Power"
         self.category = "3rd Level Measure"
 
-    def __call__(self, y, y_pred, negative=0, positive=1):
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):
         return (np.sqrt(3) / np.pi) * \
             np.log(OddsRatio()(y, y_pred, positive=positive, negative=negative))        
         
@@ -312,7 +312,7 @@ class Accuracy(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):                
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):                
         tc = TrueClassification()(y, y_pred, positive=positive, negative=negative)   
         return tc / y.shape[0]
 
@@ -330,7 +330,7 @@ class DetectionRate(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):   
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):   
         tp = TruePositives()(y, y_pred, positive=positive, negative=negative)
         return tp / y.shape[0]        
 
@@ -348,7 +348,7 @@ class RejectionRate(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         tn = TrueNegatives()(y, y_pred, positive=positive, negative=negative)
         return tn / y.shape[0]
 
@@ -367,7 +367,7 @@ class PositivePredictiveValue(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         tp = TruePositives()(y, y_pred, positive=positive, negative=negative)
         op = OutcomePositive()(y, y_pred, positive=positive, negative=negative)
         return tp / op
@@ -386,9 +386,6 @@ class Precision(PositivePredictiveValue):
         self.epsilon_factor = 1
         self.probability_metric = False    
 
-    def __call__(self, y, y_pred, negative=0, positive=1):                   
-        return super(Precision, self).__call__(y, y_pred, negative=0, positive=1)
-
 class NegativePredictiveValue(BaseClassificationMetric):
     """Negative predictive value as ratio of true negatives and outcome negative."""       
 
@@ -403,7 +400,7 @@ class NegativePredictiveValue(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         tn = TrueNegatives()(y, y_pred, positive=positive, negative=negative)
         on = OutcomeNegative()(y, y_pred, positive=positive, negative=negative)
         return tn / on
@@ -422,7 +419,7 @@ class FalseDiscoveryRate(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         fp = FalsePositives()(y, y_pred, positive=positive, negative=negative)
         op = OutcomePositive()(y, y_pred, positive=positive, negative=negative)
         return fp / op
@@ -441,7 +438,7 @@ class FalseOmissionRate(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         fn = FalseNegatives()(y, y_pred, positive=positive, negative=negative)
         on = OutcomeNegative()(y, y_pred, positive=positive, negative=negative)
         return fn / on
@@ -485,7 +482,7 @@ class AUC:
         df['auc'] = width * height
         self._roc_data = df        
 
-    def __call__(self, y, y_pred, negative=0, positive=1):                       
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):                       
         df = self._format_results(y, y_pred)
         self._compute_roc_data(df)
         return self._roc_data['auc'].sum()
@@ -505,7 +502,7 @@ class TruePositiveRate(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         tp = TruePositives()(y, y_pred, positive=positive, negative=negative)
         p = PositiveCondition()(y, y_pred, positive=positive, negative=negative)
         return tp / p
@@ -524,8 +521,6 @@ class Sensitivity(TruePositiveRate):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
-        return super(Sensitivity, self).__call__(y, y_pred, negative=0, positive=1)
 
 class Recall(TruePositiveRate):
     """Alias for True Positive Rate."""       
@@ -541,8 +536,6 @@ class Recall(TruePositiveRate):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
-        return super(Recall, self).__call__(y, y_pred, negative=0, positive=1)        
 
 class FalseNegativeRate(BaseClassificationMetric):
     """False negative rate computed as false negatives / positive condition."""       
@@ -558,7 +551,7 @@ class FalseNegativeRate(BaseClassificationMetric):
         self.epsilon_factor = -1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         fn = FalseNegatives()(y, y_pred, positive=positive, negative=negative)
         p = PositiveCondition()(y, y_pred, positive=positive, negative=negative)
         return fn / p
@@ -577,7 +570,7 @@ class TrueNegativeRate(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         tn = TrueNegatives()(y, y_pred, positive=positive, negative=negative)
         n = NegativeCondition()(y, y_pred, positive=positive, negative=negative)
         return tn / n
@@ -596,8 +589,6 @@ class Specificity(TrueNegativeRate):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
-        return super(Specificity, self).__call__(y, y_pred, negative=0, positive=1)         
         
 class FalsePositiveRate(BaseClassificationMetric):
     """False positive rate computed as false positives / negative condition."""       
@@ -613,7 +604,7 @@ class FalsePositiveRate(BaseClassificationMetric):
         self.epsilon_factor = -1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         fp = FalsePositives()(y, y_pred, positive=positive, negative=negative)
         n = NegativeCondition()(y, y_pred, positive=positive, negative=negative)
         return fp / n
@@ -633,7 +624,7 @@ class MissclassificationRate(BaseClassificationMetric):
         self.epsilon_factor = -1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         fc = FalseClassification()(y, y_pred, positive=positive, negative=negative)        
         return fc / y.shape[0]
 
@@ -652,7 +643,7 @@ class F1(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         ppv = PositivePredictiveValue()(y, y_pred, positive=positive, negative=negative)        
         tpr = TruePositiveRate()(y, y_pred, positive=positive, negative=negative)        
         return 2 * (ppv * tpr) / (ppv + tpr)
@@ -671,7 +662,7 @@ class F05(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         ppv = PositivePredictiveValue()(y, y_pred, positive=positive, negative=negative)        
         tpr = TruePositiveRate()(y, y_pred, positive=positive, negative=negative)        
         return (1.25 * ppv * tpr) / (0.25 * ppv + tpr)
@@ -690,7 +681,7 @@ class F2(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         ppv = PositivePredictiveValue()(y, y_pred, positive=positive, negative=negative)        
         tpr = TruePositiveRate()(y, y_pred, positive=positive, negative=negative)        
         return (5 * ppv * tpr) / (4 * ppv + tpr)
@@ -709,7 +700,7 @@ class FBeta(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, beta, negative=0, positive=1):           
+    def __call__(self, y, y_pred, beta, negative=0, positive=1, *args, **kwargs):           
         ppv = PositivePredictiveValue()(y, y_pred, positive=positive, negative=negative)        
         tpr = TruePositiveRate()(y, y_pred, positive=positive, negative=negative)        
         return ((1+beta**2) * ppv * tpr) / ((1+beta**2) * ppv + tpr)
@@ -729,7 +720,7 @@ class Informedness(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         tpr = TruePositiveRate()(y, y_pred, positive=positive, negative=negative)        
         tnr = TrueNegativeRate()(y, y_pred, positive=positive, negative=negative)        
         return tpr + tnr - 1
@@ -748,7 +739,7 @@ class Markedness(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred, negative=0, positive=1):           
+    def __call__(self, y, y_pred, negative=0, positive=1, *args, **kwargs):           
         ppv = PositivePredictiveValue()(y, y_pred, positive=positive, negative=negative)        
         npv = NegativePredictiveValue()(y, y_pred, positive=positive, negative=negative)        
         return ppv + npv - 1
@@ -767,7 +758,7 @@ class BalancedAccuracy(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred,negative=0, positive=1):           
+    def __call__(self, y, y_pred,negative=0, positive=1, *args, **kwargs):           
         tpr = TruePositiveRate()(y, y_pred, positive=positive, negative=negative)        
         tnr = TrueNegativeRate()(y, y_pred, positive=positive, negative=negative)        
         return (tpr + tnr) / 2
@@ -786,7 +777,7 @@ class GMeasure(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred,negative=0, positive=1):           
+    def __call__(self, y, y_pred,negative=0, positive=1, *args, **kwargs):           
         tpr = TruePositiveRate()(y, y_pred, positive=positive, negative=negative)        
         tnr = TrueNegativeRate()(y, y_pred, positive=positive, negative=negative)        
         return np.sqrt(tpr * tnr)
@@ -806,7 +797,7 @@ class CohensKappa(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred,negative=0, positive=1):           
+    def __call__(self, y, y_pred,negative=0, positive=1, *args, **kwargs):           
         acc = Accuracy()(y, y_pred, positive=positive, negative=negative)        
         ckc = CohensKappaChance()(y, y_pred, positive=positive, negative=negative)        
         return (acc-ckc) / (1-ckc)
@@ -826,7 +817,7 @@ class MatthewsCorrelationCoefficient(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred,negative=0, positive=1):           
+    def __call__(self, y, y_pred,negative=0, positive=1, *args, **kwargs):           
         inform = Informedness()(y, y_pred, positive=positive, negative=negative)        
         mark = Markedness()(y, y_pred, positive=positive, negative=negative)        
         return np.sqrt(inform * mark)
@@ -845,7 +836,7 @@ class FowlkesMallowsIndex(BaseClassificationMetric):
         self.epsilon_factor = 1
         self.probability_metric = False
     
-    def __call__(self, y, y_pred,negative=0, positive=1):           
+    def __call__(self, y, y_pred,negative=0, positive=1, *args, **kwargs):           
         ppv = PositivePredictiveValue()(y, y_pred, positive=positive, negative=negative)        
         tpr = TruePositiveRate()(y, y_pred, positive=positive, negative=negative)        
         return np.sqrt(ppv * tpr)

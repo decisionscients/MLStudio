@@ -347,8 +347,8 @@ class PerformanceObserver(Observer):
         # If score metric is designated, obtain what constitutes a better
         # or best scores from the model's metric object. 
         if 'score' in self.metric:
-            self._best = self.model.metric.best
-            self._better = self.model.metric.better
+            self._best = self.model.scorer.best
+            self._better = self.model.scorer.better
         # Otherwise, the metric is cost and best and better costs are min and
         # less, respectively
         else:

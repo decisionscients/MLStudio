@@ -28,9 +28,7 @@ from sklearn.datasets import make_classification
 
 from mlstudio.utils.data_manager import MinMaxScaler, data_split, GradientScaler
 from mlstudio.utils.data_manager import AddBiasTerm, ZeroBiasTerm, unpack_parameters
-from mlstudio.utils.data_manager import RegressionDataProcessor
-from mlstudio.utils.data_manager import LogisticRegressionDataProcessor
-from mlstudio.utils.data_manager import MulticlassDataProcessor
+from mlstudio.factories.data_processor import DataProcessors
 # --------------------------------------------------------------------------  #
 #                       TEST ADD BIAS TERM TRANSFORMER                        #
 # --------------------------------------------------------------------------  #
@@ -199,43 +197,43 @@ class RegressionDataProcessorTests:
 
     def test_regression_data_processor_X(self, get_regression_data):
         X, y = get_regression_data
-        dp = RegressionDataProcessor()
+        dp = DataProcessors.regression()
         # No random state no shuffle
-        data_1 = dp.fit_transform(X)
+        data_1 = dp.fit_transform(X).copy()
         assert data_1['X'].shape[1] == X.shape[1]+1, "Regression data processor: X.shape[1] incorrect."
         # Check deterministic
-        data_2 = dp.fit_transform(X)
+        data_2 = dp.fit_transform(X).copy()        
         assert data_2['X'].shape[1] == X.shape[1]+1, "Regression data processor: X.shape[1] incorrect."        
         assert np.array_equal(data_1['X'], data_2['X']), "Regression data processor: not deterministic"
         # Check shuffle
-        data_3 = dp.fit_transform(X, shuffle=True)
+        data_3 = dp.fit_transform(X, shuffle=True).copy()
         assert data_3['X'].shape[1] == X.shape[1]+1, "Regression data processor: X.shape[1] incorrect."        
         assert not np.array_equal(data_2['X'], data_3['X']), "Regression data processor: shuffle didn't work."        
         # Check random state
-        data_4 = dp.fit_transform(X, random_state=5)
+        data_4 = dp.fit_transform(X, random_state=5).copy()
         assert data_3['X'].shape[1] == X.shape[1]+1, "Regression data processor: X.shape[1] incorrect."        
         assert np.array_equal(data_4['X'], data_2['X']), "Regression data processor: state not consistent."        
 
 
     def test_regression_data_processor_no_split(self, get_regression_data):
         X, y = get_regression_data
-        dp = RegressionDataProcessor()        
-        data_1 = dp.fit_transform(X, y)
+        dp = DataProcessors.regression()        
+        data_1 = dp.fit_transform(X, y).copy()
         # No shuffle no random state
         assert data_1['X_train_'].shape[1] == X.shape[1]+1, "Regression data processor: X.shape[1] incorrect."
         assert data_1['y_train_'].shape[0] == X.shape[0], "Regression data processor: y_train_ shape incorrect."
         # Check deterministic
-        data_2 = dp.fit_transform(X, y)
+        data_2 = dp.fit_transform(X, y).copy()
         assert np.array_equal(data_1['X_train_'], data_2['X_train_']), "Regression data processor: not deterministic"
         assert np.array_equal(data_1['y_train_'], data_2['y_train_']), "Regression data processor: not deterministic"
         assert data_2['X_train_'].shape[0] == X.shape[0], "Regression data processor: X wrong length"
         # Check shuffle
-        data_3 = dp.fit_transform(X, y, shuffle=True)
+        data_3 = dp.fit_transform(X, y, shuffle=True).copy()
         assert not np.array_equal(data_3['X_train_'], data_2['X_train_']), "Regression data processor: shuffle not working"
         assert not np.array_equal(data_3['y_train_'], data_2['y_train_']), "Regression data processor: shuffle not working"
         assert data_3['X_train_'].shape[0] == X.shape[0], "Regression data processor: X wrong length"
         # Check random state
-        data_4 = dp.fit_transform(X, y, random_state=5)
+        data_4 = dp.fit_transform(X, y, random_state=5).copy()
         assert np.array_equal(data_2['X_train_'], data_4['X_train_']), "Regression data processor: random state not working"
         assert np.array_equal(data_2['y_train_'], data_4['y_train_']), "Regression data processor: random state not working"        
         assert data_4['X_train_'].shape[0] == X.shape[0], "Regression data processor: X wrong length"
@@ -244,8 +242,8 @@ class RegressionDataProcessorTests:
 
     def test_regression_data_processor_split(self, get_regression_data):
         X, y = get_regression_data
-        dp = RegressionDataProcessor()        
-        data_1 = dp.fit_transform(X, y, val_size=0.3)
+        dp = DataProcessors.regression()        
+        data_1 = dp.fit_transform(X, y, val_size=0.3).copy()
         # No shuffle no random state
         assert data_1['X_train_'].shape[1] == X.shape[1]+1, "Regression data processor: X.shape[1] incorrect."
         assert data_1['y_train_'].shape[0] != X.shape[0], "Regression data processor: y_train_ shape incorrect."
@@ -253,7 +251,7 @@ class RegressionDataProcessorTests:
         assert data_1['y_train_'].shape[0] == data_1['X_train_'].shape[0], "Regression data processor: train data mismatch length."
         assert data_1['y_val_'].shape[0] == data_1['X_val_'].shape[0], "Regression data processor: Val data mismatch length."
         # Check deterministic
-        data_2 = dp.fit_transform(X, y, val_size=0.3)
+        data_2 = dp.fit_transform(X, y, val_size=0.3).copy()
         assert np.array_equal(data_1['X_train_'], data_2['X_train_']), "Regression data processor: not deterministic"
         assert np.array_equal(data_1['y_train_'], data_2['y_train_']), "Regression data processor: not deterministic"
         assert data_2['X_train_'].shape[0] != X.shape[0], "Regression data processor: X wrong length"
@@ -262,7 +260,7 @@ class RegressionDataProcessorTests:
         assert data_2['y_train_'].shape[0] == data_1['X_train_'].shape[0], "Regression data processor: train data mismatch length."
         assert data_2['y_val_'].shape[0] == data_1['X_val_'].shape[0], "Regression data processor: Val data mismatch length."        
         # Check shuffle
-        data_3 = dp.fit_transform(X, y, val_size=0.3, shuffle=True)
+        data_3 = dp.fit_transform(X, y, val_size=0.3, shuffle=True).copy()
         assert not np.array_equal(data_3['X_train_'], data_2['X_train_']), "Regression data processor: shuffle not working"
         assert not np.array_equal(data_3['y_train_'], data_2['y_train_']), "Regression data processor: shuffle not working"
         assert not np.array_equal(data_3['X_val_'], data_2['X_val_']), "Regression data processor: shuffle not working"
@@ -273,7 +271,7 @@ class RegressionDataProcessorTests:
         assert data_2['y_train_'].shape[0] == data_3['X_train_'].shape[0], "Regression data processor: train data mismatch length."
         assert data_2['y_val_'].shape[0] == data_3['X_val_'].shape[0], "Regression data processor: Val data mismatch length."                
         # Check random state
-        data_4 = dp.fit_transform(X, y, val_size=0.3, random_state=5)
+        data_4 = dp.fit_transform(X, y, val_size=0.3, random_state=5).copy()
         assert np.array_equal(data_2['X_train_'], data_4['X_train_']), "Regression data processor: shuffle not working"
         assert np.array_equal(data_2['y_train_'], data_4['y_train_']), "Regression data processor: shuffle not working"
         assert np.array_equal(data_2['X_val_'], data_4['X_val_']), "Regression data processor: shuffle not working"
@@ -287,42 +285,42 @@ class LogisticRegressionDataProcessorTests:
     
     def test_logistic_regression_data_processor_X(self, get_logistic_regression_data):
         X, y = get_logistic_regression_data
-        dp = LogisticRegressionDataProcessor()
+        dp = DataProcessors.binary_classification()
         # No random state no shuffle
-        data_1 = dp.fit_transform(X=X)
+        data_1 = dp.fit_transform(X=X).copy()
         assert data_1['X'].shape[1] == X.shape[1]+1, "Logistic regression data processor: X.shape[1] incorrect."
         # Check deterministic
-        data_2 = dp.fit_transform(X=X)  
+        data_2 = dp.fit_transform(X=X).copy()  
         assert data_2['X'].shape[1] == X.shape[1]+1, "Logistic regression data processor: X.shape[1] incorrect."        
         assert np.array_equal(data_1['X'], data_2['X']), "Logistic regression data processor: not deterministic"
         # Check shuffle
-        data_3 = dp.fit_transform(X=X, shuffle=True)     
+        data_3 = dp.fit_transform(X=X, shuffle=True).copy()     
         assert data_3['X'].shape[1] == X.shape[1]+1, "Logistic regression data processor: X.shape[1] incorrect."        
         assert not np.array_equal(data_2['X'], data_3['X']), "Logistic regression data processor: shuffle didn't work."        
         # Check random state
-        data_4 = dp.fit_transform(X, random_state=5)
+        data_4 = dp.fit_transform(X, random_state=5).copy()
         assert data_4['X'].shape[1] == X.shape[1]+1, "Logistic regression data processor: X.shape[1] incorrect."        
         assert np.array_equal(data_4['X'], data_2['X']), "Logistic regression data processor: state not consistent."        
     
     def test_logistic_regression_data_processor_no_split(self, get_logistic_regression_data):
         X, y = get_logistic_regression_data
-        dp = LogisticRegressionDataProcessor()        
-        data_1 = dp.fit_transform(X, y)
+        dp = DataProcessors.binary_classification()        
+        data_1 = dp.fit_transform(X, y).copy()
         # No shuffle no random state
         assert data_1['X_train_'].shape[1] == X.shape[1]+1, "Logistic regression data processor: X.shape[1] incorrect."
         assert data_1['y_train_'].shape[0] == X.shape[0], "Logistic regression data processor: y_train_ shape incorrect."
         # Check deterministic
-        data_2 = dp.fit_transform(X, y)
+        data_2 = dp.fit_transform(X, y).copy()
         assert np.array_equal(data_1['X_train_'], data_2['X_train_']), "Logistic regression data processor: not deterministic"
         assert np.array_equal(data_1['y_train_'], data_2['y_train_']), "Logistic regression data processor: not deterministic"
         assert data_2['X_train_'].shape[0] == X.shape[0], "Logistic regression data processor: X wrong length"
         # Check shuffle
-        data_3 = dp.fit_transform(X, y, shuffle=True)
+        data_3 = dp.fit_transform(X, y, shuffle=True).copy()
         assert not np.array_equal(data_3['X_train_'], data_2['X_train_']), "Logistic regression data processor: shuffle not working"
         assert not np.array_equal(data_3['y_train_'], data_2['y_train_']), "Logistic regression data processor: shuffle not working"
         assert data_3['X_train_'].shape[0] == X.shape[0], "Logistic regression data processor: X wrong length"
         # Check random state
-        data_4 = dp.fit_transform(X, y, random_state=5)
+        data_4 = dp.fit_transform(X, y, random_state=5).copy()
         assert np.array_equal(data_2['X_train_'], data_4['X_train_']), "Logistic regression data processor: random state not working"
         assert np.array_equal(data_2['y_train_'], data_4['y_train_']), "Logistic regression data processor: random state not working"        
         assert data_4['X_train_'].shape[0] == X.shape[0], "Logistic regression data processor: X wrong length"
@@ -330,8 +328,8 @@ class LogisticRegressionDataProcessorTests:
     @mark.hit   
     def test_logistic_regression_data_processor_split(self, get_logistic_regression_data):
         X, y = get_logistic_regression_data
-        dp = LogisticRegressionDataProcessor()        
-        data_1 = dp.fit_transform(X, y, val_size=0.3)
+        dp = DataProcessors.binary_classification()        
+        data_1 = dp.fit_transform(X, y, val_size=0.3).copy()
         # No shuffle no random state
         assert data_1['X_train_'].shape[1] == X.shape[1]+1, "Logistic regression data processor: X.shape[1] incorrect."
         assert data_1['y_train_'].shape[0] != X.shape[0], "Logistic regression data processor: y_train_ shape incorrect."
@@ -341,7 +339,7 @@ class LogisticRegressionDataProcessorTests:
         assert data_1['y_train_'].shape == (data_1['X_train_'].shape[0],), "Logistic regression data processor: y_train misshape."
         assert data_1['y_val_'].shape == (data_1['X_val_'].shape[0],), "Logistic regression data processor: y_val misshape."
         # Check deterministic
-        data_2 = dp.fit_transform(X, y, val_size=0.3)
+        data_2 = dp.fit_transform(X, y, val_size=0.3).copy()
         assert np.array_equal(data_1['X_train_'], data_2['X_train_']), "Logistic regression data processor: not deterministic"
         assert np.array_equal(data_1['y_train_'], data_2['y_train_']), "Logistic regression data processor: not deterministic"
         assert data_2['X_train_'].shape[0] != X.shape[0], "Logistic regression data processor: X wrong length"
@@ -352,7 +350,7 @@ class LogisticRegressionDataProcessorTests:
         assert data_2['y_train_'].shape == (data_2['X_train_'].shape[0],), "Logistic regression data processor: y_train misshape."
         assert data_2['y_val_'].shape == (data_2['X_val_'].shape[0],), "Logistic regression data processor: y_val misshape."        
         # Check shuffle
-        data_3 = dp.fit_transform(X, y, val_size=0.3, shuffle=True)
+        data_3 = dp.fit_transform(X, y, val_size=0.3, shuffle=True).copy()
         assert not np.array_equal(data_3['X_train_'], data_2['X_train_']), "Logistic regression data processor: shuffle not working"        
         assert not np.array_equal(data_3['X_val_'], data_2['X_val_']), "Logistic regression data processor: shuffle not working"
         assert data_3['X_train_'].shape[0] != X.shape[0], "Logistic regression data processor: X wrong length"
@@ -363,7 +361,7 @@ class LogisticRegressionDataProcessorTests:
         assert data_3['y_train_'].shape == (data_3['X_train_'].shape[0],), "Logistic regression data processor: y_train misshape."
         assert data_3['y_val_'].shape == (data_3['X_val_'].shape[0],), "Logistic regression data processor: y_val misshape."        
         # Check random state
-        data_4 = dp.fit_transform(X, y, val_size=0.3, random_state=5)
+        data_4 = dp.fit_transform(X, y, val_size=0.3, random_state=5).copy()
         assert np.array_equal(data_2['X_train_'], data_4['X_train_']), "Logistic regression data processor: shuffle not working"
         assert np.array_equal(data_2['y_train_'], data_4['y_train_']), "Logistic regression data processor: shuffle not working"
         assert np.array_equal(data_2['X_val_'], data_4['X_val_']), "Logistic regression data processor: shuffle not working"
@@ -379,45 +377,45 @@ class MulticlassDataProcessorTests:
 
     def test_multiclass_classification_data_processor_X(self, get_multiclass_classification_data):
         X, y = get_multiclass_classification_data
-        dp = MulticlassDataProcessor()
+        dp =  DataProcessors.multiclass_classification()
         # No random state no shuffle
-        data_1 = dp.fit_transform(X)
+        data_1 = dp.fit_transform(X).copy()
         assert data_1['X'].shape[1] == X.shape[1]+1, "Multiclass classification data processor: X.shape[1] incorrect."
         # Check deterministic
-        data_2 = dp.fit_transform(X)
+        data_2 = dp.fit_transform(X).copy()
         assert data_2['X'].shape[1] == X.shape[1]+1, "Multiclass classification data processor: X.shape[1] incorrect."        
         assert np.array_equal(data_1['X'], data_2['X']), "Multiclass classification data processor: not deterministic"
         # Check shuffle
-        data_3 = dp.fit_transform(X, shuffle=True)
+        data_3 = dp.fit_transform(X, shuffle=True).copy()
         assert data_3['X'].shape[1] == X.shape[1]+1, "Multiclass classification data processor: X.shape[1] incorrect."        
         assert not np.array_equal(data_2['X'], data_3['X']), "Multiclass classification data processor: shuffle didn't work."        
         # Check random state
-        data_4 = dp.fit_transform(X, random_state=5)
+        data_4 = dp.fit_transform(X, random_state=5).copy()
         assert data_4['X'].shape[1] == X.shape[1]+1, "Multiclass classification data processor: X.shape[1] incorrect."        
         assert np.array_equal(data_4['X'], data_2['X']), "Multiclass classification data processor: state not consistent."        
 
 
     def test_multiclass_classification_data_processor_no_split(self, get_multiclass_classification_data):
         X, y = get_multiclass_classification_data
-        dp = MulticlassDataProcessor()        
-        data_1 = dp.fit_transform(X, y)
+        dp =  DataProcessors.multiclass_classification()        
+        data_1 = dp.fit_transform(X, y).copy()
         # No shuffle no random state
         assert data_1['X_train_'].shape[1] == X.shape[1]+1, "Multiclass classification data processor: X.shape[1] incorrect."
         assert data_1['y_train_'].shape[0] == X.shape[0], "Multiclass classification data processor: y_train_ shape incorrect."
         assert data_1['y_train_'].shape != y.shape[0], "Multiclass classification data processor: y_train_ shape incorrect."
         # Check deterministic
-        data_2 = dp.fit_transform(X, y)
+        data_2 = dp.fit_transform(X, y).copy()
         assert np.array_equal(data_1['X_train_'], data_2['X_train_']), "Multiclass classification data processor: not deterministic"
         assert np.array_equal(data_1['y_train_'], data_2['y_train_']), "Multiclass classification data processor: not deterministic"
         assert data_2['X_train_'].shape[0] == X.shape[0], "Multiclass classification data processor: X wrong length"
         assert data_2['y_train_'].shape != y.shape[0], "Multiclass classification data processor: y_train_ shape incorrect."        
         # Check shuffle
-        data_3 = dp.fit_transform(X, y, shuffle=True)
+        data_3 = dp.fit_transform(X, y, shuffle=True).copy()
         assert not np.array_equal(data_3['X_train_'], data_2['X_train_']), "Multiclass classification data processor: shuffle not working"
         assert data_3['X_train_'].shape[0] == X.shape[0], "Multiclass classification data processor: X wrong length"
         assert data_3['y_train_'].shape != y.shape[0], "Multiclass classification data processor: y_train_ shape incorrect."                
         # Check random state
-        data_4 = dp.fit_transform(X, y, random_state=5)
+        data_4 = dp.fit_transform(X, y, random_state=5).copy()
         assert np.array_equal(data_2['X_train_'], data_4['X_train_']), "Multiclass classification data processor: random state not working"
         assert np.array_equal(data_2['y_train_'], data_4['y_train_']), "Multiclass classification data processor: random state not working"        
         assert data_4['X_train_'].shape[0] == X.shape[0], "Multiclass classification data processor: X wrong length"
@@ -427,8 +425,8 @@ class MulticlassDataProcessorTests:
 
     def test_multiclass_classification_data_processor_split(self, get_multiclass_classification_data):
         X, y = get_multiclass_classification_data
-        dp = MulticlassDataProcessor()        
-        data_1 = dp.fit_transform(X, y, val_size=0.3)
+        dp =  DataProcessors.multiclass_classification()        
+        data_1 = dp.fit_transform(X, y, val_size=0.3).copy()
         # No shuffle no random state
         assert data_1['X_train_'].shape[1] == X.shape[1]+1, "Multiclass classification data processor: X.shape[1] incorrect."
         assert data_1['y_train_'].shape[0] != X.shape[0], "Multiclass classification data processor: y_train_ shape incorrect."
@@ -438,7 +436,7 @@ class MulticlassDataProcessorTests:
         assert data_1['y_train_'].shape != (data_1['X_train_'].shape[0],), "Multiclass classification data processor: y_train misshape."
         assert data_1['y_val_'].shape != (data_1['X_val_'].shape[0],), "Multiclass classification data processor: y_val misshape."
         # Check deterministic
-        data_2 = dp.fit_transform(X, y, val_size=0.3)
+        data_2 = dp.fit_transform(X, y, val_size=0.3).copy()
         assert np.array_equal(data_1['X_train_'], data_2['X_train_']), "Multiclass classification data processor: not deterministic"
         assert np.array_equal(data_1['y_train_'], data_2['y_train_']), "Multiclass classification data processor: not deterministic"
         assert data_2['X_train_'].shape[0] != X.shape[0], "Multiclass classification data processor: X wrong length"
@@ -449,7 +447,7 @@ class MulticlassDataProcessorTests:
         assert data_2['y_train_'].shape != (data_2['X_train_'].shape[0],), "Multiclass classification data processor: y_train misshape."
         assert data_2['y_val_'].shape != (data_2['X_val_'].shape[0],), "Multiclass classification data processor: y_val misshape."        
         # Check shuffle
-        data_3 = dp.fit_transform(X, y,val_size=0.3, shuffle=True)
+        data_3 = dp.fit_transform(X, y,val_size=0.3, shuffle=True).copy()
         assert not np.array_equal(data_3['X_train_'], data_2['X_train_']), "Multiclass classification data processor: shuffle not working"
         assert not np.array_equal(data_3['X_val_'], data_2['X_val_']), "Multiclass classification data processor: shuffle not working"
         assert data_3['X_train_'].shape[0] != X.shape[0], "Multiclass classification data processor: X wrong length"
@@ -460,7 +458,7 @@ class MulticlassDataProcessorTests:
         assert data_3['y_train_'].shape != (data_3['X_train_'].shape[0],), "Multiclass classification data processor: y_train misshape."
         assert data_3['y_val_'].shape != (data_3['X_val_'].shape[0],), "Multiclass classification data processor: y_val misshape."        
         # Check random state
-        data_4 = dp.fit_transform(X, y, val_size=0.3, random_state=5)
+        data_4 = dp.fit_transform(X, y, val_size=0.3, random_state=5).copy()
         assert np.array_equal(data_2['X_train_'], data_4['X_train_']), "Multiclass classification data processor: shuffle not working"
         assert np.array_equal(data_2['y_train_'], data_4['y_train_']), "Multiclass classification data processor: shuffle not working"
         assert np.array_equal(data_2['X_val_'], data_4['X_val_']), "Multiclass classification data processor: shuffle not working"

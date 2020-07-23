@@ -95,7 +95,6 @@ class RegressionMetricsTests:
         else:
             print("\nUnable to compute MSLE with negative targets.")                               
 
-
     def test_rmsle(self, get_regression_prediction):
         X, y, y_pred = get_regression_prediction
         x = regression.RMSLE()(y, y_pred)        
@@ -114,3 +113,13 @@ class RegressionMetricsTests:
         assert x > 0, "MEDAE is not  positive"          
         assert np.isclose(x,skl,rtol=1e-2), "Median absolute error not close to sklearn value"
 
+    def test_ar2(self, get_regression_prediction):
+        X, y, y_pred = get_regression_prediction
+        n = X.shape[0]
+        p = X.shape[1]
+        x = regression.AdjustedR2()(y, y_pred, p)        
+        skl = r2_score(y, y_pred)
+        skl_ar2 = 1 - (1-skl) * (n-1)/(n-p-1)
+        assert isinstance(x, float), "Adjusted R2 is not a float"                
+        assert x > 0, "Adjusted R2 is not  positive"          
+        assert np.isclose(x,skl_ar2,rtol=1e-2), "Median absolute error not close to sklearn value"

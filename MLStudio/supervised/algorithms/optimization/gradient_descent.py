@@ -119,7 +119,7 @@ class GradientDescent(BaseEstimator):
     """
 
     def __init__(self, task, eta0=0.01, epochs=1000,  batch_size=None,  val_size=0.3, 
-                 theta_init=None, optimizer=None, metric=None, early_stop=None, 
+                 theta_init=None, optimizer=None, early_stop=None, 
                  learning_rate=None,  observer_list=None, progress=None, 
                  blackbox=None, summary=None, verbose=False, random_state=None,
                  check_gradient=False, gradient_check=None):
@@ -130,8 +130,7 @@ class GradientDescent(BaseEstimator):
         self.batch_size = batch_size
         self.val_size = val_size
         self.theta_init = theta_init
-        self.optimizer = optimizer            
-        self.metric = metric
+        self.optimizer = optimizer                    
         self.early_stop=early_stop            
         self.learning_rate = learning_rate
         self.observer_list = observer_list
@@ -217,8 +216,7 @@ class GradientDescent(BaseEstimator):
         self._gradient_check = copy.deepcopy(self.gradient_check)
 
         # Attributes
-        self.blackbox_ = copy.deepcopy(self.blackbox)
-        self.metric_ = copy.deepcopy(self.metric)
+        self.blackbox_ = copy.deepcopy(self.blackbox)        
 
         # Optional dependencies
         self._learning_rate = copy.deepcopy(self.learning_rate) if \
@@ -473,10 +471,7 @@ class GradientDescent(BaseEstimator):
         score 
         """        
         y_pred = self._task.predict(self._theta, X)
-        try:
-            return self.metric_(y, y_pred, X)
-        except Exception as e:            
-            print(e)
+        return self._task.score(y, y_pred, self.n_features_)
         
 
     # ----------------------------------------------------------------------- #    
@@ -496,11 +491,8 @@ class GradientDescent(BaseEstimator):
         score based upon the metric object.
         
         """
-        y_pred = self.predict(X)        
-        try:
-            return self.metric_(y, y_pred, X)    
-        except Exception as e:
-            print(e)
+        y_pred = self.predict(X)
+        return self._task.score(y, y_pred, self.n_features_)        
         
 
     # ----------------------------------------------------------------------- #    

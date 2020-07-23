@@ -32,19 +32,24 @@ from mlstudio.utils import validation
 class Task(ABC, BaseEstimator):
     """Defines the base class for all tasks."""
 
-    def __init__(self, loss, data_processor, activation=None, 
+    def __init__(self, loss, scorer, data_processor, activation=None, 
                  random_state=None):
         self.loss = loss
+        self.scorer = scorer
         self.data_processor = data_processor
         self.activation = activation        
         self.random_state = random_state
-        self._n_features = None         # Note: This count includes the bias term
+        self._n_features_plus_bias = None         
         self._n_classes = None
         self._data_prepared = False
 
     @abstractproperty
     def name(self):
         pass
+
+    @abstractproperty   
+    def scorer(self):
+        return self._scorer
 
     def prepare_data(self, X, y=None, val_size=None):
         """Prepares data for training.
@@ -66,7 +71,7 @@ class Task(ABC, BaseEstimator):
             Dict containing training and optionally validation data
         """
         data = self._data_processor.fit_transform(X, y, val_size)
-        self._n_features = data.get('n_features_')
+        self._n_features_plus_bias = data.get('n_features_plus_bias_')
         self._n_classes = data.get('n_classes_')
         self._data_prepared = True
         return data
@@ -91,13 +96,13 @@ class Task(ABC, BaseEstimator):
             raise Exception("Data must be prepared before weights are initialized.")
 
         if theta_init is not None:
-            assert theta_init.shape == (self._n_features),\
+            assert theta_init.shape == (self._n_features_plus_bias),\
                 "Initial parameters theta must have shape (n_features,)."
             theta = theta_init
         else:
             # Random initialization of weights
             rng = np.random.RandomState(self.random_state)                
-            theta = rng.randn(self._n_features) 
+            theta = rng.randn(self._n_features_plus_bias) 
             # Set the bias initialization to zero
             theta[0] = 0
         return theta
@@ -161,6 +166,25 @@ class Task(ABC, BaseEstimator):
         """
         X = validation.check_X(X)        
         return self.compute_output(theta, X)
+
+    def score(self, y, y_pred, *args, **kwargs):
+        """Computes the score using the designated scorer object.
+        
+        Parameters
+        ----------
+        y : array-like shape (n_samples,)
+            The true target values
+
+        y_pred : array-like shape (n_samples,)
+            The predicted target values
+
+        Returns
+        -------
+        score : the score for the prediction
+        
+        """
+        return self._scorer(y, y_pred, *args, **kwargs)
+
     
 # --------------------------------------------------------------------------  #
 class LinearRegression(Task):
@@ -178,6 +202,15 @@ class LinearRegression(Task):
     def loss(self, x):
         validation.validate_regression_loss(x)
         self._loss = x
+
+    @property
+    def scorer(self):
+        return self._scorer
+
+    @scorer.setter
+    def scorer(self, x):
+        validation.validate_regression_scorer(x)
+        self._scorer = x
 
     @property
     def data_processor(self):
@@ -210,6 +243,15 @@ class LogisticRegression(Task):
         validation.validate_binary_classification_loss(x)
         self._loss = x
 
+    @property
+    def scorer(self):
+        return self._scorer
+
+    @scorer.setter
+    def scorer(self, x):
+        validation.validate_classification_scorer(x)
+        self._scorer = x
+    
     @property
     def data_processor(self):
         return self._data_processor
@@ -289,12 +331,6 @@ class LogisticRegression(Task):
 class MulticlassClassification(Task):
     """Defines the multiclass classification task."""
 
-    def __init__(self, loss, data_processor, activation=None):
-        super(MulticlassClassification, self).__init__(loss=loss, 
-                                                 data_processor=data_processor,
-                                                 activation=activation)
-        
-
     @property
     def name(self):
         return "Multiclass Classification"    
@@ -307,6 +343,15 @@ class MulticlassClassification(Task):
     def loss(self, x):
         validation.validate_multiclass_classification_loss(x)
         self._loss = x
+
+    @property
+    def scorer(self):
+        return self._scorer
+
+    @scorer.setter
+    def scorer(self, x):
+        validation.validate_classification_scorer(x)
+        self._scorer = x
 
     @property
     def data_processor(self):
@@ -346,13 +391,13 @@ class MulticlassClassification(Task):
             raise Exception("Data must be prepared before weights are initialized.")
 
         if theta_init is not None:
-            assert theta_init.shape == (self._n_features, self._n_classes),\
+            assert theta_init.shape == (self._n_features_plus_bias, self._n_classes),\
                 "Initial parameters theta must have shape (n_features,n_classes)."
             theta = theta_init
         else:
             # Random initialization of weights
             rng = np.random.RandomState(self.random_state)                
-            theta = rng.randn(self._n_features, self._n_classes) 
+            theta = rng.randn(self._n_features_plus_bias, self._n_classes) 
             # Set the bias initialization to zero
             theta[0] = 0
         return theta          

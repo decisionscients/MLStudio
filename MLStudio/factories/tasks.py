@@ -31,6 +31,8 @@ from mlstudio.supervised.algorithms.optimization.services import activations
 from mlstudio.supervised.algorithms.optimization.services import loss
 from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
+from mlstudio.supervised.performance import regression, classification
+from mlstudio.factories.data_processor import DataProcessors
 from mlstudio.utils.data_manager import RegressionDataProcessor
 from mlstudio.utils.data_manager import LogisticRegressionDataProcessor
 from mlstudio.utils.data_manager import MulticlassDataProcessor
@@ -40,16 +42,19 @@ class Task(containers.DeclarativeContainer):
 
     linear_regression_factory = providers.Factory(tasks.LinearRegression,
                                           loss=loss.Quadratic(),
-                                          data_processor=RegressionDataProcessor(),
+                                          scorer=regression.R2(),
+                                          data_processor=DataProcessors.regression(),
                                           activation=None)
 
     logistic_regression_factory = providers.Factory(tasks.LogisticRegression,
                                           loss=loss.CrossEntropy(),
-                                          data_processor=LogisticRegressionDataProcessor(),
+                                          scorer=classification.Accuracy(),
+                                          data_processor=DataProcessors.binary_classification(),
                                           activation=activations.Sigmoid())     
 
     multiclass_classification_factory = providers.Factory(tasks.MulticlassClassification,
                                           loss=loss.CategoricalCrossEntropy(),
-                                          data_processor=MulticlassDataProcessor(),
+                                          scorer=classification.Accuracy(),
+                                          data_processor=DataProcessors.multiclass_classification(),
                                           activation=activations.Softmax())
 

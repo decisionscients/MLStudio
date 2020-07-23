@@ -34,7 +34,7 @@ class SSR(BaseRegressionMetric):
         self.epsilon_factor = -1
 
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, *args, **kwargs):
         e = y - y_pred
         return np.sum(e**2)  
 
@@ -51,7 +51,7 @@ class SST(BaseRegressionMetric):
         self.epsilon_factor = -1
 
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, *args, **kwargs):
         y_avg = np.mean(y)
         e = y-y_avg                
         return np.sum(e**2)
@@ -69,7 +69,7 @@ class R2(BaseRegressionMetric):
         self.epsilon_factor = 1
 
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, *args, **kwargs):
         self._ssr = SSR()
         self._sst = SST()
         r2 = 1 - (self._ssr(y, y_pred)/self._sst(y, y_pred))     
@@ -89,14 +89,12 @@ class AdjustedR2(BaseRegressionMetric):
         self.epsilon_factor = 1
 
     
-    def __call__(self, y, y_pred, X=None):
-        self._ssr = SSR()
-        self._sst = SST()        
-        n = X.shape[0]
-        p = X.shape[1] - 1
-        df_e = n-p-1
-        df_t = n-1
-        ar2 = 1 - ((self._ssr(y, y_pred)/df_e)/(self._sst(y, y_pred)/df_t))        
+    def __call__(self, y, y_pred, n_features, *args, **kwargs):
+        r2_scorer = R2()
+        r2 = r2_scorer(y, y_pred)
+        n = y.shape[0]
+        p = n_features
+        ar2 = 1 - (1 - r2) * (n-1) / (n-p-1)
         return ar2
 
 class VarExplained(BaseRegressionMetric):
@@ -112,7 +110,7 @@ class VarExplained(BaseRegressionMetric):
         self.epsilon_factor = 1
 
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, *args, **kwargs):
         var_explained = 1 - (np.var(y-y_pred) / np.var(y))
         return var_explained                   
 
@@ -128,7 +126,7 @@ class MAE(BaseRegressionMetric):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, *args, **kwargs):
         e = abs(y-y_pred)
         return np.mean(e)
 
@@ -145,7 +143,7 @@ class MSE(BaseRegressionMetric):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):        
+    def __call__(self, y, y_pred, *args, **kwargs):        
         e = y - y_pred
         return np.mean(e**2)
 
@@ -162,7 +160,7 @@ class NMSE(BaseRegressionMetric):
         self.epsilon_factor = 1
 
     
-    def __call__(self, y, y_pred):        
+    def __call__(self, y, y_pred, *args, **kwargs):        
         e = y - y_pred
         return -np.mean(e**2)
 
@@ -178,7 +176,7 @@ class RMSE(BaseRegressionMetric):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, *args, **kwargs):
         e = y-y_pred
         return np.sqrt(np.mean(e**2)) 
 
@@ -195,7 +193,7 @@ class NRMSE(BaseRegressionMetric):
         self.epsilon_factor = 1
 
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, *args, **kwargs):
         e = y-y_pred
         return -np.sqrt(np.mean(e**2))
 
@@ -211,7 +209,7 @@ class MSLE(BaseRegressionMetric):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, *args, **kwargs):
         e = np.log(y+1)-np.log(y_pred+1)
         y = np.clip(y, 1e-15, 1-1e-15)    
         y_pred = np.clip(y_pred, 1e-15, 1-1e-15)    
@@ -230,7 +228,7 @@ class RMSLE(BaseRegressionMetric):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):
+    def __call__(self, y, y_pred, *args, **kwargs):
         y = np.clip(y, 1e-15, 1-1e-15)    
         y_pred = np.clip(y_pred, 1e-15, 1-1e-15)    
         e = np.log(y)-np.log(y_pred)
@@ -248,7 +246,7 @@ class MEDAE(BaseRegressionMetric):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):        
+    def __call__(self, y, y_pred, *args, **kwargs):        
         return np.median(np.abs(y_pred-y))
 
 class MAPE(BaseRegressionMetric):
@@ -263,5 +261,5 @@ class MAPE(BaseRegressionMetric):
         self.worst = np.Inf
         self.epsilon_factor = -1
     
-    def __call__(self, y, y_pred):        
+    def __call__(self, y, y_pred, *args, **kwargs):        
         return 100*np.mean(np.abs((y-y_pred)/y))
