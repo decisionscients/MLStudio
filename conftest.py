@@ -158,6 +158,14 @@ def get_logistic_regression_data():
     return X, y   
 
 @fixture(scope="session")
+def get_logistic_regression_data_categorical():
+    X, y = datasets.load_breast_cancer(return_X_y=True)
+    scaler = StandardScaler()    
+    X = scaler.fit_transform(X)
+    y = np.where(y==0, "good", "bad")    
+    return X, y   
+
+@fixture(scope="session")
 def get_logistic_regression_data_split():
     X, y = datasets.load_breast_cancer(return_X_y=True)
     scaler = StandardScaler()    
@@ -177,6 +185,16 @@ def get_multiclass_classification_data():
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)
     return X, y   
+
+@fixture(scope="session")
+def get_multiclass_classification_data_categorical():
+    X, y = datasets.load_iris(return_X_y=True)
+    scaler = StandardScaler()    
+    X = scaler.fit_transform(X)
+    y = np.where(y == 0, 'class_0', y)
+    y = np.where(y == '1', 'class_1', y)
+    y = np.where(y == '2', 'class_2', y)
+    return X, y       
 
 
 @fixture(scope="session")

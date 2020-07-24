@@ -33,9 +33,6 @@ from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
 from mlstudio.supervised.performance import regression, classification
 from mlstudio.factories.data_processor import DataProcessors
-from mlstudio.utils.data_manager import RegressionDataProcessor
-from mlstudio.utils.data_manager import LogisticRegressionDataProcessor
-from mlstudio.utils.data_manager import MulticlassDataProcessor
 # --------------------------------------------------------------------------- #
 class Task(containers.DeclarativeContainer):
     """IoC container for task providers."""

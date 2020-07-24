@@ -202,7 +202,27 @@ class GradientDescent(BaseEstimator):
 
     @converged.setter
     def converged(self, x):
-        self._converged = x       
+        self._converged = x      
+
+    @property
+    def X(self):
+        return self._data['train']['X'] 
+
+    @property
+    def y(self):
+        return self._data['train']['y']
+
+    @property
+    def X_val(self):
+        return self._data['validation'].get('X', None)
+
+    @property
+    def y_val(self):
+        return self._data['validation'].get('y', None)      
+
+    @property
+    def data(self):
+        return self._data  
 
     # ----------------------------------------------------------------------- #
     def _compile(self, log=None):
@@ -227,6 +247,20 @@ class GradientDescent(BaseEstimator):
             else self.early_stop        
 
     # ----------------------------------------------------------------------- #
+    def _initialize_state(self, log=None):
+        """Initializes variables that represent teh state of the estimator."""
+        self._epoch = 0      
+        self._batch = 0 
+        self.theta_ = None
+        self._gradient = None
+        self._converged = False
+
+    # ----------------------------------------------------------------------- #    
+    def _prepare_data(self, X, y):
+        """Prepares data for training and creates data and metadata attributes."""        
+        self._data = self._task.prepare_data(X, y, self.val_size)                
+
+    # ----------------------------------------------------------------------- #
     def _initialize_observers(self, log=None):
         """Initialize remaining observers. Create and initialize observer list."""        
 
@@ -248,42 +282,14 @@ class GradientDescent(BaseEstimator):
         # Publish model parameters and estimator instance on observer objects.
         self._observer_list.set_params(self.get_params())
         self._observer_list.set_model(self)            
-        self._observer_list.on_train_begin()
-
-    # ----------------------------------------------------------------------- #
-    def _initialize_state(self, log=None):
-        """Initializes variables that represent teh state of the estimator."""
-        self._epoch = 0      
-        self._batch = 0 
-        self.theta_ = None
-        self._gradient = None
-        self._converged = False
-
-    # ----------------------------------------------------------------------- #    
-    def get_data(self):
-
-    # ----------------------------------------------------------------------- #    
-    def _prepare_data(self, X, y):
-        """Prepares data for training and creates data and metadata attributes."""        
-        data = self._task.prepare_data(X, y, self.val_size)                
-        for k, v in data.items():     
-            k = k + "_"
-            setattr(self, k, v)
-
+        self._observer_list.on_train_begin(log)
     # ----------------------------------------------------------------------- #
     def _init_weights(self):
         """Initialize weights with user values or random values."""
         self.theta_ = self._task.init_weights(self.theta_init) 
-
     # ----------------------------------------------------------------------- #
     def _on_train_begin(self, log=None):
-        """Initializes all data, objects, and dependencies.
-        
-        Parameters
-        ----------
-        log : dict
-            Data relevant this part of the process. 
-        """
+        """Compiles the estimator, initializes weights, observers, and state"""
         log = log or {}        
         validation.validate_estimator(self)
         self._compile(log)    
@@ -291,121 +297,81 @@ class GradientDescent(BaseEstimator):
         self._prepare_data(log.get('X'), log.get('y'))
         self._initialize_observers(log)
         self._init_weights()
-
     # ----------------------------------------------------------------------- #
     def _on_train_end(self, log=None):
-        """Finalizes training, formats attributes, and ensures object state is fitted.
-        
-        Parameters
-        ----------
-        log : dict
-            Data relevant this part of the process. Currently not used, but 
-            kept for future tasks. 
-        
-        """
+        """Finalizes training and posts model parameter attributes."""
         log = log or {}
         self._memory_monitor.stop()
         self.n_iter_ = self._epoch         
-        self._observer_list.on_train_end()
-        self._format_results()
+        self.intercept_, self.coef_ = unpack_parameters(self.theta_)
+        self._observer_list.on_train_end()        
     # ----------------------------------------------------------------------- #
     def _on_epoch_begin(self, log=None):
-        """Initializes all data, objects, and dependencies.
-        
-        Parameters
-        ----------
-        log : dict
-            Data relevant this part of the process. Currently not used, but 
-            kept for future tasks. 
-        """
+        """Initializes the epoch and notifies observers."""
         log = log or {}
         self._set_current_state()
         self._observer_list.on_epoch_begin(epoch=self._epoch, log=self._current_state)
     # ----------------------------------------------------------------------- #
     def _on_epoch_end(self, log=None):
-        """Finalizes epoching, formats attributes, and ensures object state is fitted.
-        
-        Parameters
-        ----------
-        log : dict
-            Data relevant this part of the process. Currently not used, but 
-            kept for future tasks. 
-        
-        """
+        """Finalizes epoching and notifies observers."""
         log = log or {}
         self._observer_list.on_epoch_end(epoch=self._epoch, log=self._current_state)
         self._epoch += 1
-
     # ----------------------------------------------------------------------- #            
     def _on_batch_begin(self, log=None):
-        """Initializes the batch and notifies observers.
-        
-        Parameters
-        ----------
-        log : dict
-            Data relevant this part of the process. Currently not used, but 
-            kept for future tasks. 
-        
-        """
+        """Initializes the batch and notifies observers."""
         log = log or {}
         self._observer_list.on_batch_begin(batch=self._batch, log=log)        
-
-
     # ----------------------------------------------------------------------- #            
     def _on_batch_end(self, log=None):
-        """Wraps up the batch and notifies observers.
-        
-        Parameters
-        ----------
-        log : dict
-            Data relevant this part of the process. Currently not used, but 
-            kept for future tasks. 
-        
-        """
+        """Wraps up the batch and notifies observers."""
         log = log or {}
         self._observer_list.on_batch_end(batch=self._batch, log=log)            
         self._batch += 1 
-
     # ----------------------------------------------------------------------- #            
     def compute_output(self, theta, X):
+        """Computes output of the current iteration.
+
+        For linear regression, this is the linear combination of the inputs
+        and the weights. For binary classification the output is the sigmoid
+        probability of the positive class. For the multiclass case,
+        the output is the softmax probabilities. 
+
+        Parameters
+        ----------
+        theta : array-like (n_features,) or (n_features, n_classes)
+            The model parameters at the current iteration
+
+        X : array-like (n_samples, n_features)
+            The features including a constant bias term.
+        
+        Returns
+        -------
+        y_out : float
+        """
+
         return self._task.compute_output(theta, X)
 
     # ----------------------------------------------------------------------- #            
     def compute_loss(self, theta, y, y_out):
+        """Computes the average loss of the model.
+
+        Parameters
+        ----------
+        theta : array-like (n_features,) or (n_features, n_classes)
+            The model parameters at the current iteration
+
+        y : array-like of shape (n_samples,)
+            True target values
+
+        y_out : array-like of shape (n_samples,)
+            The real-valued output of the model.
+
+        Returns
+        -------
+        J : float
+        """
         return self._task.compute_loss(theta, y, y_out)
-
-    # ----------------------------------------------------------------------- #
-    def _set_current_state(self):
-        """Takes snapshot of current state and performance."""
-        s= {}
-        s['epoch'] = self._epoch      
-        s['eta'] = self._eta    
-        s['theta'] = self.theta_ 
-
-        s['current_memory'], s['peak_memory'] = self._memory_monitor.get_traced_memory()
-        
-        y_out = self._task.compute_output(self.theta_, self.X_train_)
-        s['train_cost'] = self._task.compute_loss(self.theta_, self.y_train_, y_out)        
-        s['train_score'] = self._score(self.X_train_, self.y_train_)
-
-        # Check not only val_size but also for empty validation sets 
-        if self.val_size:
-            if self.X_val_.shape[0] > 0:                
-                y_out_val = self._task.compute_output(self.theta_, self.X_val_)
-                s['val_cost'] = self._task.compute_loss(self.theta_, self.y_val_, y_out_val)                                
-                s['val_score'] = self._score(self.X_val_, self.y_val_)
-
-        s['gradient'] = self._gradient
-        s['gradient_norm'] = None
-        if self._gradient is not None:
-            s['gradient_norm'] = np.linalg.norm(self._gradient) 
-
-        self._current_state = s
-    
-    # ----------------------------------------------------------------------- #
-    def _format_results(self):
-        """Format the attributes that hold the optimization solution."""         
-        self.intercept_, self.coef_ = unpack_parameters(self.theta_)
 
     # ----------------------------------------------------------------------- #    
     def fit(self, X, y):
@@ -427,7 +393,7 @@ class GradientDescent(BaseEstimator):
         while (self._epoch < self.epochs and not self._converged):            
             self._on_epoch_begin()
 
-            for X_batch, y_batch in batch_iterator(self.X_train_, self.y_train_, batch_size=self.batch_size):
+            for X_batch, y_batch in batch_iterator(self.X_, self.y_, batch_size=self.batch_size):
                 self._on_batch_begin()
 
                 y_out = self.compute_output(self.theta_, X_batch)     
@@ -439,7 +405,7 @@ class GradientDescent(BaseEstimator):
                 self.theta_, self._gradient = self._optimizer(gradient=self._task.loss.gradient, \
                     learning_rate=self._eta, theta=copy.copy(self.theta_),  X=X_batch, y=y_batch,\
                         y_out=y_out)                       
-                log['gradient'] = self._gradient
+                
                 log['gradient_norm'] = np.linalg.norm(self._gradient) 
                 self._on_batch_end(log=log)
 
@@ -507,6 +473,7 @@ class GradientDescent(BaseEstimator):
         """
         y_pred = self.predict(X)
         return self._task.score(y, y_pred, self.n_features_)        
+    # ----------------------------------------------------------------------- #
         
 
     # ----------------------------------------------------------------------- #    

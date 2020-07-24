@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
 
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
-from mlstudio.utils.data_manager import DataProcessor
+from mlstudio.utils.data_manager import BaseDataProcessor, dict_search
 from mlstudio.utils.validation import validate_metric, validate_int
 from mlstudio.utils.validation import validate_zero_to_one
 from mlstudio.utils.format import proper
@@ -175,7 +175,7 @@ class Summary(base.Observer):
 
     _implicit_dependencies = (debug.GradientCheck, BlackBox, Printer, 
                               Progress, base.ObserverList, BaseMetric,
-                              BaseMeasure, DataProcessor)
+                              BaseMeasure, BaseDataProcessor)
     
     def __init__(self, printer=None):
         super(Summary, self).__init__()
@@ -197,25 +197,15 @@ class Summary(base.Observer):
 
     def _data_summary(self):
         """Prints summary of the data used for training (and validation)."""
-        d = OrderedDict()
-        d['Num Features'] = self.model.n_features_
-        if self.model.n_classes_:
-            d['Num Classes'] = self.model.n_classes_
 
-        if self.model.val_size:
-            d['Total Observations'] = self.model.n_total_observations_
-            d['Training Observations'] = self.model.n_training_observations_
-            d['Training Set Size'] = sys.getsizeof(self.model.X_train_)
-            d['Validation Observations'] = self.model.n_validation_observations_
-            d['Validation Set Size'] = sys.getsizeof(self.model.X_val_)
-            d['Validation Proportion'] = self.model.val_size,
-                 } 
-        else:
-            d['Training Observations'] = self.model.n_training_observations_
-            d['Training Set Size'] = sys.getsizeof(self.model.X_train_)
-
-        self.printer.print_dictionary(d, "Data Summary")
-
+        train_metadata = self.model.data['train']['metadata']
+        self.printer.print_dictionary(train_metadata, "Training Set")
+        try:            
+            val_metadata = self.model.data['validation']['metadata']
+        except:
+            val_metadata = None
+        if val_metadata:
+            self.printer.print_dictionary(val_metadata, "Validation Set")        
 
     def _performance_summary(self):        
         """Renders early stop optimization data."""

@@ -156,20 +156,20 @@ def validate_multiclass_classification_loss(param):
 
 # --------------------------------------------------------------------------  #        
 def validate_regression_data_processor(param):
-    from mlstudio.utils.data_manager import RegressionDataProcessor    
-    if not isinstance(param, RegressionDataProcessor):
+    from mlstudio.utils.data_manager import RegressionData    
+    if not isinstance(param, RegressionData):
         raise TypeError("The data_processor parameter is not a valid regression data_processor class.")
     return True
 # --------------------------------------------------------------------------  #        
 def validate_binary_classification_data_processor(param):
-    from mlstudio.utils.data_manager import LogisticRegressionDataProcessor    
-    if not isinstance(param, LogisticRegressionDataProcessor):
+    from mlstudio.utils.data_manager import BinaryClassData    
+    if not isinstance(param, BinaryClassData):
         raise TypeError("The data_processor parameter is not a valid logistic regression data_processor class.")
     return True    
 # --------------------------------------------------------------------------  #        
 def validate_multiclass_classification_data_processor(param):
-    from mlstudio.utils.data_manager import MulticlassDataProcessor    
-    if not isinstance(param, MulticlassDataProcessor):
+    from mlstudio.utils.data_manager import MultiClassData    
+    if not isinstance(param, MultiClassData):
         raise TypeError("The data_processor parameter is not a valid multiclass classification data_processor class.")
     return True      
 

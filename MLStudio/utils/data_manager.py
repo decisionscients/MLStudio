@@ -33,7 +33,7 @@ from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils import check_array
 from sklearn.preprocessing import LabelBinarizer
 
-from mlstudio.utils.data_analyzer import get_features, get_target_type
+from mlstudio.utils.data_analyzer import get_features, get_target_info
 from mlstudio.utils.validation import check_X_y, check_X
 # --------------------------------------------------------------------------- #
 #                           DATA PREPARATION                                  #
@@ -461,13 +461,13 @@ class BaseDataProcessor(ABC, TransformerMixin, BaseEstimator):
         y_new = y[idx]
         return X_new, y_new
 
-    def _split_data(X, y, val_size=None, stratify=False, random_state=None):
+    def _split_data(self, X, y, val_size=None, stratify=False, random_state=None):
         """Splits the data into training and validation sets."""
         X_train, X_val, y_train, y_val = data_split(X, y, test_size=val_size, \
                 stratify=stratify, random_state=random_state)  
         return X_train, X_val, y_train, y_val           
 
-    def _package_training_data(X, y, dataset):
+    def _package_training_data(self, X, y, dataset):
         """Packages training data for return to calling environment."""
         self._data[dataset] = OrderedDict()
         self._data[dataset]['X'] = X
@@ -480,18 +480,18 @@ class BaseDataProcessor(ABC, TransformerMixin, BaseEstimator):
         d['Size'] = sys.getsizeof(X)
         d['Object Class X'] = X.__class__.__name__
         d['Object Class y'] = y.__class__.__name__
-        d['Target Type'], d['Classes'], d['Num Classes'] = get_target_info(y)
+        d['Target Type'], d['Target Class'], d['Classes'], d['Num Classes'] = get_target_info(y)
 
         self._data[dataset]['metadata'] = d
     
-    def _package_test_data(X, y=None, dataset=None):
+    def _package_test_data(self, X, y=None, dataset=None):
         """Packages test data for return to calling environment."""
         self._data['test'] = OrderedDict()
         self._data['test']['X'] = X
         self._data['test']['y'] = y
 
-    def _package_data(X, y=None, dataset='train'):
-        if dataset in ['train', 'validation']:
+    def _package_data(self, X, y=None, dataset='train'):
+        if dataset in ['train', 'validation', 'original']:
             self._package_training_data(X, y, dataset)
         else:
             self._package_test_data(X, y, dataset)
@@ -531,6 +531,7 @@ class BaseDataProcessor(ABC, TransformerMixin, BaseEstimator):
             self._transform_train(X, y, shuffle, random_state)
         else:
             self._transform_test(X, y)
+        return self._data 
 
     
 
@@ -553,7 +554,7 @@ class RegressionData(BaseDataProcessor):
         X = self._add_bias_term(X)        
         if shuffle:
             X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)                        
-        self._package_data(X=X_train, y_train, dataset='train')
+        self._package_data(X=X, y=y, dataset='train')
     
     def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
                               random_state=None):
@@ -567,8 +568,8 @@ class RegressionData(BaseDataProcessor):
         X_train, X_val, y_train, y_val = self._split_data(X, y, 
                 val_size=val_size, random_state=random_state)
         
-        self._package_data(X=X_train, y_train, dataset='train')
-        self._package_data(X=X_val, y_val, dataset='validation')
+        self._package_data(X=X_train, y=y_train, dataset='train')
+        self._package_data(X=X_val, y=y_val, dataset='validation')
 
 # --------------------------------------------------------------------------- #
 #                          BINARY CLASS DATA                                  #
@@ -594,7 +595,7 @@ class BinaryClassData(BaseDataProcessor):
         y = self._encoder.fit_transform(y)
         if shuffle:
             X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)          
-        self._package_data(X=X, y, dataset='train')
+        self._package_data(X=X, y=y, dataset='train')
 
     def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
                               random_state=None):
@@ -611,8 +612,8 @@ class BinaryClassData(BaseDataProcessor):
         y_train = self._encoder.fit_transform(y_train)
         y_val = self._encoder.transform(y_val)
         
-        self._package_data(X=X_train, y_train, dataset='train')
-        self._package_data(X=X_val, y_val, dataset='validation')        
+        self._package_data(X=X_train, y=y_train, dataset='train')
+        self._package_data(X=X_val, y=y_val, dataset='validation')        
 
 
 # --------------------------------------------------------------------------- #
@@ -642,7 +643,7 @@ class MultiClassData(BaseDataProcessor):
         y = self._binarizer.fit_transform(y)
         if shuffle:
             X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)          
-        self._package_data(X=X, y, dataset='train')
+        self._package_data(X=X, y=y, dataset='train')
 
     def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
                               random_state=None):
@@ -662,8 +663,8 @@ class MultiClassData(BaseDataProcessor):
         y_train = self._binarizer.fit_transform(y_train)
         y_val = self._binarizer.transform(y_val)
         
-        self._package_data(X=X_train, y_train, dataset='train')
-        self._package_data(X=X_val, y_val, dataset='validation')        
+        self._package_data(X=X_train, y=y_train, dataset='train')
+        self._package_data(X=X_val, y=y_val, dataset='validation')        
 
 # --------------------------------------------------------------------------- #
 #                            SHUFFLE DATA                                     #
@@ -879,3 +880,30 @@ def todf(x, stub):
         df_vec = pd.DataFrame(vec, columns=[colname])
         df = pd.concat([df, df_vec], axis=1)
     return df  
+
+# ---------------------------------------------------------------------------- #
+# Dictionary search routine scarfed from https://stackoverflow.com/questions/9807634/find-all-occurrences-of-a-key-in-nested-dictionaries-and-lists
+def gen_dict_extract(key, var):
+    if hasattr(var,'iteritems'):
+        for k, v in var.iteritems():
+            if k == key:
+                yield v
+            if isinstance(v, dict):
+                for result in gen_dict_extract(key, v):
+                    yield result
+            elif isinstance(v, list):
+                for d in v:
+                    for result in gen_dict_extract(key, d):
+                        yield result
+
+def dict_search(key, var):
+    results = []
+    gen = gen_dict_extract()
+    while True:
+        try:
+            results.append(next(gen))
+        except StopIteration:
+            break
+    return results
+
+                

@@ -28,9 +28,9 @@ from mlstudio.factories.tasks import Task
 from mlstudio.supervised.algorithms.optimization.services import activations
 from mlstudio.supervised.algorithms.optimization.services import loss
 from mlstudio.supervised.algorithms.optimization.services import regularizers
-from mlstudio.utils.data_manager import RegressionDataProcessor
-from mlstudio.utils.data_manager import LogisticRegressionDataProcessor
-from mlstudio.utils.data_manager import MulticlassDataProcessor
+from mlstudio.utils.data_manager import RegressionData
+from mlstudio.utils.data_manager import BinaryClassData
+from mlstudio.utils.data_manager import MultiClassData
 # --------------------------------------------------------------------------  #
 @mark.tasks
 @mark.linear_regression
@@ -44,7 +44,7 @@ class LinearRegressionTaskTests:
         with pytest.raises(TypeError):        
             task = Task.linear_regression_factory(data_processor="hat")   
         with pytest.raises(TypeError):        
-            task = Task.linear_regression_factory(data_processor=LogisticRegressionDataProcessor())                        
+            task = Task.linear_regression_factory(data_processor=BinaryClassData())                        
         with pytest.raises(ValueError):        
             task = Task.linear_regression_factory(loss=\
                 loss.Quadratic(regularizers.L1_L2(ratio=2)))                                    
@@ -63,7 +63,7 @@ class LinearRegressionTaskTests:
         assert isinstance(task.loss.regularizer, regularizers.L1), "LinearRegression loss regularizer value not correct"
         assert task.loss.regularizer.alpha == 0.1, "LinearRegression loss regularizer value not correct"
         # Test data processor
-        assert isinstance(task.data_processor, RegressionDataProcessor), "LinearRegression data processor error."
+        assert isinstance(task.data_processor, RegressionData), "LinearRegression data processor error."
         # Test output / predict
         task = Task.linear_regression_factory()
         y_out = task.compute_output(theta=d['theta'], X=d['X'])
@@ -84,7 +84,7 @@ class LogisticRegressionTaskTests:
         with pytest.raises(TypeError):        
             task = Task.logistic_regression_factory(data_processor="hat")   
         with pytest.raises(TypeError):        
-            task = Task.logistic_regression_factory(data_processor=RegressionDataProcessor())                        
+            task = Task.logistic_regression_factory(data_processor=RegressionData())                        
         with pytest.raises(ValueError):        
             task = Task.logistic_regression_factory(loss=loss.Quadratic(regularizer=regularizers.L1_L2(ratio=2)))                                    
 
@@ -97,7 +97,7 @@ class LogisticRegressionTaskTests:
         assert isinstance(task.loss.regularizer, regularizers.L1), "LogisticRegression loss regularizer value not correct"
         assert task.loss.regularizer.alpha == 0.1, "LogisticRegression loss regularizer value not correct"
         # Test data processor
-        assert isinstance(task.data_processor, LogisticRegressionDataProcessor), "LogisticRegression data processor error."
+        assert isinstance(task.data_processor, BinaryClassData), "LogisticRegression data processor error."
         # Test output 
         task = Task.logistic_regression_factory()
         y_prob = task.predict_proba(theta=d['theta'], X=d['X'])
@@ -132,7 +132,7 @@ class MulticlassClassificationTaskTests:
         assert isinstance(task.loss.regularizer, regularizers.L1), "MulticlassClassification loss regularizer value not correct"
         assert task.loss.regularizer.alpha == 0.1, "MulticlassClassification loss regularizer value not correct"
         # Test data processor
-        assert isinstance(task.data_processor, MulticlassDataProcessor), "MulticlassClassification data processor error."
+        assert isinstance(task.data_processor, MultiClassData), "MulticlassClassification data processor error."
         # Test output 
         task = Task.multiclass_classification_factory()
         y_prob = task.predict_proba(theta=d['theta'], X=d['X'])

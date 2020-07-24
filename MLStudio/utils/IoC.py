@@ -38,9 +38,9 @@ from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
 from mlstudio.supervised.algorithms.optimization import gradient_descent
 from mlstudio.supervised.performance.regression import regression, classification
-from mlstudio.utils.data_manager import RegressionDataProcessor
-from mlstudio.utils.data_manager import LogisticRegressionDataProcessor
-from mlstudio.utils.data_manager import MulticlassDataProcessor
+from mlstudio.utils.data_manager import RegressionData
+from mlstudio.utils.data_manager import BinaryClassData
+from mlstudio.utils.data_manager import MultiClassData
 from mlstudio.utils.print import Printer
 # --------------------------------------------------------------------------- #
 class LossFunctions(containers.DeclarativeContainer):
@@ -80,53 +80,53 @@ class Tasks(containers.DeclarativeContainer):
 
     linear_regression = providers.Factory(tasks.LinearRegression,
                                           loss=LossFunctions.quadratic,
-                                          data_processor=RegressionDataProcessor,
+                                          data_processor=RegressionData,
                                           activation=None)
     linear_regression_l1 = providers.Factory(tasks.LinearRegression,
                                           loss=LossFunctions.quadratic_l1,
-                                          data_processor=RegressionDataProcessor,
+                                          data_processor=RegressionData,
                                           activation=None)                      
     linear_regression_l2 = providers.Factory(tasks.LinearRegression,
                                           loss=LossFunctions.quadratic_l2,
-                                          data_processor=RegressionDataProcessor,
+                                          data_processor=RegressionData,
                                           activation=None)
     linear_regression_l1_l2 = providers.Factory(tasks.LinearRegression,
                                           loss=LossFunctions.quadratic_l1_l2,
-                                          data_processor=RegressionDataProcessor,
+                                          data_processor=RegressionData,
                                           activation=None)
 
     logistic_regression = providers.Factory(tasks.LogisticRegression,
                                           loss=LossFunctions.cross_entropy,
-                                          data_processor=LogisticRegressionDataProcessor,
+                                          data_processor=BinaryClassData,
                                           activation=activations.Sigmoid)
     logistic_regression_l1 = providers.Factory(tasks.LogisticRegression,
                                           loss=LossFunctions.cross_entropy_l1,
-                                          data_processor=LogisticRegressionDataProcessor,
+                                          data_processor=BinaryClassData,
                                           activation=activations.Sigmoid)                      
     logistic_regression_l2 = providers.Factory(tasks.LogisticRegression,
                                           loss=LossFunctions.cross_entropy_l2,
-                                          data_processor=LogisticRegressionDataProcessor,
+                                          data_processor=BinaryClassData,
                                           activation=activations.Sigmoid)
     logistic_regression_l1_l2 = providers.Factory(tasks.LogisticRegression,
                                           loss=LossFunctions.cross_entropy_l1_l2,
-                                          data_processor=LogisticRegressionDataProcessor,
+                                          data_processor=BinaryClassData,
                                           activation=activations.Sigmoid)                                          
 
     multiclass_classification = providers.Factory(tasks.MulticlassClassification,
                                           loss=LossFunctions.categorical_cross_entropy,
-                                          data_processor=MulticlassDataProcessor,
+                                          data_processor=MultiClassData,
                                           activation=activations.Softmax)
     multiclass_classification_l1 = providers.Factory(tasks.MulticlassClassification,
                                           loss=LossFunctions.categorical_cross_entropy_l1,
-                                          data_processor=MulticlassDataProcessor,
+                                          data_processor=MultiClassData,
                                           activation=activations.Softmax)                      
     multiclass_classification_l2 = providers.Factory(tasks.MulticlassClassification,
                                           loss=LossFunctions.categorical_cross_entropy_l2,
-                                          data_processor=MulticlassDataProcessor,
+                                          data_processor=MultiClassData,
                                           activation=activations.Softmax)
     multiclass_classification_l1_l2 = providers.Factory(tasks.MulticlassClassification,
                                           loss=LossFunctions.categorical_cross_entropy_l1_l2,
-                                          data_processor=MulticlassDataProcessor,
+                                          data_processor=MultiClassData,
                                           activation=activations.Softmax)                                                
 
 # --------------------------------------------------------------------------- #

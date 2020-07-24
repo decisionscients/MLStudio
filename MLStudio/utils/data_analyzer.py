@@ -146,21 +146,45 @@ def get_target_info(y):
     
     if isinstance(y, (pd.DataFrame, pd.Series)):
         y = y.to_numpy()        
-    elif isinstance(y, list):
+    else:
         y = np.array(y)
-    
-    if 'float' in str(y.dtype):
-        data_type = 'Continuous'
+
+    # If 2d matrix, then data is nominal 
+    if y.ndim == 2:
+        data_class = "Nominal"
+        data_type = "Integer" if np.issubdtype(y.dtype, np.number) else "String"
+        classes = np.arange(y.shape[1])
+        n_classes = y.shape[1]
+
+    elif type(y) == str:
+        data_type = "String"
+        classes = np.unique(y)
+        n_classes = np.max(len(classes), y.shape[1])
+        data_class = "Binary" if n_classes == 2 else "Nominal"
+
+    elif 'float' in str(y.dtype):  
+        data_type = 'Float'      
+        data_class = 'Continuous'    
         classes = None
         n_classes = None
-    else:
+    elif np.issubdtype(y.dtype, np.number):
+        data_type = "Integer"
         classes = np.unique(y)
         n_classes = len(classes)
         if n_classes == 2:
-            data_type = 'Binary'
+            data_class = "Binary"
         else:
-            data_type = 'Nominal'        
-    return data_type, classes, n_classes
+            data_class = "Nominal"
+    else:
+        data_type = "String"
+        classes = np.arange(len(np.unique(y))) if y.ndim==1 else np.arange(y.shape[1])
+        n_classes = len(np.unique(y))
+        if n_classes == 2:
+            data_class = "Binary"
+        else:
+            data_class = "Nominal"        
+
+    return data_type, data_class, classes, n_classes
     
 
     
