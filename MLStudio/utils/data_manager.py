@@ -29,9 +29,9 @@ import numpy as np
 from numpy.random import RandomState
 import pandas as pd
 from scipy.sparse import isspmatrix_coo, issparse, csr_matrix, hstack
-from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils import check_array
-from sklearn.preprocessing import LabelBinarizer
+from sklearn import preprocessing
 
 from mlstudio.utils.data_analyzer import get_features, get_target_info
 from mlstudio.utils.validation import check_X_y, check_X
@@ -69,8 +69,16 @@ def unpack_parameters(theta):
 # --------------------------------------------------------------------------- #
 #                               TRANSFORMERS                                  #
 # --------------------------------------------------------------------------- #
+class BaseTransformer(TransformerMixin, BaseEstimator):
+
+    def __init__(self):
+        self._is_fitted = False
+
+    @property
+    def is_fitted(self):
+        return self._is_fitted
 # --------------------------------------------------------------------------- #
-class NormScaler(TransformerMixin, BaseEstimator):
+class NormScaler(BaseTransformer):
     """Scalers a vector to unit length.  
 
     Scaling a sample 'x' to 0-1 is calculated as:
@@ -89,6 +97,11 @@ class NormScaler(TransformerMixin, BaseEstimator):
     def __init__(self, clip_norm=1):        
         self.clip_norm = clip_norm
         self.r_ = None
+        self._is_fitted = False
+
+    @property
+    def is_fitted(self):
+        return self._is_fitted
 
     def fit(self, X, y=None):
         """Computes the Frobenius norm of the input vector
@@ -103,6 +116,7 @@ class NormScaler(TransformerMixin, BaseEstimator):
 
         """
         self.r_= np.linalg.norm(X)
+        self._is_fitted = True
         return self
 
     def transform(self, X):
@@ -152,7 +166,7 @@ class NormScaler(TransformerMixin, BaseEstimator):
         return X
 # --------------------------------------------------------------------------- #
 
-class MinMaxScaler(TransformerMixin, BaseEstimator):
+class MinMaxScaler(BaseTransformer):
     """Scales each feature to values between 0 and 1.
 
     Scaling a sample 'x' to 0-1 is calculated as:
@@ -175,7 +189,11 @@ class MinMaxScaler(TransformerMixin, BaseEstimator):
     """        
 
     def __init__(self):        
-        pass
+        self._is_fitted = False
+
+    @property
+    def is_fitted(self):
+        return self._is_fitted        
 
     def fit(self, X, y=None):
         """Computes the min and max on X for scaling.
@@ -192,6 +210,7 @@ class MinMaxScaler(TransformerMixin, BaseEstimator):
         self.data_min_ = np.amin(X, axis=0)
         self.data_max_ = np.amax(X, axis=0)
         self.data_range_ = self.data_max_ - self.data_min_
+        self._is_fitted = True
         return self
 
     def transform(self, X):
@@ -244,7 +263,7 @@ class MinMaxScaler(TransformerMixin, BaseEstimator):
         X = X + self.data_min_
         return X
 # --------------------------------------------------------------------------- #
-class StandardScaler(TransformerMixin, BaseEstimator):
+class StandardScaler(BaseTransformer):
     """Standardizes data to a zero mean and unit variance.
 
     Standardizing a sample 'x' is calculated as:
@@ -278,6 +297,11 @@ class StandardScaler(TransformerMixin, BaseEstimator):
         self.scale_std = scale_std
         self.mean_=0
         self.std_=1
+        self._is_fitted = False
+
+    @property
+    def is_fitted(self):
+        return self._is_fitted
 
     def fit(self, X, y=None):
         """Computes the mean and std for centering and scaling the data.
@@ -297,6 +321,7 @@ class StandardScaler(TransformerMixin, BaseEstimator):
             self.std_ = np.std(X,axis=0)
         else:
             self.std_ = np.ones(shape=(X.shape[1],))            
+        self._is_fitted = True
         return self
 
     def transform(self, X):
@@ -335,11 +360,124 @@ class StandardScaler(TransformerMixin, BaseEstimator):
         """Calls fit and transform methods."""
         self.fit(X)
         return self.transform(X)
+# --------------------------------------------------------------------------- #
+class LabelEncoder(BaseTransformer):
+    """Converts labels values from 0 to k-1 classes."""
 
+    def __init__(self):
+        self._is_fitted = False
+        self._encoder = None
+
+    @property
+    def is_fitted(self):
+        return self._is_fitted
+
+    def fit(self, y):
+        """Fits the LabelEncoder object.
+        
+        Parameters
+        ----------
+        y : array-like vector of shape (n_samples,)
+            Target output 
+
+        """
+        self._encoder = preprocessing.LabelEncoder()
+        self._encoder.fit(y)
+        self._is_fitted = True
+        return self
+
+    def transform(self, y):
+        """Transforms multiclass labels to binary labels.
+
+        Parameters
+        ----------
+        y : array-like vector of shape (n_samples,)
+            Target output 
+
+        Returns
+        -------
+        array-like or csr matrix of shape (n_samples, n_classes)
+        """
+        return self._encoder.transform(y)        
+
+
+    def inverse_transform(self, y):
+        """Inverses the encoding process.
+
+        Parameters
+        ----------
+        y : array-like vector of shape (n_samples,)
+            Target output 
+
+        Returns
+        -------
+        array-like or csr matrix of shape (n_samples,)        
+        """
+        return self._encoder.inverse_transform(y)
+# --------------------------------------------------------------------------- #
+class OneHotLabelEncoder(BaseTransformer):
+    """Converts labels to k class One Hot encoding."""
+
+    def __init__(self, negative=0, positive=1, sparse_output=False):
+        self.negative = negative
+        self.positive = positive
+        self.sparse_output = sparse_output
+        self._encoder = None        
+        self._is_fitted = False
+
+    @property
+    def is_fitted(self):
+        return self._is_fitted
+
+    def fit(self, y):
+        """Fits the OneHotLabelEncoder object.
+        
+        Parameters
+        ----------
+        y : array-like vector of shape (n_samples,)
+            Target output 
+
+        """
+        self._encoder = preprocessing.LabelBinarizer(neg_label=self.negative, 
+                                                  pos_label=self.positive,
+                                                  sparse_output=self.sparse_output)
+        self._encoder.fit(y)
+        self._is_fitted = True
+        return self
+
+    def transform(self, y):
+        """Transforms multiclass labels to binary labels.
+
+        Parameters
+        ----------
+        y : array-like vector of shape (n_samples,)
+            Target output 
+
+        Returns
+        -------
+        array-like or csr matrix of shape (n_samples, n_classes)
+        """
+        return self._encoder.transform(y)        
+
+    def inverse_transform(self, y):
+        """Inverses the encoding process.
+
+        Parameters
+        ----------
+        y : array-like vector of shape (n_samples,)
+            Target output 
+
+        Returns
+        -------
+        array-like or csr matrix of shape (n_samples,)        
+        """
+        return self._encoder.inverse_transform(y)
+
+    
 # --------------------------------------------------------------------------  #
 #                           GRADIENT SCALING                                  #        
 # --------------------------------------------------------------------------  #        
-class GradientScaler(BaseEstimator, TransformerMixin):
+class GradientScaler(BaseTransformer, TransformerMixin):
     """Scales and/or normalizes exploding and vanishing gradients. 
 
     If the norm of the gradient is below the lower threshold, the gradient
@@ -362,10 +500,16 @@ class GradientScaler(BaseEstimator, TransformerMixin):
         self.lower_threshold  = lower_threshold
         self.upper_threshold = upper_threshold
         self.normalizer_ = None
+        self._is_fitted = False
+
+    @property
+    def is_fitted(self):
+        return self._is_fitted        
 
     def fit(self, X, y=None):
         """Fits the transformer to the data. """  
         self._r = np.linalg.norm(X)
+        self._is_fitted = True
         return self       
 
     def transform(self, X):
@@ -389,11 +533,19 @@ class GradientScaler(BaseEstimator, TransformerMixin):
             X = X  * self._r / self.upper_threshold                    
         return X
 
-class AddBiasTerm(BaseEstimator, TransformerMixin):
+class AddBiasTerm(BaseTransformer, TransformerMixin):
     """Adds bias term of ones to matrix."""
+
+    def __init__(self):
+        self._is_fitted = False
+
+    @property
+    def is_fitted(self):
+        return self._is_fitted
 
     def fit(self, X, y=None):
         """Fits data to the transformer."""
+        self._is_fitted = True
         return self
 
     def _transform_numpy(self, X):
@@ -424,11 +576,19 @@ class AddBiasTerm(BaseEstimator, TransformerMixin):
         return X[:,1:]
                         
 # --------------------------------------------------------------------------- #
-class ZeroBiasTerm(BaseEstimator, TransformerMixin):
+class ZeroBiasTerm(BaseTransformer, TransformerMixin):
     """Zeros out bias term in a parameters matrix or tensor."""
+
+    def __init__(self):
+        self._is_fitted = False    
+
+    @property
+    def is_fitted(self):
+        return self._is_fitted
 
     def fit(self, X, y=None):
         """Fits data to the transformer."""
+        self._is_fitted = True
         return self
 
     def transform(self, X):
@@ -440,235 +600,156 @@ class ZeroBiasTerm(BaseEstimator, TransformerMixin):
         return X
            
 # --------------------------------------------------------------------------- #
-#                            BASE DATA PROCESSOR                              #
-# --------------------------------------------------------------------------- #
-class BaseDataProcessor(ABC, TransformerMixin, BaseEstimator):
-    """Abstract base class for all data preparation subclasses."""
+# Data shuffler
+class DataShuffler(BaseTransformer, TransformerMixin):
+    """Shuffles data."""
 
     def __init__(self):
-        self._data = OrderedDict()        
+        self._is_fitted = False    
 
-    def _add_bias_term(self, X):
-        """Adds bias term to the feature set."""
-        return AddBiasTerm().fit_transform(X)         
-
-    def _shuffle_X_y(self, X, y, random_state=None):
-        """Shuffles X data using numpy random generator."""
-        rg = np.random.default_rng(seed=random_state)
-        n_samples = X.shape[0]
-        idx =  rg.permutation(n_samples)           
-        X_new = X[idx]
-        y_new = y[idx]
-        return X_new, y_new
-
-    def _split_data(self, X, y, val_size=None, stratify=False, random_state=None):
-        """Splits the data into training and validation sets."""
-        X_train, X_val, y_train, y_val = data_split(X, y, test_size=val_size, \
-                stratify=stratify, random_state=random_state)  
-        return X_train, X_val, y_train, y_val           
-
-    def _package_training_data(self, X, y, dataset):
-        """Packages training data for return to calling environment."""
-        self._data[dataset] = OrderedDict()
-        self._data[dataset]['X'] = X
-        self._data[dataset]['y'] = y
-
-        d = OrderedDict()
-        d['Features'] = get_features(X)           
-        d['Num Features'] = X.shape[1]
-        d['Num Observations'] = X.shape[0]
-        d['Size'] = sys.getsizeof(X)
-        d['Object Class X'] = X.__class__.__name__
-        d['Object Class y'] = y.__class__.__name__
-        d['Target Type'], d['Target Class'], d['Classes'], d['Num Classes'] = get_target_info(y)
-
-        self._data[dataset]['metadata'] = d
-    
-    def _package_test_data(self, X, y=None, dataset=None):
-        """Packages test data for return to calling environment."""
-        self._data['test'] = OrderedDict()
-        self._data['test']['X'] = X
-        self._data['test']['y'] = y
-
-    def _package_data(self, X, y=None, dataset='train'):
-        if dataset in ['train', 'validation', 'original']:
-            self._package_training_data(X, y, dataset)
-        else:
-            self._package_test_data(X, y, dataset)
+    @property
+    def is_fitted(self):
+        return self._is_fitted        
 
     def fit(self, X, y=None):
-        """Saves the original data."""             
-        self._package_data(X, y, dataset='original')        
-        return self 
+        """Fits the data to the shuffler.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input data
 
-    def fit_transform(self, X, y, dataset, val_size=None, shuffle=False, 
-                      random_state=None):
-        return self.fit(X, y).transform(X, y, dataset, val_size, shuffle, 
-                                        random_state)        
+        y : array-like of shape (n_samples,) or (n_samples, n_classes)
+            Target data
+        """
+        self._is_fitted = True
+        return self
 
-    @abstractmethod
-    def _transform_test(self, X, y=None):
-        """Preprocesses test data"""
-        pass
+    def transform(self, X, y=None, random_state=None):
+        """Shuffles the data.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input data
 
-    @abstractmethod
-    def _transform_train(self, X, y, shuffle=False, random_state=None):
-        """Preprocesses training data"""
-        pass
+        y : array-like of shape (n_samples,) or (n_samples, n_classes)
+            Target data
 
-    @abstractmethod
-    def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
-                              random_state=None):
-        """Preprocesses training and validation data."""
-        pass
-    
-    def transform(self, X, y=None, dataset='train', val_size=None, 
-                  shuffle=False,  random_state=None):
-        """Entry point for data transformation. """
-        if dataset == 'train' and val_size:
-            self._transform_train_test(X, y, val_size, shuffle, random_state)
-        elif dataset == 'train' and not val_size:
-            self._transform_train(X, y, shuffle, random_state)
+        random_state : int (default=None)
+            Seed for reproducibility of pseudo-randomization
+
+        Returns
+        -------
+        X, y    : Inputs and target data         
+        
+        """
+        rg = np.random.default_rng(seed=random_state)
+        X = rg.permutation(X)   
+        if y is not None:
+            y = rg.permutation(y)    
+        return X, y
+
+    def fit_transform(self, X, y=None, random_state=None):
+        """Executes fit and transform in sequence."""
+        return self.fit(X, y).transform(X=X, y=y, random_state=random_state)
+
+# --------------------------------------------------------------------------- #
+# Data Splitter
+class DataSplitter(BaseTransformer, TransformerMixin):
+    """Splits X, y data ."""
+
+    def __init__(self):
+        self._is_fitted = False    
+
+    @property
+    def is_fitted(self):
+        return self._is_fitted        
+
+    def fit(self, X, y=None, *args, **kwargs):
+        """Fits the data to the splitter.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input data
+
+        y : array-like of shape (n_samples,) or (n_samples, n_classes)
+            Target data
+        """
+        self._is_fitted = True
+        return self
+
+
+    def transform(self, X, y=None, test_size=None, stratify=False, random_state=None):
+        """Splits the data.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Input data
+
+        y : array-like of shape (n_samples,) or (n_samples, n_classes)
+            Target data
+
+        test_size : float (0,1)
+            The proportion of the training set to designate for cross-validation.
+
+        stratify : Bool (default=False)
+            Indicates whether the data should be stratified by target class.
+
+        random_state : int (default=None)
+            Seed for reproducibility of pseudo-randomization
+
+        Returns
+        -------
+        X_train, X_test, y_train, y_test : Data split in accordance with parameters.
+        """ 
+        if isspmatrix_coo(X):
+            X = X.tocsr()
+        if isspmatrix_coo(y):
+            y = y.tocsr()
+            
+        if X.shape[0] != y.shape[0]:
+            raise ValueError("X and y have incompatible shapes. Expected "
+                            "X.shape[0]=y.shape[0] however X.shape[0] = %d "
+                            " and y.shape[0] = %d." % (X.shape[0], y.shape[0]))
+
+        if not stratify:
+            split_i = len(y) - int(len(y) // (1 / test_size))
+            X_train, X_test = X[:split_i], X[split_i:]
+            y_train, y_test = y[:split_i], y[split_i:]
         else:
-            self._transform_test(X, y)
-        return self._data 
+            train_idx = []
+            test_idx = []
+            classes = np.unique(y)
+            for k in classes:
+                # Obtain the indices and number of samples for class k
+                idx_k = np.array(np.where(y == k)).flatten()  
+                n_samples_k = idx_k.shape[0]
+                # Compute number of training and test samples
+                n_train_samples_k = ceil(n_samples_k * (1-test_size))
+                n_test_samples_k = n_samples_k - n_train_samples_k
+                # Allocate corresponding indices to training and test set indices
+                train_idx_k = idx_k[0:n_train_samples_k]
+                test_idx_k = idx_k[n_train_samples_k:n_train_samples_k+n_test_samples_k]
+                # Maintain indices in a list
+                train_idx.append(train_idx_k)
+                test_idx.append(test_idx_k)
+            # Concatenate all indices into a training and test indices
+            train_idx = np.concatenate(train_idx).ravel()
+            test_idx = np.concatenate(test_idx).ravel()
+            # Slice and dice.
+            y_train, y_test = y[train_idx], y[test_idx]
+            X_train, X_test = X[train_idx], X[test_idx]
 
-    
+        return X_train, X_test, y_train, y_test
 
-# --------------------------------------------------------------------------- #
-#                            REGRESSION DATA                                  #
-# --------------------------------------------------------------------------- #
-class RegressionData(BaseDataProcessor):
-    """Performs data processing for regression training."""
-
-    def _transform_test(self, X, y=None):
-        """Transforms regression test data."""
-        X, y = check_X_y(X, y)
-        X = self._add_bias_term(X)        
-        self._package_data(X, y, dataset='test')
-    
-    def _transform_train(self, X, y, shuffle=False, random_state=None):
-        """Prepares training data for regression."""
-
-        X, y = check_X_y(X, y)
-        X = self._add_bias_term(X)        
-        if shuffle:
-            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)                        
-        self._package_data(X=X, y=y, dataset='train')
-    
-    def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
-                              random_state=None):
-        """Prepares training and validation data for regression."""
-
-        X, y = check_X_y(X, y)
-        X = self._add_bias_term(X)        
-        if shuffle:
-            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)                
-        
-        X_train, X_val, y_train, y_val = self._split_data(X, y, 
-                val_size=val_size, random_state=random_state)
-        
-        self._package_data(X=X_train, y=y_train, dataset='train')
-        self._package_data(X=X_val, y=y_val, dataset='validation')
-
-# --------------------------------------------------------------------------- #
-#                          BINARY CLASS DATA                                  #
-# --------------------------------------------------------------------------- #
-class BinaryClassData(BaseDataProcessor):
-    """Prepares binary classification data for training."""
-
-    def __init__(self, encoder):
-        super(BinaryClassData, self).__init__()
-        self._encoder = encoder
-
-    def _transform_test(self, X, y=None):
-        """Transforms binary classification test data."""
-        X, y = check_X_y(X, y)
-        X = self._add_bias_term(X)        
-        y = self._encoder.transform(y)
-        self._package_data(X, y, dataset='test')
-
-    def _transform_train(self, X, y, shuffle=False, random_state=None):
-        """Prepares binary classification data for training. """
-        X, y = check_X_y(X, y)
-        X = self._add_bias_term(X)        
-        y = self._encoder.fit_transform(y)
-        if shuffle:
-            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)          
-        self._package_data(X=X, y=y, dataset='train')
-
-    def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
-                              random_state=None):
-        """Prepares binary classification training and validation data."""
-
-        X, y = check_X_y(X, y)
-        X = self._add_bias_term(X)        
-        if shuffle:
-            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)                
-        
-        X_train, X_val, y_train, y_val = self._split_data(X, y, 
-                stratify=True, val_size=val_size, random_state=random_state)
-
-        y_train = self._encoder.fit_transform(y_train)
-        y_val = self._encoder.transform(y_val)
-        
-        self._package_data(X=X_train, y=y_train, dataset='train')
-        self._package_data(X=X_val, y=y_val, dataset='validation')        
+    def fit_transform(self, X, y, test_size=None, stratify=False, random_state=None):
+        return self.fit(X, y).transform(X, y, test_size, stratify, random_state)
 
 
-# --------------------------------------------------------------------------- #
-#                          MULTI CLASS DATA                                   #
-# --------------------------------------------------------------------------- #
-class MultiClassData(BaseDataProcessor):
-    """Prepares multi classification data for training."""
 
-    def __init__(self, encoder, binarizer):
-        super(MultiClassData, self).__init__()
-        self._encoder = encoder
-        self._binarizer = binarizer
-
-    def _transform_test(self, X, y=None):
-        """Transforms multiclass classification test data."""
-        X, y = check_X_y(X, y)
-        X = self._add_bias_term(X)        
-        y = self._encoder.transform(y)
-        y = self._binarizer.transform(y)
-        self._package_data(X, y, dataset='test')
-
-    def _transform_train(self, X, y, shuffle=False, random_state=None):
-        """Prepares multiclass classification data for training. """
-        X, y = check_X_y(X, y)
-        X = self._add_bias_term(X)        
-        y = self._encoder.fit_transform(y)
-        y = self._binarizer.fit_transform(y)
-        if shuffle:
-            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)          
-        self._package_data(X=X, y=y, dataset='train')
-
-    def _transform_train_test(self, X, y, val_size=None, shuffle=False, \
-                              random_state=None):
-        """Prepares multiclass classification training and validation data."""
-
-        X, y = check_X_y(X, y)
-        X = self._add_bias_term(X)      
-        if shuffle:
-            X, y = self._shuffle_X_y(X=X, y=y, random_state=random_state)                
-        
-        X_train, X_val, y_train, y_val = self._split_data(X, y, 
-                stratify=True, val_size=val_size, random_state=random_state)
-
-        y_train = self._encoder.fit_transform(y_train)
-        y_val = self._encoder.transform(y_val)
-
-        y_train = self._binarizer.fit_transform(y_train)
-        y_val = self._binarizer.transform(y_val)
-        
-        self._package_data(X=X_train, y=y_train, dataset='train')
-        self._package_data(X=X_val, y=y_val, dataset='validation')        
-
-# --------------------------------------------------------------------------- #
-#                            SHUFFLE DATA                                     #
-# --------------------------------------------------------------------------- #
 def shuffle_data(X, y=None, random_state=None):
     """ Random shuffle of the samples in X and y.
     

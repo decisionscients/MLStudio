@@ -21,6 +21,8 @@
 """ Print utilities."""
 import math
 import statistics
+
+from tabulate import tabulate
 # --------------------------------------------------------------------------- #
 #                                Print                                        #
 # --------------------------------------------------------------------------- #
@@ -101,7 +103,7 @@ class Printer:
         """Prints a table with a heading.
 
         Note: To use the tabulate package, content must be a dictionary and 
-        each key must be an iterable.
+        each value must be an iterable.
 
         Parameters
         ----------
@@ -112,6 +114,6 @@ class Printer:
         """
         if title:
             self.print_title(title)
-        print(content.to_string())
+        print(tabulate(content, headers=content.columns, tablefmt="simple"))
 
         

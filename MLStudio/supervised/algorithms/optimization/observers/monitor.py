@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
 
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
-from mlstudio.utils.data_manager import BaseDataProcessor, dict_search
+from mlstudio.utils.data_manager import dict_search
 from mlstudio.utils.validation import validate_metric, validate_int
 from mlstudio.utils.validation import validate_zero_to_one
 from mlstudio.utils.format import proper
@@ -175,7 +175,7 @@ class Summary(base.Observer):
 
     _implicit_dependencies = (debug.GradientCheck, BlackBox, Printer, 
                               Progress, base.ObserverList, BaseMetric,
-                              BaseMeasure, BaseDataProcessor)
+                              BaseMeasure)
     
     def __init__(self, printer=None):
         super(Summary, self).__init__()

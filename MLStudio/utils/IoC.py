@@ -37,7 +37,7 @@ from mlstudio.supervised.algorithms.optimization.services import optimizers
 from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
 from mlstudio.supervised.algorithms.optimization import gradient_descent
-from mlstudio.supervised.performance.regression import regression, classification
+from mlstudio.supervised.performance.regression import regression, binary_class
 from mlstudio.utils.data_manager import RegressionData
 from mlstudio.utils.data_manager import BinaryClassData
 from mlstudio.utils.data_manager import MultiClassData

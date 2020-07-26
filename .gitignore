@@ -33,6 +33,9 @@ mlstudio/demo/figures/
 *.gif
 *.png
 
+# Notes references etc...
+notes/
+
 # Lab and internal folders
 mlstudio/lab/
 

@@ -37,11 +37,9 @@ import pandas as pd
 # --------------------------------------------------------------------------- #
 class BasePerformance(ABC, BaseEstimator):
     """Abstract base class for performance analytics."""
-
-    @abstractmethod
-    def __init__(self):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
+    
+    def __init__(self, id):
+        self._id = id
 
     @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
@@ -54,7 +52,52 @@ class BasePerformance(ABC, BaseEstimator):
         y_pred = np.array(y_pred)
         d = {'y': y, 'y_pred': y_pred}
         df = pd.DataFrame(data=d)
-        return df                                  
+        return df                    
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def code(self):
+        return self._code         
+
+    @code.setter
+    def code(self, x):
+        self._code = x        
+
+    @property
+    def name(self):
+        return self._name         
+
+    @name.setter
+    def name(self, x):
+        self._name = x
+
+    @property
+    def label(self):
+        return self._label
+
+    @label.setter
+    def label(self, x):
+        self._label = x     
+
+    @property
+    def best(self):
+        return self._best
+
+    @property
+    def better(self):
+        return self._better
+
+    @property
+    def worst(self):
+        return self._worst
+
+    @property
+    def epsilon_factor(self):
+        return self._epsilon_factor   
+
 
 class BaseMeasure(BasePerformance):
     """Base class for performance measures."""
@@ -108,7 +151,7 @@ class BaseRegressionMetric(BaseMetric):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
-class BaseClassificationMeasure(BaseMeasure):
+class BaseBinaryClassificationMeasure(BaseMeasure):
     """Base class for regresssion measures."""
 
     @abstractmethod
@@ -121,7 +164,7 @@ class BaseClassificationMeasure(BaseMeasure):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
-class BaseClassificationMetric(BaseMetric):
+class BaseBinaryClassificationMetric(BaseMetric):
     """Base class for regresssion metrics."""
 
     @abstractmethod
@@ -134,8 +177,8 @@ class BaseClassificationMetric(BaseMetric):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
-class ClassificationMetric(BaseMetric):
-    """Base class for classification metrics."""
+class BaseMultiClassificationMeasure(BaseMeasure):
+    """Base class for regresssion measures."""
 
     @abstractmethod
     def __init__(self):
@@ -146,3 +189,17 @@ class ClassificationMetric(BaseMetric):
     def __call__(self, y, y_pred, *args, **kwargs):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
+
+class BaseMultiClassificationMetric(BaseMetric):
+    """Base class for regresssion metrics."""
+
+    @abstractmethod
+    def __init__(self):
+        raise NotImplementedError("This method is not implemented for "
+                                  "this Abstract Base Class.")
+
+    @abstractmethod
+    def __call__(self, y, y_pred, *args, **kwargs):
+        raise NotImplementedError("This method is not implemented for "
+                                  "this Abstract Base Class.")
+

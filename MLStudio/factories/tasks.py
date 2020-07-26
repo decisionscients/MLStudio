@@ -31,7 +31,7 @@ from mlstudio.supervised.algorithms.optimization.services import activations
 from mlstudio.supervised.algorithms.optimization.services import loss
 from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
-from mlstudio.supervised.performance import regression, classification
+from mlstudio.supervised.performance import regression, binary_class
 from mlstudio.factories.data_processor import DataProcessors
 # --------------------------------------------------------------------------- #
 class Task(containers.DeclarativeContainer):

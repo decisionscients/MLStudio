@@ -219,9 +219,9 @@ def validate_regression_scorer(scorer):
         return True
 # --------------------------------------------------------------------------  #
 def validate_classification_scorer(scorer):    
-    from mlstudio.supervised.performance.base import BaseClassificationMetric
-    valid_scorers = [cls.__name__ for cls in BaseClassificationMetric.__subclasses__()]
-    if not isinstance(scorer, BaseClassificationMetric):
+    from mlstudio.supervised.performance.base import BaseBinaryClassificationMetric
+    valid_scorers = [cls.__name__ for cls in BaseBinaryClassificationMetric.__subclasses__()]
+    if not isinstance(scorer, BaseBinaryClassificationMetric):
         msg = "{s} is an invalid scorer object. The valid scorer classes include : \
             {v}".format(s=scorer, v=str(valid_scorers))
         raise TypeError(msg)
@@ -377,7 +377,7 @@ def validate_estimator(estimator):
                                 minimum=0, maximum=1, left='closed', 
                                 right='open')
     validate_optimizer(estimator.optimizer)
-    validate_scorer(estimator.scorer)               
+       
     if estimator.early_stop:
         validate.observers(estimator.early_stop, 
                                         param_name='early_stop')

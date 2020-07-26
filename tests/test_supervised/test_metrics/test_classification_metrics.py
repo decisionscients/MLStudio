@@ -26,7 +26,7 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score
 from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.metrics import roc_auc_score
 
-from mlstudio.supervised.performance import classification  
+from mlstudio.supervised.performance import binary_class  
 
 @mark.metrics
 @mark.classification_metrics

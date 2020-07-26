@@ -24,16 +24,15 @@ from mlstudio.supervised.performance.base import BaseRegressionMetric
 class SSR(BaseRegressionMetric):
     """Computes sum squared residuals given"""
 
-    def __init__(self):
-        self.mode = 'min'
-        self.name = "Residual Sum Squared Error"
-        self.stateful = False
-        self.best = np.min
-        self.better = np.less
-        self.worst = np.Inf
-        self.epsilon_factor = -1
-
+    _mode  = 'min'
+    _name  = 'residual_sum_squared_error'
+    _label  = "Residual Sum Squared Error"
     
+    _best  = np.min
+    _better  = np.less
+    _worst  = np.Inf
+    _epsilon_factor  = -1
+
     def __call__(self, y, y_pred, *args, **kwargs):
         e = y - y_pred
         return np.sum(e**2)  
@@ -41,14 +40,15 @@ class SSR(BaseRegressionMetric):
 class SST(BaseRegressionMetric):
     """Computes total sum of squares"""
 
-    def __init__(self):
-        self.mode = 'min'
-        self.name = "Total Sum Squared Error"
-        self.stateful = False
-        self.best = np.min
-        self.better = np.less
-        self.worst = np.Inf
-        self.epsilon_factor = -1
+    
+    _mode  = 'min'
+    _name  = 'total_sum_squared_error'
+    _label  = "Total Sum Squared Error"
+    
+    _best  = np.min
+    _better  = np.less
+    _worst  = np.Inf
+    _epsilon_factor  = -1
 
     
     def __call__(self, y, y_pred, *args, **kwargs):
@@ -59,14 +59,15 @@ class SST(BaseRegressionMetric):
 class R2(BaseRegressionMetric):
     """Computes coefficient of determination."""
 
-    def __init__(self):
-        self.mode = 'max'   
-        self.name = r"$R^2$"
-        self.stateful = False
-        self.best = np.max
-        self.better = np.greater
-        self.worst = -np.Inf
-        self.epsilon_factor = 1
+    
+    _mode  = 'max'   
+    _name  = 'coefficient_of_determination'
+    _label  = r"$R^2$"
+    
+    _best  = np.max
+    _better  = np.greater
+    _worst  = -np.Inf
+    _epsilon_factor  = 1
 
     
     def __call__(self, y, y_pred, *args, **kwargs):
@@ -79,14 +80,15 @@ class R2(BaseRegressionMetric):
 class AdjustedR2(BaseRegressionMetric):
     """Computes adjusted coefficient of determination."""
 
-    def __init__(self):
-        self.mode = 'max'   
-        self.name = r"$\text{Adjusted }R^2$"
-        self.stateful = False
-        self.best = np.max
-        self.better = np.greater
-        self.worst = -np.Inf
-        self.epsilon_factor = 1
+    
+    _mode  = 'max'   
+    _name  = 'adjusted_r2'
+    _label  = r"$\text{Adjusted }R^2$"
+    
+    _best  = np.max
+    _better  = np.greater
+    _worst  = -np.Inf
+    _epsilon_factor  = 1
 
     
     def __call__(self, y, y_pred, n_features, *args, **kwargs):
@@ -100,14 +102,15 @@ class AdjustedR2(BaseRegressionMetric):
 class VarExplained(BaseRegressionMetric):
     """Computes proportion of variance explained."""
 
-    def __init__(self):
-        self.mode = 'max'
-        self.name = "Percent Variance Explained"
-        self.stateful = False
-        self.best = np.max
-        self.better = np.greater
-        self.worst = -np.Inf
-        self.epsilon_factor = 1
+    
+    _mode  = 'max'
+    _name  = 'percent_variance_explained'
+    _label  = "Percent Variance Explained"
+    
+    _best  = np.max
+    _better  = np.greater
+    _worst  = -np.Inf
+    _epsilon_factor  = 1
 
     
     def __call__(self, y, y_pred, *args, **kwargs):
@@ -117,14 +120,15 @@ class VarExplained(BaseRegressionMetric):
 class MAE(BaseRegressionMetric):
     """Computes mean absolute error given data and parameters."""
 
-    def __init__(self):
-        self.mode = 'min'
-        self.name = "Mean Absolute Error"
-        self.stateful = False
-        self.best = np.min
-        self.better = np.less
-        self.worst = np.Inf
-        self.epsilon_factor = -1
+    
+    _mode  = 'min'
+    _name  = 'mean_absolute_error'
+    _label  = "Mean Absolute Error"
+    
+    _best  = np.min
+    _better  = np.less
+    _worst  = np.Inf
+    _epsilon_factor  = -1
     
     def __call__(self, y, y_pred, *args, **kwargs):
         e = abs(y-y_pred)
@@ -134,14 +138,15 @@ class MAE(BaseRegressionMetric):
 class MSE(BaseRegressionMetric):
     """Computes mean squared error given data and parameters."""
 
-    def __init__(self):
-        self.mode = 'min'
-        self.name = "Mean Squared Error"
-        self.stateful = False
-        self.best = np.min
-        self.better = np.less
-        self.worst = np.Inf
-        self.epsilon_factor = -1
+    
+    _mode  = 'min'
+    _name  = 'mean_squared_error'
+    _label  = "Mean Squared Error"
+    
+    _best  = np.min
+    _better  = np.less
+    _worst  = np.Inf
+    _epsilon_factor  = -1
     
     def __call__(self, y, y_pred, *args, **kwargs):        
         e = y - y_pred
@@ -150,14 +155,15 @@ class MSE(BaseRegressionMetric):
 class NMSE(BaseRegressionMetric):
     """Computes negative mean squared error given data and parameters."""
 
-    def __init__(self):
-        self.mode = 'max'
-        self.name = "Negative Mean Squared Error"
-        self.stateful = False
-        self.best = np.max
-        self.better = np.greater
-        self.worst = -np.Inf
-        self.epsilon_factor = 1
+    
+    _mode  = 'max'
+    _name  = 'negative_mean_squared_error'
+    _label  = "Negative Mean Squared Error"
+    
+    _best  = np.max
+    _better  = np.greater
+    _worst  = -np.Inf
+    _epsilon_factor  = 1
 
     
     def __call__(self, y, y_pred, *args, **kwargs):        
@@ -167,14 +173,15 @@ class NMSE(BaseRegressionMetric):
 class RMSE(BaseRegressionMetric):
     """Computes root mean squared error given data and parameters."""
 
-    def __init__(self):
-        self.mode = 'min'
-        self.name = "Root Mean Squared Error"
-        self.stateful = False
-        self.best = np.min
-        self.better = np.less
-        self.worst = np.Inf
-        self.epsilon_factor = -1
+    
+    _mode  = 'min'
+    _name  = 'root_mean_squared_error'
+    _label  = "Root Mean Squared Error"
+    
+    _best  = np.min
+    _better  = np.less
+    _worst  = np.Inf
+    _epsilon_factor  = -1
     
     def __call__(self, y, y_pred, *args, **kwargs):
         e = y-y_pred
@@ -183,14 +190,15 @@ class RMSE(BaseRegressionMetric):
 class NRMSE(BaseRegressionMetric):
     """Computes negative root mean squared error given data and parameters."""
 
-    def __init__(self):
-        self.mode = 'max'
-        self.name = "Negative Root Mean Squared Error"
-        self.stateful = False
-        self.best = np.max
-        self.better = np.greater
-        self.worst = -np.Inf
-        self.epsilon_factor = 1
+    
+    _mode  = 'max'
+    _name  = 'negative_root_mean_squared_error'
+    _label  = "Negative Root Mean Squared Error"
+    
+    _best  = np.max
+    _better  = np.greater
+    _worst  = -np.Inf
+    _epsilon_factor  = 1
 
     
     def __call__(self, y, y_pred, *args, **kwargs):
@@ -200,14 +208,15 @@ class NRMSE(BaseRegressionMetric):
 class MSLE(BaseRegressionMetric):
     """Computes mean squared log error given data and parameters."""
 
-    def __init__(self):
-        self.mode = 'min'
-        self.name = "Mean Squared Log Error"
-        self.stateful = False
-        self.best = np.min
-        self.better = np.less
-        self.worst = np.Inf
-        self.epsilon_factor = -1
+    
+    _mode  = 'min'
+    _name  = 'mean_squared_log_error'
+    _label  = "Mean Squared Log Error"
+    
+    _best  = np.min
+    _better  = np.less
+    _worst  = np.Inf
+    _epsilon_factor  = -1
     
     def __call__(self, y, y_pred, *args, **kwargs):
         e = np.log(y+1)-np.log(y_pred+1)
@@ -219,14 +228,15 @@ class MSLE(BaseRegressionMetric):
 class RMSLE(BaseRegressionMetric):
     """Computes root mean squared log error given data and parameters."""
 
-    def __init__(self):
-        self.mode = 'min'
-        self.name = "Root Mean Squared Log Error"
-        self.stateful = False
-        self.best = np.min
-        self.better = np.less
-        self.worst = np.Inf
-        self.epsilon_factor = -1
+    
+    _mode  = 'min'
+    _name  = 'root_mean_squared_log_error'
+    _label  = "Root Mean Squared Log Error"
+    
+    _best  = np.min
+    _better  = np.less
+    _worst  = np.Inf
+    _epsilon_factor  = -1
     
     def __call__(self, y, y_pred, *args, **kwargs):
         y = np.clip(y, 1e-15, 1-1e-15)    
@@ -237,29 +247,30 @@ class RMSLE(BaseRegressionMetric):
 class MEDAE(BaseRegressionMetric):
     """Computes median absolute error given data and parameters."""
 
-    def __init__(self):
-        self.mode = 'min'
-        self.name = "Median Absolute Error"
-        self.stateful = False
-        self.best = np.min
-        self.better = np.less
-        self.worst = np.Inf
-        self.epsilon_factor = -1
+    
+    _mode  = 'min'
+    _name  = 'median_absolute_error'
+    _label  = "Median Absolute Error"
+    
+    _best  = np.min
+    _better  = np.less
+    _worst  = np.Inf
+    _epsilon_factor  = -1
     
     def __call__(self, y, y_pred, *args, **kwargs):        
         return np.median(np.abs(y_pred-y))
 
 class MAPE(BaseRegressionMetric):
     """Computes mean absolute percentage given data and parameters."""
+    _mode  = 'min'
+    _name  = 'mean_absolute_percentage_error'
+    _label  = "Mean Absolute Percentage Error"
 
-    def __init__(self):
-        self.mode = 'min'
-        self.name = "Mean Absolute Percentage Error"
-        self.stateful = False
-        self.best = np.min
-        self.better = np.less
-        self.worst = np.Inf
-        self.epsilon_factor = -1
+    _best  = np.min
+    _better  = np.less
+    _worst  = np.Inf
+    _epsilon_factor  = -1
     
     def __call__(self, y, y_pred, *args, **kwargs):        
         return 100*np.mean(np.abs((y-y_pred)/y))
+

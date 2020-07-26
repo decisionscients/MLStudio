@@ -32,10 +32,12 @@ from mlstudio.utils import validation
 class Task(ABC, BaseEstimator):
     """Defines the base class for all tasks."""
 
-    def __init__(self, loss, scorer, data_processor, activation=None, 
-                 random_state=None):
+    def __init__(self, loss, metrics, primary_metric, scorer_factory,
+                 data_processor, activation=None, random_state=None):
         self.loss = loss
-        self.scorer = scorer
+        self.metrics = metrics
+        self.primary_metric = primary_metric
+        self.scorer_factory = scorer_factory
         self.data_processor = data_processor
         self.activation = activation        
         self.random_state = random_state
@@ -71,8 +73,8 @@ class Task(ABC, BaseEstimator):
             Dict containing training and optionally validation data
         """
         data = self._data_processor.fit_transform(X, y, val_size)
-        self._n_features_plus_bias = data.get('n_features_plus_bias_')
-        self._n_classes = data.get('n_classes_')
+        self._n_features_plus_bias = data['original']['X'].shape[1]+1
+        self._n_classes = data['original']['metadata'].get("Num Classes")
         self._data_prepared = True
         return data
 
