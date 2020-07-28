@@ -44,14 +44,13 @@ class PipelineConfigFactory(AbstractPipelineConfig):
 class PipelineSteps(containers.DeclarativeContainer):
     """IoC container for pipeline step providers."""
     from mlstudio.data_services.preprocessing import AddBiasDataPipelineStep
-    from mlstudio.data_services.preprocessing import AddBiasDataPipelineStep
     from mlstudio.data_services.preprocessing import ShuffleDataPipelineStep
     from mlstudio.data_services.preprocessing import SplitDataPipelineStep
     from mlstudio.data_services.preprocessing import EncodeLabelsDataPipelineStep
     from mlstudio.data_services.preprocessing import OneHotEncodeLabelsDataPipelineStep
     from mlstudio.utils.data_manager import AddBiasTerm, DataShuffler
     from mlstudio.utils.data_manager import OneHotLabelEncoder, DataSplitter
-    from mlstudio.utils.data_manager import LabelEncoder    
+    from mlstudio.utils.data_manager import LabelEncoder        
 
     add_bias_term_factory = providers.Factory(AddBiasDataPipelineStep,
                                              transformer=AddBiasTerm())

@@ -48,15 +48,24 @@ class AbstractPipelineConfig(BaseEstimator):
         Seed for reproducibility of pseudo-randomization
     """
 
-    def __init__(self, val_size=None, shuffle=False, stratify=False, 
+    def __init__(self, name=None, val_size=None, shuffle=False, stratify=False, 
                  encode_labels=False, random_state=None):
 
+        self._name = name or __class__
         self._val_size = val_size
         self._shuffle = shuffle
         self._stratify = stratify
         self._encode_labels = encode_labels
         self._one_hot_encode_labels = one_hot_encode_labels
-        self._random_state = random_state
+        self._random_state = random_state        
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
 
     @property
     def val_size(self):
@@ -86,8 +95,8 @@ class AbstractPipelineConfig(BaseEstimator):
 class AbstractDataPipeline(BaseEstimator):
     """Abstract base class for all pipeline subclasses."""
 
-    def __init__(self):
-        self._name = "abstract_data_pipeline"
+    def __init__(self, name=None):
+        self._name = name or __class__
         self._steps = OrderedDict()
         self._transformers = OrderedDict()
 
@@ -95,21 +104,28 @@ class AbstractDataPipeline(BaseEstimator):
     def name(self):
         return self._name
 
-    def get_step(self, step_name):
+    @name.setter
+    def name(self, name):
+        self._name = name        
+
+    def get_step(self, name):
         """Gets the step referenced by the given 'step_name' parameter."""
-        return self._steps[step_name]
+        return self._steps.get(name)
 
     def add_step(self, step):
-        """Adds a step to the pipeline."""
+        """Adds a step to the pipeline."""        
+        if step.name in self._steps.keys():
+            msg = "Step named {s} already exists. It must be deleted before adding it again.".format(s=step.name)
+            raise ValueError(msg)
         self._steps[step.name] = step
         return self
 
-    def del_step(self, step_name):
+    def del_step(self, name):
         """Removes a step from the pipeline."""
         try:
-            del self._steps[step_name]
+            del self._steps[name]
         except:
-            msg = "Step named {s} did not exist in the pipeline.".format(s=step_name)
+            msg = "Step named {s} did not exist in the pipeline.".format(s=name)
             warnings.warn(msg, category=UserWarning)
         return self
 
@@ -129,25 +145,22 @@ class AbstractDataPipeline(BaseEstimator):
 class DataPipeline(AbstractDataPipeline):
     """Data pipeline subclasses."""
 
-    def __init__(self):
+    def __init__(self, name=None):
         from mlstudio.factories.pipeline import Pipeline
-        super(DataPipeline, self).__init__()
-        self._name = "data_pipeline"
+        super(DataPipeline, self).__init__(name)        
 
 
 # --------------------------------------------------------------------------- #
 class AbstractDataPipelineStep(BaseEstimator):
     """Defines the interface for pipeline steps."""
 
-    def __init__(self, config, transformer=None):
-        self._name = "abstract_data_pipeline_step"
+    def __init__(self, config, transformer=None):        
         self._config = config
         self._transformer = transformer
-        from mlstudio.factories.pipeline import PipelineSteps
 
     @property
     def name(self):
-        return self._name
+        return self.__class__.__name__
     
     @property
     def config(self):
@@ -160,13 +173,35 @@ class AbstractDataPipelineStep(BaseEstimator):
     @abstractmethod
     def __call__(self, X, y=None):        
         pass
-        
+# --------------------------------------------------------------------------- #
+class MakeTrainDataPackagePipelineStep(AbstractDataPipelineStep):        
+    """Creates the DataPackage object for training."""
+
+    def __call__(self, X, y=None, dataset_X=None, dataset_y=None, data_package=None):
+        X = dataset_X(X)
+        y = dataset_y(y)
+        data_package.add_dataset(X)
+        data_package.add_dataset(y)
+        return data_package
+
+# --------------------------------------------------------------------------- #
+class MakePredictDataPackagePipelineStep(AbstractDataPipelineStep):        
+    """Creates the DataPackage object for training."""
+
+    def __call__(self, X, y=None, dataset_X=None, dataset_y=None, data_package=None):
+        X = dataset_X(X)
+        y = dataset_y(y)
+        data_package.add_dataset(X)
+        data_package.add_dataset(y)
+        return data_package
+
 # --------------------------------------------------------------------------- #
 class AddBiasDataPipelineStep(AbstractDataPipelineStep):
     """Step that adds bias term to input data."""        
 
-    def __call__(self, X, y=None):
+    def __call__(self, data):
         """Adds bias term to input X"""        
+
         X =  self._transformer.fit_transform(X)        
         return X, y
 
@@ -174,7 +209,7 @@ class AddBiasDataPipelineStep(AbstractDataPipelineStep):
 class ShuffleDataPipelineStep(AbstractDataPipelineStep):
     """Step that shuffles the data."""        
 
-    def __call__(self, X, y=None):
+    def __call__(self, data):
         """Shuffles data"""
         
         if self._config.shuffle:
@@ -186,7 +221,7 @@ class ShuffleDataPipelineStep(AbstractDataPipelineStep):
 class SplitDataPipelineStep(AbstractDataPipelineStep):
     """Step that splits the data."""        
 
-    def __call__(self, X, y=None):
+    def __call__(self, data):
         """Split the data"""
         X_train, X_val, y_train, y_val = self._transformer.fit_transform(X, y, 
                           test_size=self._config.val_size, 
@@ -198,7 +233,7 @@ class SplitDataPipelineStep(AbstractDataPipelineStep):
 class EncodeLabelsDataPipelineStep(AbstractDataPipelineStep):
     """Step that performs 1-of-k binary encoding of labels."""        
 
-    def __call__(self, X, y=None):
+    def __call__(self, data):
         """Performs label encoding."""
         if self._transformer.is_fitted:
             y = self._transformer.transform(y)
@@ -210,7 +245,7 @@ class EncodeLabelsDataPipelineStep(AbstractDataPipelineStep):
 class OneHotEncodeLabelsDataPipelineStep(AbstractDataPipelineStep):
     """Step that performs 1-of-k binary encoding of labels."""        
 
-    def __call__(self, X, y=None):
+    def __call__(self, data):
         """Performs one hot label encoding."""
         if self._transformer.is_fitted:
             y = self._transformer.transform(y)
@@ -223,8 +258,17 @@ class OneHotEncodeLabelsDataPipelineStep(AbstractDataPipelineStep):
 class AbstractDataPipelineBuilder(BaseEstimator):
     """Defines the ABC for data pipeline builders."""
 
-    def __init__(self, config):
-        self._config = config    
+    def __init__(self, config, name=None):
+        self._config = config
+        self._name = name or __class__
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name        
 
     def reset(self):
         self._pipeline = Pipeline.factory()
@@ -276,12 +320,12 @@ class RegressionDataPipelineBuilder(AbstractDataPipelineBuilder):
         step = PipelineSteps.split_data_factory(config=self._config)
         self._pipeline.add_step(step)
 
-    def one_hot_encode_labels_step(self):
-        """Adds step to encode targets to (0,k). k=n_classes"""
-        pass
-
     def encode_labels_step(self):
         """Adds step that encodes the target data."""
+        pass        
+
+    def one_hot_encode_labels_step(self):
+        """Adds step to encode targets to (0,k). k=n_classes"""
         pass
 
 # --------------------------------------------------------------------------- #
@@ -303,12 +347,12 @@ class BinaryClassDataPipelineBuilder(AbstractDataPipelineBuilder):
         step = PipelineSteps.split_data_factory(config=self._config)
         self._pipeline.add_step(step)
 
-    def one_hot_encode_labels_step(self):
-        """Adds step to encode targets to (0,k). k=n_classes"""
-        pass
-
     def encode_labels_step(self):
         """Adds step that encodes the target data."""
+        pass
+
+    def one_hot_encode_labels_step(self):
+        """Adds step to encode targets to (0,k). k=n_classes"""
         pass
 
 # --------------------------------------------------------------------------- #
@@ -330,22 +374,31 @@ class MultiClassDataPipelineBuilder(AbstractDataPipelineBuilder):
         step = PipelineSteps.split_data_factory(config=self._config)
         self._pipeline.add_step(step)
 
-    def one_hot_encode_labels_step(self):
-        """Adds step to encode targets to (0,k). k=n_classes"""
-        step = PipelineSteps.one_hot_encode_labels_factory(config=self._config)
-        self._pipeline.add_step(step)
-
     def encode_labels_step(self):
         """Adds step that encodes the target data."""
         step = PipelineSteps.encode_labels_factory(config=self._config)
+        self._pipeline.add_step(step)        
+
+    def one_hot_encode_labels_step(self):
+        """Adds step to encode targets to (0,k). k=n_classes"""
+        step = PipelineSteps.one_hot_encode_labels_factory(config=self._config)
         self._pipeline.add_step(step)
 
 # --------------------------------------------------------------------------- #
 class DataPipelineDirector(BaseEstimator):
     """Responsible for executign the pipeline building steps in a specific order."""
 
-    def __init__(self, config):        
+    def __init__(self, config, name=None):        
         self._config = config
+        self._name = name or __class__
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name        
 
     @property
     def builder(self):
@@ -372,7 +425,8 @@ class DataPipelineDirector(BaseEstimator):
         return self._builder.pipeline()
 
     def build_score_pipeline(self, X, y=None):
-        self._builder.one_hot_encode_labels_step()        
+        self._builder.add_bias_term_step()
         self._builder.encode_labels_step()                        
+        self._builder.one_hot_encode_labels_step()                
         return self._builder.pipeline()
     

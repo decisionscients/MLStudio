@@ -184,7 +184,12 @@ def get_target_info(y):
         else:
             data_class = "Nominal"        
 
-    return data_type, data_class, classes, n_classes
+    d = OrderedDict()
+    d['data_type'] = data_type
+    d['data_class'] = data_class
+    d['classes'] = classes
+    d['n_classes'] = n_classes
+    return d
     
 
     

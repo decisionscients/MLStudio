@@ -24,7 +24,11 @@ from pytest import mark
 from scipy.sparse import csr_matrix
 from sklearn.datasets import make_classification, make_regression
 
+from mlstudio.data_services.preprocessing import DataPipeline
+from mlstudio.data_services.preprocessing import AbstractDataPipelineStep
 from mlstudio.factories.pipeline import PipelineConfigFactory, PipelineSteps
+from mlstudio.utils.data_manager import AddBiasTerm
+
 # --------------------------------------------------------------------------  #
 #                        TEST PIPELINE STEPS                                  #
 # --------------------------------------------------------------------------  #  
@@ -101,4 +105,55 @@ class PipelineStepTests:
         X, y = step(X, y)
         assert len(np.unique(y)) == 2, "Pipeline step error: check data"
         assert y.shape[1] == 4, "Pipeline step error: one hot encoding didn't work." 
+
+@mark.preprocessing
+@mark.pipeline
+class DataPipelineTests:
+
+    def test_data_pipeline_object(self, get_regression_data):
+        X, y = get_regression_data
+        y = np.random.randint(low=0,high=4, size=X.shape[0], dtype='int')
+        config = PipelineConfigTests().test_data_pipeline_config()                
+        pipe = DataPipeline()
+        d = {}
+        step_classes =  [cls for cls in AbstractDataPipelineStep.__subclasses__()]
+        # Instantiate all step classes
+        steps = []
+        for step in step_classes:
+            steps.append(step(config, AddBiasTerm()))
+
+        # Add all steps
+        for step in steps:
+            pipe.add_step(step)
+        # Get all steps
+        for step in steps:            
+            assert isinstance(pipe.get_step(step.name), AbstractDataPipelineStep), "Pipeline error: Not a step instance."
+        # List all steps
+        print(pipe.list_steps)
+        # Try to add step that already exists:
+        for step in steps:
+            with pytest.raises(ValueError):
+                pipe.add_step(step)
+        # Delete all steps
+        for step in steps:
+            pipe.del_step(step.name)
+        # Confirm all deleted
+        for step in steps:            
+            assert not pipe.get_step(step.name), "Pipeline deletion error"
+        # Now add them again and run the pipeline
+        for step in steps:
+            pipe.add_step(step)
+        X_new, y = pipe.run(X, y)
+        assert X
+
+
+        
+        
+
+
+
+
+
+
+
 
