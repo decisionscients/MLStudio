@@ -18,415 +18,99 @@
 # =========================================================================== #
 """Data preprocessing for machine learning and model development."""
 from abc import ABC, abstractmethod
-from collections import OrderedDict
-
-import numpy as np
-from numpy.random import RandomState
-from sklearn.base import TransformerMixin, BaseEstimator
-
-
-from mlstudio.utils.validation import check_X_y, check_X
 # --------------------------------------------------------------------------- #
-class AbstractPipelineConfig(BaseEstimator):
-    """Defines interface for pipeline configuration object.
-    
-    Parameters
-    ----------
-    val_size : float in [0,1) or None
-        The proportion of the training set to allocate to cross-validation
+class AbstractDataProcessor(ABC):
+    """Defines interface for DataProcessor classes."""
 
-    shuffle : Bool (Default=False)
-        Specifies whether data shuffling should take place.
-
-    stratify : Bool (Default=False)
-        Specifies whether stratified data splitting should take place.
-
-    encode_labels : Bool (Default=False)
-        Specifies whether 1-of-k class encoding of target labels should take place.
-
-    random_state : int
-        Seed for reproducibility of pseudo-randomization
-    """
-
-    def __init__(self, name=None, val_size=None, shuffle=False, stratify=False, 
-                 encode_labels=False, random_state=None):
-
-        self._name = name or __class__
-        self._val_size = val_size
-        self._shuffle = shuffle
-        self._stratify = stratify
-        self._encode_labels = encode_labels
-        self._one_hot_encode_labels = one_hot_encode_labels
-        self._random_state = random_state        
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name):
-        self._name = name
-
-    @property
-    def val_size(self):
-        return self._val_size
-
-    @property
-    def shuffle(self):
-        return self._shuffle
-
-    @property
-    def stratify(self):
-        return self._stratify
-
-    @property
-    def encode_labels(self):
-        return self._encode_labels
-
-    @property
-    def one_hot_encode_labels(self):
-        return self._one_hot_encode_labels
-
-    @property
-    def random_state(self):
-        return self._random_state
+    def __init__(self, add_bias_transformer=None, 
+                 split_transformer=None, label_encoder=None, 
+                 one_hot_label_encoder=None):
         
-# --------------------------------------------------------------------------- #
-class AbstractDataPipeline(BaseEstimator):
-    """Abstract base class for all pipeline subclasses."""
-
-    def __init__(self, name=None):
-        self._name = name or __class__
-        self._steps = OrderedDict()
-        self._transformers = OrderedDict()
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name):
-        self._name = name        
-
-    def get_step(self, name):
-        """Gets the step referenced by the given 'step_name' parameter."""
-        return self._steps.get(name)
-
-    def add_step(self, step):
-        """Adds a step to the pipeline."""        
-        if step.name in self._steps.keys():
-            msg = "Step named {s} already exists. It must be deleted before adding it again.".format(s=step.name)
-            raise ValueError(msg)
-        self._steps[step.name] = step
-        return self
-
-    def del_step(self, name):
-        """Removes a step from the pipeline."""
-        try:
-            del self._steps[name]
-        except:
-            msg = "Step named {s} did not exist in the pipeline.".format(s=name)
-            warnings.warn(msg, category=UserWarning)
-        return self
-
-    def list_steps(self):
-        """Lists the steps by name."""
-        for k, v in self._steps.items():
-            print(v.name)
-        return self
-
-    def run(self, X, y=None):
-        """Executes the pipeline."""
-        for name, step in self._steps.items():
-            X, y = step(X, y)
-        return X, y
-
-# --------------------------------------------------------------------------- #
-class DataPipeline(AbstractDataPipeline):
-    """Data pipeline subclasses."""
-
-    def __init__(self, name=None):
-        from mlstudio.factories.pipeline import Pipeline
-        super(DataPipeline, self).__init__(name)        
-
-
-# --------------------------------------------------------------------------- #
-class AbstractDataPipelineStep(BaseEstimator):
-    """Defines the interface for pipeline steps."""
-
-    def __init__(self, config, transformer=None):        
-        self._config = config
-        self._transformer = transformer
-
-    @property
-    def name(self):
-        return self.__class__.__name__
-    
-    @property
-    def config(self):
-        return self._config
-
-    @property
-    def transformer(self):
-        return self._transformer        
+        self._add_bias_transformer = add_bias_transformer  
+        self._split_transformer = split_transformer
+        self._label_encoder = label_encoder
+        self._one_hot_label_encoder = one_hot_label_encoder
 
     @abstractmethod
-    def __call__(self, X, y=None):        
+    def process_train_data(self, X, y=None, random_state=None):
+        """Processes data for training."""
         pass
+
+    @abstractmethod
+    def process_train_val_data(self, val_size, X, y=None, random_state=None):
+        """Processes training and validation data for training."""
+        pass
+    
+    def process_X_test_data(self, X, y=None, random_state=None):
+        return self._add_bias_transformer.fit_transform(X)
+    
+    def process_y_test_data(self, y, random_state=None):
+        """Processes y test data."""
+        return y    
+    
 # --------------------------------------------------------------------------- #
-class MakeTrainDataPackagePipelineStep(AbstractDataPipelineStep):        
-    """Creates the DataPackage object for training."""
+class RegressionDataProcessor(AbstractDataProcessor):
 
-    def __call__(self, X, y=None, dataset_X=None, dataset_y=None, data_package=None):
-        X = dataset_X(X)
-        y = dataset_y(y)
-        data_package.add_dataset(X)
-        data_package.add_dataset(y)
-        return data_package
-
-# --------------------------------------------------------------------------- #
-class MakePredictDataPackagePipelineStep(AbstractDataPipelineStep):        
-    """Creates the DataPackage object for training."""
-
-    def __call__(self, X, y=None, dataset_X=None, dataset_y=None, data_package=None):
-        X = dataset_X(X)
-        y = dataset_y(y)
-        data_package.add_dataset(X)
-        data_package.add_dataset(y)
-        return data_package
-
-# --------------------------------------------------------------------------- #
-class AddBiasDataPipelineStep(AbstractDataPipelineStep):
-    """Step that adds bias term to input data."""        
-
-    def __call__(self, data):
-        """Adds bias term to input X"""        
-
-        X =  self._transformer.fit_transform(X)        
+    def process_train_data(self, X, y=None, random_state=None):
+        X = self._add_bias_transformer.fit_transform(X)
         return X, y
 
-# --------------------------------------------------------------------------- #
-class ShuffleDataPipelineStep(AbstractDataPipelineStep):
-    """Step that shuffles the data."""        
+    def process_train_val_data(self, X, y=None, val_size=None, random_state=None):
+        X = self._add_bias_transformer.fit_transform(X)
+        X_train, X_val, y_train, y_val = self._split_transformer.fit_transform(
+            X, y, test_size=val_size, random_state=random_state)
 
-    def __call__(self, data):
-        """Shuffles data"""
+        return X_train, X_val, y_train, y_val
         
-        if self._config.shuffle:
-            X, y = self._transformer.fit_transform(X=X, y=y, 
-                            random_state=self._config.random_state)
+# --------------------------------------------------------------------------- #
+class BinaryClassDataProcessor(AbstractDataProcessor):
+
+    def process_train_data(self, X, y=None, random_state=None):
+        X = self._add_bias_transformer.fit_transform(X)
+        y = self._label_encoder.fit_transform(y)
         return X, y
 
-# --------------------------------------------------------------------------- #
-class SplitDataPipelineStep(AbstractDataPipelineStep):
-    """Step that splits the data."""        
+    def process_train_val_data(self, X, y=None, val_size=None, random_state=None):
+        X = self._add_bias_transformer.fit_transform(X)
 
-    def __call__(self, data):
-        """Split the data"""
-        X_train, X_val, y_train, y_val = self._transformer.fit_transform(X, y, 
-                          test_size=self._config.val_size, 
-                          stratify=self._config.stratify, 
-                          random_state=self._config.random_state)
+        X_train, X_val, y_train, y_val = self._split_transformer.fit_transform(
+            X, y, test_size=val_size, stratify=True, 
+            random_state=random_state)
+
+        y_train = self._label_encoder.fit_transform(y_train)
+        y_val = self._label_encoder.transform(y_val)
+
         return X_train, X_val, y_train, y_val
 
-# --------------------------------------------------------------------------- #
-class EncodeLabelsDataPipelineStep(AbstractDataPipelineStep):
-    """Step that performs 1-of-k binary encoding of labels."""        
-
-    def __call__(self, data):
-        """Performs label encoding."""
-        if self._transformer.is_fitted:
-            y = self._transformer.transform(y)
-        else:
-            y = self._transformer.fit_transform(y)
-        return X, y
-
-# --------------------------------------------------------------------------- #
-class OneHotEncodeLabelsDataPipelineStep(AbstractDataPipelineStep):
-    """Step that performs 1-of-k binary encoding of labels."""        
-
-    def __call__(self, data):
-        """Performs one hot label encoding."""
-        if self._transformer.is_fitted:
-            y = self._transformer.transform(y)
-        else:
-            y = self._transformer.fit_transform(y)
-        return X, y
+    def process_y_test_data(self, y, random_state=None):
+        return self._label_encoder.fit_transform(y)
         
-
 # --------------------------------------------------------------------------- #
-class AbstractDataPipelineBuilder(BaseEstimator):
-    """Defines the ABC for data pipeline builders."""
+class MultiClassDataProcessor(AbstractDataProcessor):
 
-    def __init__(self, config, name=None):
-        self._config = config
-        self._name = name or __class__
+    def process_train_data(self, X, y=None, random_state=None):
+        X = self._add_bias_transformer.fit_transform(X)
+        y = self._label_encoder.fit_transform(y)
+        y = self._one_hot_label_encoder.fit_transform(y)
+        return X, y
 
-    @property
-    def name(self):
-        return self._name
+    def process_train_val_data(self, X, y=None, val_size=None, random_state=None):
+        X = self._add_bias_transformer.fit_transform(X)
 
-    @name.setter
-    def name(self, name):
-        self._name = name        
+        X_train, X_val, y_train, y_val = self._split_transformer.fit_transform(
+            X, y, test_size=val_size, stratify=True, 
+            random_state=random_state)
 
-    def reset(self):
-        self._pipeline = Pipeline.factory()
+        y_train = self._label_encoder.fit_transform(y_train)
+        y_train = self._one_hot_label_encoder.fit_transform(y_train)
+        y_val = self._label_encoder.transform(y_val)
+        y_val = self._one_hot_label_encoder.transform(y_val)
 
-    @property
-    def config(self):
-        return self._config
+        return X_train, X_val, y_train, y_val
 
-    @abstractmethod
-    def add_bias_term_step(self):        
-        pass
+    def process_y_test_data(self, y, random_state=None):
+        y = self._label_encoder.fit_transform(y)
+        y = self._one_hot_label_encoder.fit_transform(y)
+        return y
 
-    @abstractmethod
-    def shuffle_data_step(self):
-        pass   
-
-    @abstractmethod
-    def split_data_step(self):
-        pass 
-
-    @abstractmethod
-    def encode_labels_step(self):
-        pass    
-
-    @abstractmethod
-    def one_hot_encode_labels_step(self):
-        pass        
-
-    def pipeline(self):
-        pipeline = self._pipeline
-        self.reset()
-        return pipeline
-# --------------------------------------------------------------------------- #
-class RegressionDataPipelineBuilder(AbstractDataPipelineBuilder):
-    """Builds data pipelines for regression problems."""
-    
-    def add_bias_term_step(self):
-        """Adds step that creates a bias term on the input matrix."""
-        step = PipelineSteps.add_bias_term_factory(config=self._config)
-        self._pipeline.add_step(step)
-
-    def shuffle_data_step(self):
-        """Adds step that shuffles the data."""
-        step = PipelineSteps.shuffle_factory(config=self._config)
-        self._pipeline.add_step(step)
-
-    def split_data_step(self):
-        """Adds step that splits the data."""
-        step = PipelineSteps.split_data_factory(config=self._config)
-        self._pipeline.add_step(step)
-
-    def encode_labels_step(self):
-        """Adds step that encodes the target data."""
-        pass        
-
-    def one_hot_encode_labels_step(self):
-        """Adds step to encode targets to (0,k). k=n_classes"""
-        pass
-
-# --------------------------------------------------------------------------- #
-class BinaryClassDataPipelineBuilder(AbstractDataPipelineBuilder):
-    """Builds data pipelines for binary classification problems."""
-    
-    def add_bias_term_step(self):
-        """Adds step that creates a bias term on the input matrix."""
-        step = PipelineSteps.add_bias_term_factory(config=self._config)
-        self._pipeline.add_step(step)
-
-    def shuffle_data_step(self):
-        """Adds step that shuffles the data."""
-        step = PipelineSteps.shuffle_factory(config=self._config)
-        self._pipeline.add_step(step)
-
-    def split_data_step(self):
-        """Adds step that splits the data."""
-        step = PipelineSteps.split_data_factory(config=self._config)
-        self._pipeline.add_step(step)
-
-    def encode_labels_step(self):
-        """Adds step that encodes the target data."""
-        pass
-
-    def one_hot_encode_labels_step(self):
-        """Adds step to encode targets to (0,k). k=n_classes"""
-        pass
-
-# --------------------------------------------------------------------------- #
-class MultiClassDataPipelineBuilder(AbstractDataPipelineBuilder):
-    """Builds data pipelines for multiclass classification problems."""
-    
-    def add_bias_term_step(self):
-        """Adds step that creates a bias term on the input matrix."""
-        step = PipelineSteps.add_bias_term_factory(config=self._config)
-        self._pipeline.add_step(step)
-
-    def shuffle_data_step(self):
-        """Adds step that shuffles the data."""
-        step = PipelineSteps.shuffle_factory(config=self._config)
-        self._pipeline.add_step(step)
-
-    def split_data_step(self):
-        """Adds step that splits the data."""
-        step = PipelineSteps.split_data_factory(config=self._config)
-        self._pipeline.add_step(step)
-
-    def encode_labels_step(self):
-        """Adds step that encodes the target data."""
-        step = PipelineSteps.encode_labels_factory(config=self._config)
-        self._pipeline.add_step(step)        
-
-    def one_hot_encode_labels_step(self):
-        """Adds step to encode targets to (0,k). k=n_classes"""
-        step = PipelineSteps.one_hot_encode_labels_factory(config=self._config)
-        self._pipeline.add_step(step)
-
-# --------------------------------------------------------------------------- #
-class DataPipelineDirector(BaseEstimator):
-    """Responsible for executign the pipeline building steps in a specific order."""
-
-    def __init__(self, config, name=None):        
-        self._config = config
-        self._name = name or __class__
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name):
-        self._name = name        
-
-    @property
-    def builder(self):
-        return self._builder
-
-    @property
-    def config(self):
-        return self._config
-
-    @builder.setter
-    def builder(self, builder):
-        self._builder = builder
-
-    def build_training_pipeline(self, X, y=None):
-        self._builder.add_bias_term_step()
-        self._builder.shuffle_data_step()
-        self._builder.split_data_step()
-        self._builder.one_hot_encode_labels_step()        
-        self._builder.encode_labels_step()        
-        return self._builder.pipeline()        
-
-    def build_predict_pipeline(self, X, y=None):
-        self._builder.add_bias_term_step()
-        return self._builder.pipeline()
-
-    def build_score_pipeline(self, X, y=None):
-        self._builder.add_bias_term_step()
-        self._builder.encode_labels_step()                        
-        self._builder.one_hot_encode_labels_step()                
-        return self._builder.pipeline()
-    
+        

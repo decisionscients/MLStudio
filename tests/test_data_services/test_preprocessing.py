@@ -24,136 +24,127 @@ from pytest import mark
 from scipy.sparse import csr_matrix
 from sklearn.datasets import make_classification, make_regression
 
-from mlstudio.data_services.preprocessing import DataPipeline
-from mlstudio.data_services.preprocessing import AbstractDataPipelineStep
-from mlstudio.factories.pipeline import PipelineConfigFactory, PipelineSteps
-from mlstudio.utils.data_manager import AddBiasTerm
+from mlstudio.factories.data import DataProcessors
 
-# --------------------------------------------------------------------------  #
-#                        TEST PIPELINE STEPS                                  #
 # --------------------------------------------------------------------------  #  
-@mark.preprocessing
-@mark.pipeline_config
-class PipelineConfigTests:
+def check_add_bias(X, X_train, test):
+    assert X_train.shape[1] == X.shape[1] + 1, test + ": bias term wasn't added."
 
-    def test_data_pipeline_config(self):
-        d = {}
-        d['val_size'] = 0.2
-        d['shuffle'] = True
-        d['stratify'] = True
-        d['length'] = 200
-        d['width'] = 300
-        d['encode_labels'] = True
-        d['one_hot_encode_labels'] = True
-        d['random_state'] = 55
-        config = PipelineConfigFactory(name='DynamicPipelineConfig', config=d)
-        settings = config.build()
-        assert settings.val_size == d['val_size'], "Configuration attribute error"
-        assert settings.shuffle == d['shuffle'], "Configuration attribute error"
-        assert settings.stratify == d['stratify'], "Configuration attribute error"
-        assert settings.length == d['length'], "Configuration attribute error"
-        assert settings.width == d['width'], "Configuration attribute error"
-        assert settings.encode_labels == d['encode_labels'], "Configuration attribute error"
-        assert settings.one_hot_encode_labels == d['one_hot_encode_labels'], "Configuration attribute error"
-        assert settings.random_state == d['random_state'], "Configuration attribute error"
-        return settings        
+def check_split(X, y, X_train, y_train, X_val, y_val, test):
+    assert X_train.shape[1] == X.shape[1] + 1, test + ": bias term wasn't added."        
+    assert X.shape[0] > X_train.shape[0],  test + ": split didn't happen."        
+    assert X_train.shape[0] == y_train.shape[0], test + ": X, y shape mismatch."
+    assert X_val.shape[0] == y_val.shape[0],  test + ": X, y shape mismatch."        
+    assert X_train.shape[0] > X_val.shape[0],  test + ": Train size not greater than test."        
+
+def check_label_encoder(y, test):
+    assert all(y) in range(len(np.unique(y))), test + ": label encoding didn't work"
+
+def check_one_hot_label_encoder(y, test):
+    assert np.sum(y) == y.shape[0], test + ": one-hot-label encoding didn't binarize"
+    assert y.shape[1] > 2, test + ": one-hot-label encoding didn't create vector."
+
+
+@mark.data_processing
+@mark.regression_data
+class RegressionDataTests:
+
+    _test = "Regression data"
+
+    def test_regression_train_data(self, get_regression_data):
+        X, y = get_regression_data
+        data_processor = DataProcessors.regression
+        X_train, y_train = data_processor().process_train_data(X, y)
+        check_add_bias(X, X_train,test = self._test)        
+
+    def test_regression_train_val_data(self, get_regression_data):
+        X, y = get_regression_data
+        data_processor = DataProcessors.regression
+        X_train, X_val, y_train, y_val = data_processor().process_train_val_data(X, y, val_size=0.3)
+        check_add_bias(X, X_train, test = self._test)        
+        check_add_bias(X, X_val, test = self._test)        
+        check_split(X, y, X_train, y_train, X_val, y_val, test=self._test)
+
+    def test_regression_X_test_data(self, get_regression_data):
+        X, y = get_regression_data
+        data_processor = DataProcessors.regression
+        X_train = data_processor().process_X_test_data(X)
+        check_add_bias(X, X_train, test=self._test)
+
+@mark.data_processing
+@mark.binary_class_data
+class BinaryClassDataTests:
+
+    _test = "Binary classification data"
+
+    def test_binary_class_train_data(self, get_logistic_regression_data):
+        X, y = get_logistic_regression_data
+        y = np.random.choice(["hat", "bowl"], size=y.shape[0])
+        data_processor = DataProcessors.binary_class
+        X_train, y_train = data_processor().process_train_data(X, y)
+        check_add_bias(X, X_train,test = self._test)        
+
+    def test_binary_class_train_val_data(self, get_logistic_regression_data):
+        X, y = get_logistic_regression_data
+        y = np.random.choice(["hat", "bowl"], size=y.shape[0])
+        data_processor = DataProcessors.binary_class
+        X_train, X_val, y_train, y_val = data_processor().process_train_val_data(X, y, val_size=0.3)
+        check_add_bias(X, X_train, test = self._test)        
+        check_add_bias(X, X_val, test = self._test)        
+        check_split(X, y, X_train, y_train, X_val, y_val, test=self._test)
+        check_label_encoder(y_train, test=self._test)
+        check_label_encoder(y_val, test=self._test)
+
+    def test_binary_class_X_test_data(self, get_logistic_regression_data):
+        X, y = get_logistic_regression_data
+        y = np.random.choice(["hat", "bowl"], size=y.shape[0])
+        data_processor = DataProcessors.binary_class
+        X_train = data_processor().process_X_test_data(X)
+        check_add_bias(X, X_train, test=self._test)
+
+    def test_binary_class_y_test_data(self, get_logistic_regression_data):
+        X, y = get_logistic_regression_data
+        y = np.random.choice(["hat", "bowl"], size=y.shape[0])        
+        data_processor = DataProcessors.binary_class
+        y_test = data_processor().process_y_test_data(y) 
+        check_label_encoder(y_test, test=self._test)
+
+@mark.data_processing
+@mark.multi_class_data
+class MultiClassDataTests:
+
+    _test = "Multi classification data"
+
+    def test_multi_class_train_data(self, get_multiclass_classification_data):
+        X, y = get_multiclass_classification_data
+        y = np.random.choice(["hat", "bowl", "junky", "riding", "happy"], size=y.shape[0])
+        data_processor = DataProcessors.multi_class
+        X_train, y_train = data_processor().process_train_data(X, y)
+        check_add_bias(X, X_train,test = self._test)        
+
+    def test_multi_class_train_val_data(self, get_multiclass_classification_data):
+        X, y = get_multiclass_classification_data
+        y = np.random.choice(["hat", "bowl", "junky", "riding", "happy"], size=y.shape[0])
+        data_processor = DataProcessors.multi_class
+        X_train, X_val, y_train, y_val = data_processor().process_train_val_data(X, y, val_size=0.3)
+        check_add_bias(X, X_train, test = self._test)        
+        check_add_bias(X, X_val, test = self._test)        
+        check_split(X, y, X_train, y_train, X_val, y_val, test=self._test)
+        check_one_hot_label_encoder(y_train, test=self._test)
+        check_one_hot_label_encoder(y_val, test=self._test)
+
+    def test_multi_class_X_test_data(self, get_multiclass_classification_data):
+        X, y = get_multiclass_classification_data
+        y = np.random.choice(["hat", "bowl", "junky", "riding", "happy"], size=y.shape[0])
+        data_processor = DataProcessors.multi_class
+        X_train = data_processor().process_X_test_data(X)
+        check_add_bias(X, X_train, test=self._test)
+
+    def test_multi_class_y_test_data(self, get_multiclass_classification_data):
+        X, y = get_multiclass_classification_data
+        y = np.random.choice(["hat", "bowl", "junky", "riding", "happy"], size=y.shape[0])
+        data_processor = DataProcessors.multi_class
+        y_test = data_processor().process_y_test_data(y)         
+        check_one_hot_label_encoder(y_test, test=self._test)
         
-@mark.preprocessing
-@mark.pipeline_steps
-class PipelineStepTests:
-
-    def test_pipeline_step1_add_bias_term(self, get_regression_data):
-        X, y = get_regression_data
-        config = PipelineConfigTests().test_data_pipeline_config()                
-        assert config.shuffle == True, "Config not obtained from prior class."
-        step = PipelineSteps.add_bias_term_factory(config=config)
-        X_new, y = step(X, y)
-        assert X.shape[1] + 1 == X_new.shape[1], "Pipeline step error: input shape not changed" 
-
-    def test_pipeline_step2_shuffle_data(self, get_regression_data):
-        X, y = get_regression_data
-        config = PipelineConfigTests().test_data_pipeline_config()        
-        assert config.shuffle == True, "Config not obtained from prior class."
-        step = PipelineSteps.shuffle_factory(config=config)
-        X_new, y = step(X, y)
-        assert not np.array_equal(X, X_new), "Pipeline step error: shuffle didn't work" 
-
-    def test_pipeline_step3_split_data(self, get_regression_data):
-        X, y = get_regression_data
-        config = PipelineConfigTests().test_data_pipeline_config()        
-        step = PipelineSteps.split_data_factory(config=config)
-        X_train, X_val, y_train, y_val = step(X, y)
-        assert not np.array_equal(X, X_train), "Pipeline step error: split didn't work" 
-        assert X_train.shape[0] == y_train.shape[0] , "Pipeline step error: mismatch lengths " 
-        assert X_val.shape[0] == y_val.shape[0] , "Pipeline step error: mismatch lengths " 
-        assert X.shape[1] == X_val.shape[1] , "Pipeline step error: mismatch dimensions " 
-
-    def test_pipeline_step4_encode_labels(self, get_regression_data):
-        X, y = get_regression_data
-        y = np.random.randint(low=10,high=14, size=X.shape[0], dtype='int')
-        config = PipelineConfigTests().test_data_pipeline_config()        
-        step = PipelineSteps.encode_labels_factory(config=config)
-        X, y = step(X, y)
-        assert len(np.unique(y)) == 4, "Pipeline step error: check data"
-        assert np.all(y) in np.arange(0,4), "Pipeline step error: encoding didn't work" 
-
-    def test_pipeline_step5_one_hot_encode_labels(self, get_regression_data):
-        X, y = get_regression_data
-        y = np.random.randint(low=0,high=4, size=X.shape[0], dtype='int')
-        config = PipelineConfigTests().test_data_pipeline_config()        
-        step = PipelineSteps.one_hot_encode_labels_factory(config=config)
-        X, y = step(X, y)
-        assert len(np.unique(y)) == 2, "Pipeline step error: check data"
-        assert y.shape[1] == 4, "Pipeline step error: one hot encoding didn't work." 
-
-@mark.preprocessing
-@mark.pipeline
-class DataPipelineTests:
-
-    def test_data_pipeline_object(self, get_regression_data):
-        X, y = get_regression_data
-        y = np.random.randint(low=0,high=4, size=X.shape[0], dtype='int')
-        config = PipelineConfigTests().test_data_pipeline_config()                
-        pipe = DataPipeline()
-        d = {}
-        step_classes =  [cls for cls in AbstractDataPipelineStep.__subclasses__()]
-        # Instantiate all step classes
-        steps = []
-        for step in step_classes:
-            steps.append(step(config, AddBiasTerm()))
-
-        # Add all steps
-        for step in steps:
-            pipe.add_step(step)
-        # Get all steps
-        for step in steps:            
-            assert isinstance(pipe.get_step(step.name), AbstractDataPipelineStep), "Pipeline error: Not a step instance."
-        # List all steps
-        print(pipe.list_steps)
-        # Try to add step that already exists:
-        for step in steps:
-            with pytest.raises(ValueError):
-                pipe.add_step(step)
-        # Delete all steps
-        for step in steps:
-            pipe.del_step(step.name)
-        # Confirm all deleted
-        for step in steps:            
-            assert not pipe.get_step(step.name), "Pipeline deletion error"
-        # Now add them again and run the pipeline
-        for step in steps:
-            pipe.add_step(step)
-        X_new, y = pipe.run(X, y)
-        assert X
-
-
         
-        
-
-
-
-
-
-
-
-
