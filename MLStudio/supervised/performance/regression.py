@@ -62,7 +62,7 @@ class R2(BaseRegressionMetric):
     
     _mode  = 'max'   
     _name  = 'coefficient_of_determination'
-    _label  = r"$R^2$"
+    _label  = 'R2'
     
     _best  = np.max
     _better  = np.greater

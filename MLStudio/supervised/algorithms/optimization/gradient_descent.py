@@ -21,31 +21,21 @@
 #%%
 """Gradient Descent Module"""
 from abc import ABC, abstractmethod, abstractproperty
-import collections
+from collections import OrderedDict
 import copy
 import warnings
 from pathlib import Path
 import site
+import time
 import tracemalloc
 PROJECT_DIR = Path(__file__).resolve().parents[4]
 site.addsitedir(PROJECT_DIR)
 
-import dependency_injector.containers as containers
-import dependency_injector.providers as providers
 import numpy as np
 from sklearn.base import BaseEstimator
 
-from mlstudio.supervised.algorithms.optimization.observers import base
-from mlstudio.supervised.algorithms.optimization.observers import monitor
-from mlstudio.supervised.algorithms.optimization.observers import early_stop
-from mlstudio.supervised.algorithms.optimization.services import activations
-from mlstudio.supervised.algorithms.optimization.services import loss
-from mlstudio.supervised.algorithms.optimization.services import optimizers
-from mlstudio.supervised.algorithms.optimization.services import regularizers
-from mlstudio.supervised.algorithms.optimization.services import tasks
-from mlstudio.utils.data_analyzer import get_features
 from mlstudio.utils.data_manager import unpack_parameters
-from mlstudio.utils.data_manager import batch_iterator, AddBiasTerm
+from mlstudio.utils.data_manager import batch_iterator
 from mlstudio.utils import validation
 # =========================================================================== #
 #                              GRADIENT DESCENT                               #
@@ -238,11 +228,19 @@ class GradientDescent(BaseEstimator):
         return self._blackbox
 
     # TODO: add evaluator and profiler observers
-    def get_evaluator(self):
-        pass
+    def performance_log(self):
+        try:
+            return self._performance_log
+        except:
+            warnings.warn("No performance log until the fit method is called.")
+            return None
 
-    def get_profiler(self):
-        pass
+    def profile_log(self):
+        try:
+            return self._profile_log
+        except:
+            warnings.warn("No profile log until the fit method is called.")
+            return None
 
     # ----------------------------------------------------------------------- #
     def _compile(self, log=None):
@@ -256,6 +254,7 @@ class GradientDescent(BaseEstimator):
         self._summary = copy.deepcopy(self.summary) 
         self._gradient_checker = copy.deepcopy(self.gradient_checker)
         self._blackbox = copy.deepcopy(self.blackbox)
+        self._tracemalloc = tracemalloc
 
         # Optional dependencies
         self._learning_rate = copy.deepcopy(self.learning_rate) if \
@@ -273,6 +272,12 @@ class GradientDescent(BaseEstimator):
         self._theta = None
         self._gradient = None
         self._converged = False
+        self._performance_log = OrderedDict()
+        self._profile_log = OrderedDict()
+        self._timer = time
+        self._epoch_log = None
+        self._start_time = None
+        self._end_time = None
 
     # ----------------------------------------------------------------------- #    
     def _prepare_data(self, X, y):
@@ -336,13 +341,27 @@ class GradientDescent(BaseEstimator):
     # ----------------------------------------------------------------------- #
     def _on_epoch_begin(self, log=None):
         """Initializes the epoch and notifies observers."""
-        log = log or {}        
+        log = log or {}      
+        self._epoch_log = self._performance_snapshot(log)
+        self._start_time = self._timer.perf_counter()          
+        self._tracemalloc.start()
         self._observer_list.on_epoch_begin(epoch=self._epoch, log=log)
     # ----------------------------------------------------------------------- #
     def _on_epoch_end(self, log=None):
         """Finalizes epoching and notifies observers."""
         log = log or {}
-        self._observer_list.on_epoch_end(epoch=self._epoch, log=log)
+
+        self._end_time = self._timer.perf_counter()
+        elapsed_time = self._end_time - self._start_time
+        
+        current, peak = self._tracemalloc.get_traced_memory()
+        self._tracemalloc.stop()                
+        
+        self._epoch_log['cpu_time'] = elapsed_time
+        self._epoch_log['current_memory'] = current
+        self._epoch_log['peak_memory'] = peak
+        
+        self._observer_list.on_epoch_end(epoch=self._epoch, log=self._epoch_log)
         self._epoch += 1
     # ----------------------------------------------------------------------- #            
     def _on_batch_begin(self, log=None):
@@ -399,6 +418,35 @@ class GradientDescent(BaseEstimator):
         J : float
         """
         return self._task.compute_loss(theta, y, y_out)
+    # ----------------------------------------------------------------------- #            
+    def _performance_snapshot(self, log=None):
+        """Computes loss and scores for the current set of parameters."""
+        log = log or {}
+        log['epoch'] = self._epoch
+        log['eta'] = self._eta
+        log['theta'] = self._theta
+
+        y_out = self._task.compute_output(self._theta, self._X_train)
+        log['train_cost'] = self._task.compute_loss(self._theta, self._y_train,
+                                                    y_out)
+        log['train_score'] = self._task.score(self._X_train, self._y_train,
+                                              self._theta)
+
+        # Check not only val_size but also for empty validation sets 
+        if self.val_size:
+            if self._X_val.shape[0] > 0:                
+                y_out_val = self._task.compute_output(self._theta, self._X_val)
+                log['val_cost'] = self._task.compute_loss(self._theta, self._y_val, y_out_val)                                
+                log['val_score'] = self._task.score(self._X_val, self._y_val,
+                                                    self._theta)
+        # Store the gradient and its magnitude
+        log['gradient'] = self._gradient
+        log['gradient_norm'] = None
+        if self._gradient is not None:
+            log['gradient_norm'] = np.linalg.norm(self._gradient) 
+
+        return log
+            
 
     # ----------------------------------------------------------------------- #            
     def train_epoch(self):

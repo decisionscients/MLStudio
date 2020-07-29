@@ -20,6 +20,7 @@
 # =========================================================================== #
 """Defines linear, logistic, and multiclass classification tasks."""
 from abc import ABC, abstractmethod, abstractproperty 
+from collections import OrderedDict
 
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -195,7 +196,8 @@ class Task(ABC, BaseEstimator):
         if X.shape[1] != theta.shape[0]:
             X = validation.check_X(X)        
             data = self._data_processor.process_X_test_data(X)        
-        return data['X_test']['data']
+            return data['X_test']['data']
+        return X
 
     @abstractmethod
     def predict(self, X, theta):
@@ -370,7 +372,7 @@ class LogisticRegression(ClassificationTask):
         """Confirms y has been encoded."""
         if not validation.is_binary(y):
             data = self._data_processor.process_y_test_data(y)
-            y = data['y_test']['data']
+            return data['y_test']['data']
         return y
         
     def predict(self, X, theta):

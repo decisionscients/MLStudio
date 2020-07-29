@@ -29,7 +29,7 @@ import dependency_injector.providers as providers
 
 from mlstudio.supervised.algorithms.optimization.gradient_descent import GradientDescent
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
-from mlstudio.supervised.algorithms.optimization.observers import monitor
+from mlstudio.supervised.algorithms.optimization.observers import report, history
 from mlstudio.supervised.algorithms.optimization.services import optimizers
 from mlstudio.factories.tasks import Task
 from mlstudio.factories.observers import Summary
@@ -49,8 +49,8 @@ class GradientDescent(containers.DeclarativeContainer):
                                     early_stop=None,
                                     learning_rate=None,                           
                                     observer_list=base.ObserverList(),
-                                    progress=monitor.Progress(),
-                                    blackbox=monitor.BlackBox(),
+                                    progress=report.Progress(),
+                                    blackbox=history.BlackBox(),
                                     summary=Summary.factory(),
                                     verbose=False,
                                     random_state=None,
@@ -69,8 +69,8 @@ class GradientDescent(containers.DeclarativeContainer):
                                     early_stop=None,
                                     learning_rate=None,                           
                                     observer_list=base.ObserverList(),
-                                    progress=monitor.Progress(),
-                                    blackbox=monitor.BlackBox(),
+                                    progress=report.Progress(),
+                                    blackbox=history.BlackBox(),
                                     summary=Summary.factory(),
                                     verbose=False,
                                     random_state=None,
@@ -89,8 +89,8 @@ class GradientDescent(containers.DeclarativeContainer):
                                     early_stop=None,
                                     learning_rate=None,                           
                                     observer_list=base.ObserverList(),
-                                    progress=monitor.Progress(),
-                                    blackbox=monitor.BlackBox(),
+                                    progress=report.Progress(),
+                                    blackbox=history.BlackBox(),
                                     summary=Summary.factory(),
                                     verbose=False,
                                     random_state=None,

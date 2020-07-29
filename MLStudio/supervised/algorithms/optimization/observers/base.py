@@ -443,14 +443,5 @@ class PerformanceObserver(Observer):
         self._update_log(epoch, log)
         
 
-# --------------------------------------------------------------------------- #
-#                    PERFORMANCE OBSERVER FACTORY                             #
-# --------------------------------------------------------------------------- #
-class PerformanceObserverFactory:
-
-    def get(self, metric, epsilon=None, patience=None):
-        factor = PerformanceObserver(metric=metric, epsilon=epsilon, 
-                                     patience=patience)
-        return factory
 
         

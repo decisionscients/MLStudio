@@ -1,22 +1,20 @@
-#!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 # =========================================================================== #
-# Project : ML Studio                                                         #
-# Version : 0.1.14                                                            #
-# File    : monitoring.py                                                        #
+# Project : MLStudio                                                          #
+# File    : \report.py                                                        #
 # Python  : 3.8.3                                                             #
-# --------------------------------------------------------------------------  #
+# --------------------------------------------------------------------------- #
 # Author  : John James                                                        #
-# Company : DecisionScients                                                   #
-# Email   : jjames@decisionscients.com                                        #
-# URL     : https://github.com/decisionscients/MLStudio                       #
-# --------------------------------------------------------------------------  #
+# Company : nov8.ai                                                           #
+# Email   : jjames@nov8.ai                                                    #
+# URL     : https://github.com/nov8ai/MLStudio                                #
+# --------------------------------------------------------------------------- #
 # Created       : Friday, May 15th 2020, 9:16:41 pm                           #
-# Last Modified : Sunday, June 14th 2020, 11:49:38 pm                         #
-# Modified By   : John James (jjames@decisionscients.com)                     #
-# --------------------------------------------------------------------------  #
+# Last Modified : Tuesday, July 28th 2020, 9:09:28 pm                         #
+# Modified By   : John James (jjames@nov8.ai)                                 #
+# --------------------------------------------------------------------------- #
 # License : BSD                                                               #
-# Copyright (c) 2020 DecisionScients                                          #
+# Copyright (c) 2020 nov8.ai                                                  #
 # =========================================================================== #
 """Module containing observers that monitor and report on optimization."""
 from abc import ABC, abstractmethod
@@ -27,92 +25,13 @@ import sys
 
 import numpy as np
 import pandas as pd
+from tabulate import tabulate
 
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
-from mlstudio.supervised.algorithms.optimization.services.activations import Activation
-from mlstudio.supervised.algorithms.optimization.services.loss import Loss
-from mlstudio.supervised.algorithms.optimization.services.optimizers import Optimizer
-from mlstudio.supervised.algorithms.optimization.services.regularizers import Regularizer
-from mlstudio.supervised.algorithms.optimization.services.tasks import Task
 from mlstudio.supervised.performance.base import BaseMeasure, BaseMetric
-from mlstudio.utils.data_manager import dict_search
-from mlstudio.utils.validation import validate_metric, validate_int
-from mlstudio.utils.validation import validate_zero_to_one
+from mlstudio.supervised.algorithms.optimization.observers.history import BlackBox
 from mlstudio.utils.format import proper
 from mlstudio.utils.print import Printer
-
-# --------------------------------------------------------------------------- #
-#                                BLACKBOX                                     #
-# --------------------------------------------------------------------------- #
-class BlackBox(base.Observer):
-    """Repository for data obtained during optimization."""
-
-    def __init__(self):
-        super(BlackBox, self).__init__()
-        self.name = "BlackBox"
-
-    def on_train_begin(self, log=None):
-        """Sets instance variables at the beginning of training.
-        
-        Parameters
-        ----------
-        log : Dict
-            Dictionary containing the X and y data
-        """ 
-        self.total_epochs = 0
-        self.total_batches = 0
-        self.start = datetime.datetime.now()
-        self.epoch_log = {}
-        self.batch_log = {}        
-
-    def on_train_end(self, log=None):        
-        """Sets instance variables at end of training.
-        
-        Parameters
-        ----------
-        log : Dict
-            Not used 
-        """
-        self.end = datetime.datetime.now()
-        self.duration = (self.end-self.start).total_seconds() 
-
-    def on_batch_end(self, batch, log=None):
-        """Updates data and statistics relevant to the training batch.
-        
-        Parameters
-        ----------
-        batch : int
-            The current training batch
-        
-        log : dict
-            Dictionary containing batch statistics, such as batch size, current
-            weights and training cost.
-        """
-        log = log or {}
-        self.total_batches += 1
-        for k,v in log.items():
-            self.batch_log.setdefault(k,[]).append(v)            
-
-    def on_epoch_end(self, epoch, log=None):
-        """Updates data and statistics relevant to the training epoch.
-
-        Parameters
-        ----------
-        epoch : int
-            The current training epoch
-        
-        log : dict
-            Dictionary containing data and statistics for the current epoch,
-            such as weights, costs, and optional validation set statistics
-            beginning with 'val_'.
-        """
-        log = log or {}
-        self.total_epochs += 1
-        for k,v in log.items():
-            self.epoch_log.setdefault(k,[]).append(v)
-
-
-
 
 # --------------------------------------------------------------------------- #
 #                                PROGRESS                                     #
@@ -174,50 +93,70 @@ class Summary(base.Observer):
 
     def _data_summary(self):
         """Prints summary of the data used for training (and validation)."""
-        print("**********************************")
-        print(self.model.train_data_package['X_train']['metadata'])
 
-        X_train_metadata = self.model.train_data_package['X_train']['metadata']
-        self.printer.print_dictionary(X_train_metadata, "Training Set (X)")
+        X_train_metadata = self.model.train_data_package['X_train']['metadata']                
         y_train_metadata = self.model.train_data_package['y_train']['metadata']
-        self.printer.print_dictionary(y_train_metadata, "Training Set (y)") 
-
+        
         if self.model.train_data_package.get('X_val'):       
-            X_val_metadata = self.model.train_data_package['X_val']['metadata']
-            self.printer.print_dictionary(X_val_metadata, "Validation Set (X)")
+            X_val_metadata = self.model.train_data_package['X_val']['metadata']            
             y_val_metadata = self.model.train_data_package['y_val']['metadata']
-            self.printer.print_dictionary(y_val_metadata, "Validation Set (y)") 
+
+            headers = ["n_Observations", "n_Features", "Size (Bytes)"]
+            df_X = {'X_train': X_train_metadata, "X_val": X_val_metadata}
+            self.printer.print_title("Training and Validation Input Data (X)")
+            df_X = pd.DataFrame(data=df_X)
+            print(tabulate(df_X.T, headers, tablefmt="simple"))
+
+            headers = ["n_Observations", "Data Type","Data Class", "n_Classes", "Size (Bytes)"]
+            df_y = {'y_train': y_train_metadata, "y_val": y_val_metadata}
+            self.printer.print_title("Training and Validation Target Data (y)")
+            df_y = pd.DataFrame(data=df_y)
+            print(tabulate(df_y.T, headers, tablefmt="simple"))
+        else:
+            self.printer.print_title("Training Set (X)")
+            self.printer.print_dictionary(X_train_metadata)
+            self.printer.print_title("Training Set (y)")
+            self.printer.print_dictionary(y_train_metadata)                        
+            
+    def _resource_summary(self):
+        """Produces data on memory and CPU consumption."""
+        bb = self.model.get_blackbox()
+        log = bb.epoch_log
+        d = OrderedDict()
+        d['Total CPU Time (s)'] = round(np.sum(log['cpu_time']), 4)
+        d['Average Peak Memory (bytes)'] = round(np.mean(log['peak_memory']), 4)
+        d['Average Current Memory (bytes)'] = round(np.mean(log['current_memory']), 4)
+        self.printer.print_dictionary(d, "Resource Consumption")
 
     def _performance_summary(self):        
         """Renders early stop optimization data."""
-        #TODO: update once evaluator observer is done.
-        pass
 
-        # log = self.model.blackbox.epoch_log
-        # datasets = {'train': 'Training', 'val': 'Validation'}
-        # keys = ['train', 'val']
-        # metrics = ['cost', 'score']
-        # print_data = []
-        # # Format labels and data for printing from result parameter
-        # for performance in list(itertools.product(keys, metrics)):
-        #     d = {}
-        #     key = performance[0] + '_' + performance[1]
-        #     if log.get(key):
-        #         label = datasets[performance[0]] + ' ' + proper(performance[1]) 
-        #         d['label'] = label
-        #         if performance[1] == 'score' and hasattr(self.model, 'metric'):                    
-        #             d['data'] = str(np.round(log.get(key)[-1],4)) + " " + self.model.metric.name
-        #         else:
-        #             d['data'] = str(np.round(log.get(key)[-1],4)) 
-        #         print_data.append(d) 
+        bb = self.model.get_blackbox()
+        log = bb.epoch_log
+        datasets = {'train': 'Training', 'val': 'Validation'}
+        keys = ['train', 'val']
+        metrics = ['cost', 'score']
+        print_data = []
+        # Format labels and data for printing from result parameter
+        for performance in list(itertools.product(keys, metrics)):
+            d = {}
+            key = performance[0] + '_' + performance[1]
+            if log.get(key):
+                label = datasets[performance[0]] + ' ' + proper(performance[1]) 
+                d['label'] = label
+                if performance[1] == 'score':                    
+                    d['data'] = str(np.round(log.get(key)[-1],4)) + " " + self.model.task.scorer.label
+                else:
+                    d['data'] = str(np.round(log.get(key)[-1],4)) 
+                print_data.append(d) 
 
-        # # Print performance statistics
-        # performance_summary = OrderedDict()
-        # for i in range(len(print_data)):
-        #     performance_summary[print_data[i]['label']] = print_data[i]['data']
-        # title = "Performance Summary"
-        # self.printer.print_dictionary(performance_summary, title)    
-        # 
+        # Print performance statistics
+        performance_summary = OrderedDict()
+        for i in range(len(print_data)):
+            performance_summary[print_data[i]['label']] = print_data[i]['data']
+        title = "Performance Summary"
+        self.printer.print_dictionary(performance_summary, title)    
+        
     _hdf = pd.DataFrame()
     def _update_params(self, level, k, v):
         """Adds a k,v pair of params to the hyperparameter dataframe."""        
@@ -266,6 +205,7 @@ class Summary(base.Observer):
     def report(self):
           
         self._optimization_summary()
+        self._resource_summary()
         self._data_summary()
         self._performance_summary()
         self._hyperparameter_summary()

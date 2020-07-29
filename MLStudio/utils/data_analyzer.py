@@ -197,7 +197,6 @@ def get_target_info(y):
     
     d['data_type'] = data_type
     d['data_class'] = data_class
-    d['classes'] = classes
     d['n_classes'] = n_classes
     d['size (Bytes)'] = sys.getsizeof(y)
     return d

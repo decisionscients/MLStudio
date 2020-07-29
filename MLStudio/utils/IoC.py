@@ -143,7 +143,7 @@ po = performance_observer_factory(metric='val_score', epsilon=0.001, patience=5)
 class Summary(containers.DeclarativeContainer):       
     """IoC Container for Gradient Descent summary providers."""
 
-    summary = providers.Factory(monitor.Summary,
+    summary = providers.Factory(report.Summary,
                                 printer=Printer())            
 
 # --------------------------------------------------------------------------- #
@@ -168,9 +168,9 @@ class Estimators(containers.DeclarativeContainer):
     gradient_descent_factory = providers.Factory(GradientDescent,                                
                                     optimizer=optimizers.GradientDescentOptimizer,
                                     observer_list=base.ObserverList,
-                                    progress=monitor.Progress,
-                                    blackbox=monitor.BlackBox,
-                                    summary=monitor.Summary
+                                    progress=report.Progress,
+                                    blackbox=history.BlackBox,
+                                    summary=report.Summary
                                     )
 
 # Obtain some dependencies

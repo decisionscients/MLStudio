@@ -108,33 +108,33 @@ def validate_array_like(param, param_name=""):
 def validate_gradient_checker(param):
     from mlstudio.supervised.algorithms.optimization.observers import debug
     if param is None:
-        raise ValueError("The GradientCheck observer from optimization.observers.monitor is required.")
+        raise ValueError("The GradientCheck observer from optimization.observers.debug is required.")
     if not isinstance(param, debug.GradientCheck):
-        raise TypeError("The GradientCheck observer from optimization.observers.monitor is required.")
+        raise TypeError("The GradientCheck observer from optimization.observers.debug is required.")
     return True            
 # --------------------------------------------------------------------------  #        
 def validate_summary(param):
-    from mlstudio.supervised.algorithms.optimization.observers import monitor    
+    from mlstudio.supervised.algorithms.optimization.observers import report    
     if param is None:
-        raise ValueError("The Summary observer from optimization.observers.monitor is required.")
-    if not isinstance(param, monitor.Summary):
-        raise TypeError("The Summary observer from optimization.observers.monitor is required.")
+        raise ValueError("The Summary observer from optimization.observers.report is required.")
+    if not isinstance(param, report.Summary):
+        raise TypeError("The Summary observer from optimization.observers.report is required.")
     return True                
 # --------------------------------------------------------------------------  #        
 def validate_progress(param):
-    from mlstudio.supervised.algorithms.optimization.observers import monitor    
+    from mlstudio.supervised.algorithms.optimization.observers import report    
     if param is None:
-        raise ValueError("The Progress observer from optimization.observers.monitor is required.")    
-    if not isinstance(param, monitor.Progress):
-        raise TypeError("The Progress observer from optimization.observers.monitor is required.")
+        raise ValueError("The Progress observer from optimization.observers.report is required.")    
+    if not isinstance(param, report.Progress):
+        raise TypeError("The Progress observer from optimization.observers.report is required.")
     return True        
 # --------------------------------------------------------------------------  #        
 def validate_black_box(param):
-    from mlstudio.supervised.algorithms.optimization.observers import monitor    
+    from mlstudio.supervised.algorithms.optimization.observers import history    
     if param is None:
-        raise ValueError("The BlackBox observer from optimization.observers.monitor is required.")    
-    if not isinstance(param, monitor.BlackBox):
-        raise TypeError("The BlackBox observer from optimization.observers.monitor is required.")
+        raise ValueError("The BlackBox observer from optimization.observers.history is required.")    
+    if not isinstance(param, history.BlackBox):
+        raise TypeError("The BlackBox observer from optimization.observers.history is required.")
     return True        
 # --------------------------------------------------------------------------  #        
 def validate_regression_loss(param):

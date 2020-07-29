@@ -28,12 +28,12 @@ from sklearn.utils.estimator_checks import check_estimator
 from sklearn.linear_model import SGDRegressor, SGDClassifier
 
 from mlstudio.factories import tasks, observers, algorithms
-from mlstudio.supervised.algorithms.optimization.observers import base, debug
-from mlstudio.supervised.algorithms.optimization.observers import monitor
-from mlstudio.supervised.algorithms.optimization.services import loss, tasks
+from mlstudio.supervised.algorithms.optimization.observers import base
+from mlstudio.supervised.algorithms.optimization.observers import history
+from mlstudio.supervised.algorithms.optimization.observers import report
+from mlstudio.supervised.algorithms.optimization.services import tasks
 from mlstudio.supervised.algorithms.optimization.services import optimizers
-from mlstudio.supervised.algorithms.optimization.services import regularizers
-from mlstudio.supervised.performance import regression, binaryclass
+from mlstudio.supervised.performance import regression
 # --------------------------------------------------------------------------  #
 @mark.regressor
 class GradientRegressorTests:
@@ -43,9 +43,9 @@ class GradientRegressorTests:
         assert isinstance(est.task, tasks.LinearRegression), "Error GradientRegressorTest: task is invalid."        
         assert isinstance(est.optimizer, optimizers.GradientDescentOptimizer), "Error GradientRegressorTest: optimizer is invalid."        
         assert isinstance(est.observer_list, base.ObserverList), "Error GradientRegressorTest: observer_list is invalid."        
-        assert isinstance(est.progress, monitor.Progress), "Error GradientRegressorTest: progress is invalid."        
-        assert isinstance(est.blackbox, monitor.BlackBox), "Error GradientRegressorTest: blackbox is invalid."
-        assert isinstance(est.summary, monitor.Summary), "Error GradientRegressorTest: summary is invalid."
+        assert isinstance(est.progress, report.Progress), "Error GradientRegressorTest: progress is invalid."        
+        assert isinstance(est.blackbox, history.BlackBox), "Error GradientRegressorTest: blackbox is invalid."
+        assert isinstance(est.summary, report.Summary), "Error GradientRegressorTest: summary is invalid."
         assert est.eta0 == 0.01, "Error GradientRegressorTest: eta0 is invalid."
         assert est.epochs == 1000, "Error GradientRegressorTest: epochs is invalid."
         assert est.batch_size is None, "Error GradientRegressorTest: batch_size is invalid."
@@ -70,18 +70,21 @@ class GradientRegressorTests:
         bb = est.get_blackbox()
         assert bb.total_epochs == 5000, "Regressor: blackbox error, num epochs incorrect"
         assert bb.total_batches == 5000, "Regressor: blackbox error, num batches incorrect"
-        #TODO: Change to evaluator observer
-        # assert len(bb.epoch_log.get('train_cost')) == 5000, "Regressor: blackbox error, train_cost length != num epochs"
-        # assert len(bb.epoch_log.get('val_cost')) == 5000, "Regressor: blackbox error, val_cost length != num epochs"
-        # assert len(bb.epoch_log.get('train_score')) == 5000, "Regressor: blackbox error, train_score length != num epochs"
-        # assert len(bb.epoch_log.get('val_score')) == 5000, "Regressor: blackbox error, val_score length != num epochs"        
-        # assert len(bb.epoch_log.get('theta')) == 5000, "Regressor: blackbox error, theta shape incorrect"
-        # assert len(bb.epoch_log.get('gradient')) == 5000, "Regressor: blackbox error, gradient shape incorrect"
-        # assert len(bb.epoch_log.get('gradient_norm')) == 5000, "Regressor: blackbox error, gradient_norm length != num epochs"        
+        
+        assert len(bb.epoch_log.get('train_cost')) == 5000, "Regressor: blackbox error, train_cost length != num epochs"
+        assert len(bb.epoch_log.get('val_cost')) == 5000, "Regressor: blackbox error, val_cost length != num epochs"
+        assert len(bb.epoch_log.get('train_score')) == 5000, "Regressor: blackbox error, train_score length != num epochs"
+        assert len(bb.epoch_log.get('val_score')) == 5000, "Regressor: blackbox error, val_score length != num epochs"        
+        assert len(bb.epoch_log.get('theta')) == 5000, "Regressor: blackbox error, theta shape incorrect"
+        assert len(bb.epoch_log.get('gradient')) == 5000, "Regressor: blackbox error, gradient shape incorrect"
+        assert len(bb.epoch_log.get('gradient_norm')) == 5000, "Regressor: blackbox error, gradient_norm length != num epochs"        
+        assert len(bb.epoch_log.get('cpu_time')) == 5000, "Regressor: blackbox error, gradient_norm length != num epochs"        
+        assert len(bb.epoch_log.get('current_memory')) == 5000, "Regressor: blackbox error, gradient_norm length != num epochs"        
+        assert len(bb.epoch_log.get('peak_memory')) == 5000, "Regressor: blackbox error, gradient_norm length != num epochs"        
         skl_scores = skl.score(X_train, y_train)
         est_scores = est.score(X_train, y_train)
         d = (skl_scores-est_scores)/skl_scores
-        print("SKL {k}     MLS {m}     RDIF {d}".format(k=str(skl_scores), m=str(est_scores), d=str(d)))
+        print("\nSKL {k}     MLS {m}     RDIF {d}".format(k=str(skl_scores), m=str(est_scores), d=str(d)))
         assert np.isclose(skl.score(X_train,y_train), est.score(X_train, y_train), rtol=1e-2), "Regressor: inaccurate train scores "
         assert np.isclose(skl.score(X_test,y_test), est.score(X_test, y_test), rtol=1e-2), "Regressor: inaccurate test scores "
         # Test summary
