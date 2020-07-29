@@ -32,16 +32,14 @@ from mlstudio.utils import validation
 class Task(ABC, BaseEstimator):
     """Defines the base class for all tasks."""
 
-    def __init__(self, loss, metrics, primary_metric, scorer_factory,
-                 data_processor, activation=None, random_state=None):
+    def __init__(self, loss, scorer, data_processor, activation=None, 
+                 random_state=None):
         self.loss = loss
-        self.metrics = metrics
-        self.primary_metric = primary_metric
-        self.scorer_factory = scorer_factory
+        self.scorer = scorer
         self.data_processor = data_processor
         self.activation = activation        
         self.random_state = random_state
-        self._n_features_plus_bias = None         
+        self._n_features = None         
         self._n_classes = None
         self._data_prepared = False
 
@@ -49,12 +47,20 @@ class Task(ABC, BaseEstimator):
     def name(self):
         pass
 
-    @abstractproperty   
-    def scorer(self):
-        return self._scorer
+    @abstractproperty
+    def loss(self):
+        pass
 
-    def prepare_data(self, X, y=None, val_size=None):
-        """Prepares data for training.
+    @abstractproperty
+    def scorer(self):
+        pass
+
+    @abstractproperty
+    def data_processor(self):
+        pass
+
+    def prepare_train_data(self, X, y=None):
+        """Prepares training data.
         
         Parameters
         ----------
@@ -64,19 +70,52 @@ class Task(ABC, BaseEstimator):
         y : array-like of shape (n_samples,) or (n_samples, n_classes)
             The dependent variable from the training set.
 
-        val_size : float in (0,1) or None
-            Proportion of training data to allocate to validation set.
-
-        Returns 
+        Returns
         -------
-        data : dictionary 
-            Dict containing training and optionally validation data
+        X_train : array-like of shape (n_samples, n_features) 
+        y_train : array-like of shape (n_samples,) or (n_samples, n_classes)
+
         """
-        data = self._data_processor.fit_transform(X, y, val_size)
-        self._n_features_plus_bias = data['original']['X'].shape[1]+1
-        self._n_classes = data['original']['metadata'].get("Num Classes")
+
+        data = self._data_processor.process_train_data(X, y, random_state)
+        self._n_features = data['X_train']['metadata']['n_features']
+
+        self._data_prepared = True
+
+        return data
+
+    def prepare_train_val_data(self, X, y=None, val_size=None, random_state=None):
+        """Prepares training data.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The independent variables from the training set.
+
+        y : array-like of shape (n_samples,) or (n_samples, n_classes)
+            The dependent variable from the training set.
+
+        val_size : float in [0,1)
+            The proportion of data to allocate to the validation set.
+
+        random_state : int or None (default=None)
+            Seed for pseudo-randomization
+
+        Returns
+        -------
+        X_train : array-like of shape (n_samples, n_features) 
+        y_train : array-like of shape (n_samples,) or (n_samples, n_classes)
+        X_test : array-like of shape (n_samples, n_features) 
+        y_test : array-like of shape (n_samples,) or (n_samples, n_classes)        
+
+        """
+
+        data = self._data_processor.process_train_val_data(X, y, val_size, 
+                                                            random_state)
+        self._n_features = data['X_train']['metadata']['n_features']
         self._data_prepared = True
         return data
+
 
     def init_weights(self, theta_init=None):
         """Initializes parameters to theta_init or to random values.
@@ -98,13 +137,13 @@ class Task(ABC, BaseEstimator):
             raise Exception("Data must be prepared before weights are initialized.")
 
         if theta_init is not None:
-            assert theta_init.shape == (self._n_features_plus_bias),\
+            assert theta_init.shape == (self._n_features,),\
                 "Initial parameters theta must have shape (n_features,)."
             theta = theta_init
         else:
             # Random initialization of weights
             rng = np.random.RandomState(self.random_state)                
-            theta = rng.randn(self._n_features_plus_bias) 
+            theta = rng.randn(self._n_features) 
             # Set the bias initialization to zero
             theta[0] = 0
         return theta
@@ -151,41 +190,52 @@ class Task(ABC, BaseEstimator):
 
         return self._loss.gradient(theta, X, y, y_out)
 
-    def predict(self, theta, X):
+    def _check_X(self, X, theta):
+        """Checks X to ensure that it has been processed for training/prediction."""
+        if X.shape[1] != theta.shape[0]:
+            X = validation.check_X(X)        
+            data = self._data_processor.process_X_test_data(X)        
+        return data['X_test']['data']
+
+    @abstractmethod
+    def predict(self, X, theta):
         """Computes prediction on test data.
 
         Parameters
         ----------
-        theta : array-like of shape (n_features) or (n_features, n_classes)
-            The model parameters
-
         X : array-like of shape (n_samples, n_features)
             The input data
+
+        theta : array-like of shape (n_features) or (n_features, n_classes)
+            The model parameters
         
         Returns
         -------
         y_pred : prediction
         """
-        X = validation.check_X(X)        
-        return self.compute_output(theta, X)
+        pass
 
-    def score(self, y, y_pred, *args, **kwargs):
+    @abstractmethod
+    def score(self, X, y, theta):
         """Computes the score using the designated scorer object.
         
         Parameters
         ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+
         y : array-like shape (n_samples,)
             The true target values
 
-        y_pred : array-like shape (n_samples,)
-            The predicted target values
+        theta : array-like of shape (n_features) or (n_features, n_classes)
+            The model parameters
 
         Returns
         -------
         score : the score for the prediction
         
         """
-        return self._scorer(y, y_pred, *args, **kwargs)
+        pass
 
     
 # --------------------------------------------------------------------------  #
@@ -221,16 +271,38 @@ class LinearRegression(Task):
     @data_processor.setter
     def data_processor(self, x):
         validation.validate_regression_data_processor(x)
-        self._data_processor = x
+        self._data_processor = x        
+
+    def predict(self, X, theta):
+        X = self._check_X(X, theta)
+        return self.compute_output(theta, X)
+
+    def score(self, X, y, theta):
+        y_pred = self.predict(X, theta)          
+        return self._scorer(y, y_pred, n_features=self._n_features)
 
     def predict_proba(self, theta, X):
         raise NotImplementedError("predict_proba is not implemented for the LinearRegression task.")
 
+# --------------------------------------------------------------------------  #
+class ClassificationTask(Task):
+    """Abstract class for binary and multiclass classification subclasses."""
+
+    @abstractmethod
+    def _check_y(self, y):
+        pass    
+
+    def score(self, X, y, theta):
+        y = self._check_y(y)
+        if self._scorer.is_probability_metric:
+            y_pred = self.predict_proba(X, theta)
+        else:
+            y_pred = self.predict(X, theta)          
+        return self._scorer(y, y_pred, n_features=self._n_features)
 
 # --------------------------------------------------------------------------  #
-class LogisticRegression(Task):
+class LogisticRegression(ClassificationTask):
     """Defines the logistic regression task."""
-
 
     @property
     def name(self):
@@ -242,7 +314,7 @@ class LogisticRegression(Task):
 
     @loss.setter
     def loss(self, x):
-        validation.validate_binary_classification_loss(x)
+        validation.validate_binaryclass_loss(x)
         self._loss = x
 
     @property
@@ -251,7 +323,7 @@ class LogisticRegression(Task):
 
     @scorer.setter
     def scorer(self, x):
-        validation.validate_classification_scorer(x)
+        validation.validate_binaryclass_scorer(x)
         self._scorer = x
     
     @property
@@ -260,7 +332,7 @@ class LogisticRegression(Task):
 
     @data_processor.setter
     def data_processor(self, x):
-        validation.validate_binary_classification_data_processor(x)
+        validation.validate_binaryclass_data_processor(x)
         self._data_processor = x        
 
     @property
@@ -269,7 +341,7 @@ class LogisticRegression(Task):
 
     @activation.setter
     def activation(self, x):
-        validation.validate_binary_classification_activation(x)
+        validation.validate_binaryclass_activation(x)
         self._activation = x                
     
     def compute_output(self, theta, X):
@@ -294,43 +366,51 @@ class LogisticRegression(Task):
         z = super(LogisticRegression, self).compute_output(theta, X)        
         return self._activation(z)
 
-    def predict(self, theta, X):
+    def _check_y(self, y):
+        """Confirms y has been encoded."""
+        if not validation.is_binary(y):
+            data = self._data_processor.process_y_test_data(y)
+            y = data['y_test']['data']
+        return y
+        
+    def predict(self, X, theta):
         """Computes prediction on test data.
 
         Parameters
         ----------
-        theta : array_like of shape (n_features,) or (n_features, n_classes)
-            The current learned parameters of the model.
-
         X : array-like of shape (n_samples, n_features)
             The input data
+
+        theta : array_like of shape (n_features,) or (n_features, n_classes)
+            The current learned parameters of the model.
 
         Returns
         -------
         y_pred : Predicted class
         """        
-        o = self.compute_output(theta, X)
+        o = self.predict_proba(X, theta)
         return np.round(o).astype(int)
 
-    def predict_proba(self, theta, X):
+    def predict_proba(self, X, theta):
         """Predicts the probability of the positive class
 
         Parameters
         ----------
-        theta : array_like of shape (n_features,) or (n_features, n_classes)
-            The current learned parameters of the model.
-
         X : array-like of shape (n_samples, n_features)
             The input data
+
+        theta : array_like of shape (n_features,) or (n_features, n_classes)
+            The current learned parameters of the model.
 
         Returns
         -------
         y_pred : Predicted class probability
-        """               
-        return self.compute_output(theta, X)        
+        """
+        X = self._check_X(X, theta)
+        return self.compute_output(theta, X)     
 
 # --------------------------------------------------------------------------  #
-class MulticlassClassification(Task):
+class MulticlassClassification(ClassificationTask):
     """Defines the multiclass classification task."""
 
     @property
@@ -343,7 +423,7 @@ class MulticlassClassification(Task):
 
     @loss.setter
     def loss(self, x):
-        validation.validate_multiclass_classification_loss(x)
+        validation.validate_multiclass_loss(x)
         self._loss = x
 
     @property
@@ -352,7 +432,7 @@ class MulticlassClassification(Task):
 
     @scorer.setter
     def scorer(self, x):
-        validation.validate_classification_scorer(x)
+        validation.validate_multiclass_scorer(x)
         self._scorer = x
 
     @property
@@ -361,7 +441,7 @@ class MulticlassClassification(Task):
 
     @data_processor.setter
     def data_processor(self, x):
-        validation.validate_multiclass_classification_data_processor(x)
+        validation.validate_multiclass_data_processor(x)
         self._data_processor = x        
 
     @property
@@ -370,7 +450,7 @@ class MulticlassClassification(Task):
 
     @activation.setter
     def activation(self, x):
-        validation.validate_multiclass_classification_activation(x)
+        validation.validate_multiclass_activation(x)
         self._activation = x                        
 
     def init_weights(self, theta_init=None):
@@ -393,13 +473,13 @@ class MulticlassClassification(Task):
             raise Exception("Data must be prepared before weights are initialized.")
 
         if theta_init is not None:
-            assert theta_init.shape == (self._n_features_plus_bias, self._n_classes),\
+            assert theta_init.shape == (self._n_features, self._n_classes),\
                 "Initial parameters theta must have shape (n_features,n_classes)."
             theta = theta_init
         else:
             # Random initialization of weights
             rng = np.random.RandomState(self.random_state)                
-            theta = rng.randn(self._n_features_plus_bias, self._n_classes) 
+            theta = rng.randn(self._n_features, self._n_classes) 
             # Set the bias initialization to zero
             theta[0] = 0
         return theta          
@@ -425,37 +505,46 @@ class MulticlassClassification(Task):
         z = super(MulticlassClassification, self).compute_output(theta, X)
         return self._activation(z)        
 
-    def predict(self, theta, X):
+    def _check_y(self, y):
+        """Confirms y has been one-hot encoded."""
+        if not validation.is_one_hot(y):
+            data = self._data_processor.process_y_test_data(y)
+            y = data['y_test']['data'] 
+        return y
+
+    def predict(self, X, theta):
         """Computes prediction on test data.
 
         Parameters
         ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data        
+
         theta : array_like of shape (n_features,) or (n_features, n_classes)
             The current learned parameters of the model.
-
-        X : array-like of shape (n_samples, n_features)
-            The input data
 
         Returns
         -------
         y_pred : Predicted class
-        """           
-        o = self.compute_output(theta, X)        
+        """
+                   
+        o = self.predict_proba(X, theta)
         return o.argmax(axis=1)
 
-    def predict_proba(self, theta, X):
+    def predict_proba(self, X, theta):
         """Predicts the class probabilities.
 
         Parameters
         ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data        
+
         theta : array_like of shape (n_features,) or (n_features, n_classes)
             The current learned parameters of the model.
-
-        X : array-like of shape (n_samples, n_features)
-            The input data
 
         Returns
         -------
         y_pred : Predicted class probability
         """              
-        return self.compute_output(theta, X)                
+        X = self._check_X(X, theta)
+        return self.compute_output(theta, X)            

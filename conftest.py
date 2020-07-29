@@ -39,7 +39,7 @@ warnings.filterwarnings('ignore')
 warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
 
 from mlstudio.supervised.algorithms.optimization.services.optimizers import Adagrad
-from mlstudio.supervised.algorithms.optimization.services.objectives import StyblinskiTank
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import StyblinskiTank
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import TimeDecay
 from mlstudio.supervised.performance.regression import MSE
 from mlstudio.utils.data_manager import StandardScaler
@@ -54,9 +54,9 @@ sys.path.append(datadir)
 # ---------------------------------------------------------------------------- #
 
 collect_ignore_glob = ["*ions.py", "*ic_regression.py", "performance*",
-                       "*ss_regression.py", "*metrics.py", "*tasks.py",
+                       "*ss_regression.py", "*metrics.py", 
                        "*stop.py", "*IoC.py", "*validation.py",
-                       "*regression.py", "*monitor.py",
+                       "*monitor.py",
                        "*test_cross_validation.py", "test_pure*.py"]
 
 # ---------------------------------------------------------------------------- #
@@ -183,14 +183,14 @@ def get_logistic_regression_data_features():
     return data['feature_names']
 
 @fixture(scope="session")
-def get_multiclass_classification_data():
+def get_multiclass_data():
     X, y = datasets.load_iris(return_X_y=True)
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)
     return X, y   
 
 @fixture(scope="session")
-def get_multiclass_classification_data_categorical():
+def get_multiclass_data_categorical():
     X, y = datasets.load_iris(return_X_y=True)
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)
@@ -201,7 +201,7 @@ def get_multiclass_classification_data_categorical():
 
 
 @fixture(scope="session")
-def get_multiclass_classification_data_split(make_multiclass_data):
+def get_multiclass_data_split(make_multiclass_data):
     X, y = make_multiclass_data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.33, random_state=50)
@@ -306,10 +306,8 @@ class MockEstimator:
         self.optimizer = optimizer
         self.observers = observers
         self.verbose = verbose
-        self.random_state = random_state
-        # Initialize attributes and variables required
-        self.metric_ = MSE()
-        self.blackbox_ = MockBlackBox()
+        self.random_state = random_state        
+        self.blackbox = MockBlackBox()
         self._eta = eta0
     # ----------------------------------------------------------------------- #
     @property
@@ -340,7 +338,7 @@ class MockEstimator:
             for observer in self.observers:
                 observer.on_epoch_end(epoch=i, log=None)
             log = {'epoch': i, 'eta': self._eta}            
-            self.blackbox_.on_epoch_end(epoch=i,log=log)            
+            self.get_blackbox().on_epoch_end(epoch=i,log=log)            
 
 @fixture(scope="session")
 def get_mock_estimator():
@@ -475,9 +473,9 @@ def get_classification_metric_test_package():
     return d    
 
 @fixture(scope="session")
-def get_multiclass_classification_task_package():
+def get_multiclass_task_package():
     d = {}
-    filename = "test_task_multiclass_classification.xlsx"
+    filename = "test_task_multiclass.xlsx"
     filepath = os.path.join(datadir, filename)
     xlsx = pd.ExcelFile(filepath)
     d['X'] = pd.read_excel(xlsx, sheet_name='X', header=0, usecols="A:E").to_numpy()

@@ -49,5 +49,5 @@ class EarlyStopTests:
             est = GDRegressor(observers=[EarlyStop(epsilon=epsilon,patience=50)],
                                            random_state=5)
             est.fit(X,y)
-            assert est.blackbox_.total_epochs > last_epoch, "Early stop error " + str(epsilon)
-            last_epoch = est.blackbox_.total_epochs
+            assert est.get_blackbox().total_epochs > last_epoch, "Early stop error " + str(epsilon)
+            last_epoch = est.get_blackbox().total_epochs

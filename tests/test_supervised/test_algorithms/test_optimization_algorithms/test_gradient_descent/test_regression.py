@@ -33,16 +33,15 @@ from mlstudio.supervised.algorithms.optimization.observers import monitor
 from mlstudio.supervised.algorithms.optimization.services import loss, tasks
 from mlstudio.supervised.algorithms.optimization.services import optimizers
 from mlstudio.supervised.algorithms.optimization.services import regularizers
-from mlstudio.supervised.performance import regression, binary_class
+from mlstudio.supervised.performance import regression, binaryclass
 # --------------------------------------------------------------------------  #
 @mark.regressor
 class GradientRegressorTests:
 
     def test_regressor_instantiation(self):        
-        est = algorithms.GradientDescent.regressor_factory()       
+        est = algorithms.GradientDescent.regression()       
         assert isinstance(est.task, tasks.LinearRegression), "Error GradientRegressorTest: task is invalid."        
         assert isinstance(est.optimizer, optimizers.GradientDescentOptimizer), "Error GradientRegressorTest: optimizer is invalid."        
-        assert isinstance(est.metric, regression.RegressionMetric), "Error GradientRegressorTest: metric is invalid."        
         assert isinstance(est.observer_list, base.ObserverList), "Error GradientRegressorTest: observer_list is invalid."        
         assert isinstance(est.progress, monitor.Progress), "Error GradientRegressorTest: progress is invalid."        
         assert isinstance(est.blackbox, monitor.BlackBox), "Error GradientRegressorTest: blackbox is invalid."
@@ -57,29 +56,28 @@ class GradientRegressorTests:
 
     def test_regressor_fit(self, get_regression_data_split):
         X_train, X_test, y_train, y_test = get_regression_data_split
-        est = algorithms.GradientDescent.regressor_factory(check_gradient=False, epochs=5000)        
+        est = algorithms.GradientDescent.regression(check_gradient=False, epochs=5000)        
         est.fit(X_train, y_train)
         skl = SGDRegressor()
         skl.fit(X_train, y_train)
         # Test data split
         m = X_train.shape[0]
-        assert np.isclose(est.X_train_.shape[0], (0.7 * m), rtol=1), "Regressor: training data shape incorrect."
-        assert np.isclose(est.X_val_.shape[0], (0.3 * m), rtol=1), "Regressor: validation data shape incorrect."
-        assert est.X_train_.shape[0] == len(est.y_train_), "Regressor: X_train,y_train shape mismatch "
-        assert est.X_val_.shape[0] == len(est.y_val_), "Regressor: X_val,y_val shape mismatch "
+        assert np.isclose(est.X_train.shape[0], (0.7 * m), rtol=1), "Regressor: training data shape incorrect."
+        assert np.isclose(est.X_val.shape[0], (0.3 * m), rtol=1), "Regressor: validation data shape incorrect."
+        assert est.X_train.shape[0] == len(est.y_train), "Regressor: X_train,y_train shape mismatch "
+        assert est.X_val.shape[0] == len(est.y_val), "Regressor: X_val,y_val shape mismatch "
         # Test blackbox
-        bb = est.blackbox_
+        bb = est.get_blackbox()
         assert bb.total_epochs == 5000, "Regressor: blackbox error, num epochs incorrect"
         assert bb.total_batches == 5000, "Regressor: blackbox error, num batches incorrect"
-        assert len(bb.epoch_log.get('train_cost')) == 5000, "Regressor: blackbox error, train_cost length != num epochs"
-        assert len(bb.epoch_log.get('val_cost')) == 5000, "Regressor: blackbox error, val_cost length != num epochs"
-        assert len(bb.epoch_log.get('train_score')) == 5000, "Regressor: blackbox error, train_score length != num epochs"
-        assert len(bb.epoch_log.get('val_score')) == 5000, "Regressor: blackbox error, val_score length != num epochs"        
-        assert len(bb.epoch_log.get('theta')) == 5000, "Regressor: blackbox error, theta shape incorrect"
-        assert len(bb.epoch_log.get('gradient')) == 5000, "Regressor: blackbox error, gradient shape incorrect"
-        assert len(bb.epoch_log.get('gradient_norm')) == 5000, "Regressor: blackbox error, gradient_norm length != num epochs"        
-        # Test metric
-        assert isinstance(est.metric_, regression.R2), "Regressor: metric incorrect."
+        #TODO: Change to evaluator observer
+        # assert len(bb.epoch_log.get('train_cost')) == 5000, "Regressor: blackbox error, train_cost length != num epochs"
+        # assert len(bb.epoch_log.get('val_cost')) == 5000, "Regressor: blackbox error, val_cost length != num epochs"
+        # assert len(bb.epoch_log.get('train_score')) == 5000, "Regressor: blackbox error, train_score length != num epochs"
+        # assert len(bb.epoch_log.get('val_score')) == 5000, "Regressor: blackbox error, val_score length != num epochs"        
+        # assert len(bb.epoch_log.get('theta')) == 5000, "Regressor: blackbox error, theta shape incorrect"
+        # assert len(bb.epoch_log.get('gradient')) == 5000, "Regressor: blackbox error, gradient shape incorrect"
+        # assert len(bb.epoch_log.get('gradient_norm')) == 5000, "Regressor: blackbox error, gradient_norm length != num epochs"        
         skl_scores = skl.score(X_train, y_train)
         est_scores = est.score(X_train, y_train)
         d = (skl_scores-est_scores)/skl_scores

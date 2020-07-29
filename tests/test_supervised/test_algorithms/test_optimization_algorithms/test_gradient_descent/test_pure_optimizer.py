@@ -43,12 +43,12 @@ from mlstudio.supervised.algorithms.optimization.services.optimizers import RMSp
 from mlstudio.supervised.algorithms.optimization.services.optimizers import Adam, AdaMax, Nadam
 from mlstudio.supervised.algorithms.optimization.services.optimizers import AMSGrad, AdamW, QHAdam
 from mlstudio.supervised.algorithms.optimization.services.optimizers import QuasiHyperbolicMomentum
-from mlstudio.supervised.algorithms.optimization.services.objectives import Adjiman, BartelsConn
-from mlstudio.supervised.algorithms.optimization.services.objectives import Himmelblau, Leon
-from mlstudio.supervised.algorithms.optimization.services.objectives import Rosenbrock, Branin02
-from mlstudio.supervised.algorithms.optimization.services.objectives import StyblinskiTank
-from mlstudio.supervised.algorithms.optimization.services.objectives import ThreeHumpCamel, Ursem01
-from mlstudio.supervised.algorithms.optimization.services.objectives import Wikipedia
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import Adjiman, BartelsConn
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import Himmelblau, Leon
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import Rosenbrock, Branin02
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import StyblinskiTank
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import ThreeHumpCamel, Ursem01
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import Wikipedia
 # --------------------------------------------------------------------------  #
 #                       TEST OBJECTIVE FUNCTIONS                              #
 # --------------------------------------------------------------------------  #
@@ -72,7 +72,7 @@ class PureOptimizerObjectiveTests:
                                                    optimizer=optimizer,
                                                    objective=objective)
                 est.fit()
-                bb = est.blackbox_
+                bb = est.get_blackbox()
                 solution_norm = np.linalg.norm(bb.epoch_log.get('theta')[-1])
                 assert len(bb.epoch_log.get('epoch')) == epochs, "Epoch log wrong length"
                 assert len(bb.epoch_log.get('theta')) == epochs, "Epoch log wrong length"

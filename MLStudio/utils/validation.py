@@ -61,6 +61,11 @@ def is_valid_array_size(x, lower=1e-10, upper=1e10):
     else:
         return False
 # --------------------------------------------------------------------------  #
+def is_binary(x):
+    """Returns true if x is binary"""
+    return np.array_equal(x, x.astype(bool))
+
+# --------------------------------------------------------------------------  #
 def is_one_hot(x):
     """Returns true if a 2 dimensional matrix is in one-hot encoded format."""
     if np.ndim(x) == 1:
@@ -100,7 +105,7 @@ def validate_array_like(param, param_name=""):
         return True             
 
 # --------------------------------------------------------------------------  #        
-def validate_gradient_check(param):
+def validate_gradient_checker(param):
     from mlstudio.supervised.algorithms.optimization.observers import debug
     if param is None:
         raise ValueError("The GradientCheck observer from optimization.observers.monitor is required.")
@@ -139,14 +144,14 @@ def validate_regression_loss(param):
         raise TypeError("The loss parameter is not a valid regression loss class.")
     return True
 # --------------------------------------------------------------------------  #        
-def validate_binary_classification_loss(param):
+def validate_binaryclass_loss(param):
     from mlstudio.supervised.algorithms.optimization.services import loss
     valid_loss_classes = (loss.CrossEntropy,)
     if not isinstance(param, valid_loss_classes):
         raise TypeError("The loss parameter is not a valid binary classification loss class.")
     return True
 # --------------------------------------------------------------------------  #        
-def validate_multiclass_classification_loss(param):
+def validate_multiclass_loss(param):
     from mlstudio.supervised.algorithms.optimization.services import loss
     valid_loss_classes = (loss.CategoricalCrossEntropy,)
     if not isinstance(param, valid_loss_classes):
@@ -156,32 +161,32 @@ def validate_multiclass_classification_loss(param):
 
 # --------------------------------------------------------------------------  #        
 def validate_regression_data_processor(param):
-    from mlstudio.utils.data_manager import RegressionData    
-    if not isinstance(param, RegressionData):
+    from mlstudio.data_services.preprocessing import RegressionDataProcessor    
+    if not isinstance(param, RegressionDataProcessor):
         raise TypeError("The data_processor parameter is not a valid regression data_processor class.")
     return True
 # --------------------------------------------------------------------------  #        
-def validate_binary_classification_data_processor(param):
-    from mlstudio.utils.data_manager import BinaryClassData    
-    if not isinstance(param, BinaryClassData):
+def validate_binaryclass_data_processor(param):
+    from mlstudio.data_services.preprocessing import BinaryClassDataProcessor
+    if not isinstance(param, BinaryClassDataProcessor):
         raise TypeError("The data_processor parameter is not a valid logistic regression data_processor class.")
     return True    
 # --------------------------------------------------------------------------  #        
-def validate_multiclass_classification_data_processor(param):
-    from mlstudio.utils.data_manager import MultiClassData    
-    if not isinstance(param, MultiClassData):
+def validate_multiclass_data_processor(param):
+    from mlstudio.data_services.preprocessing import MultiClassDataProcessor
+    if not isinstance(param, MultiClassDataProcessor):
         raise TypeError("The data_processor parameter is not a valid multiclass classification data_processor class.")
     return True      
 
 
 # --------------------------------------------------------------------------  #        
-def validate_binary_classification_activation(param):
+def validate_binaryclass_activation(param):
     from mlstudio.supervised.algorithms.optimization.services.activations import Sigmoid    
     if not isinstance(param, Sigmoid):
         raise TypeError("This class requires the Sigmoid activation function.")
     return True    
 # --------------------------------------------------------------------------  #        
-def validate_multiclass_classification_activation(param):
+def validate_multiclass_activation(param):
     from mlstudio.supervised.algorithms.optimization.services.activations import Softmax
     if not isinstance(param, Softmax):
         raise TypeError("This class requires the Softmax activation function.")
@@ -218,7 +223,7 @@ def validate_regression_scorer(scorer):
     else:
         return True
 # --------------------------------------------------------------------------  #
-def validate_classification_scorer(scorer):    
+def validate_binaryclass_scorer(scorer):    
     from mlstudio.supervised.performance.base import BaseBinaryClassificationMetric
     valid_scorers = [cls.__name__ for cls in BaseBinaryClassificationMetric.__subclasses__()]
     if not isinstance(scorer, BaseBinaryClassificationMetric):
@@ -227,6 +232,17 @@ def validate_classification_scorer(scorer):
         raise TypeError(msg)
     else:
         return True
+
+# --------------------------------------------------------------------------  #
+def validate_multiclass_scorer(scorer):    
+    from mlstudio.supervised.performance.base import BaseMultiClassificationMetric
+    valid_scorers = [cls.__name__ for cls in BaseMultiClassificationMetric.__subclasses__()]
+    if not isinstance(scorer, BaseMultiClassificationMetric):
+        msg = "{s} is an invalid scorer object. The valid scorer classes include : \
+            {v}".format(s=scorer, v=str(valid_scorers))
+        raise TypeError(msg)
+    else:
+        return True        
 
 # --------------------------------------------------------------------------  #
 def validate_activation(activation):    
@@ -241,7 +257,7 @@ def validate_activation(activation):
 
 # --------------------------------------------------------------------------  #
 def validate_objective(objective):    
-    from mlstudio.supervised.algorithms.optimization.services.objectives import Objective
+    from mlstudio.supervised.algorithms.optimization.services.benchmarks import Objective
     valid_objectives = [cls.__name__ for cls in Objective.__subclasses__()]
     if not isinstance(objective, Objective):
         msg = "{s} is an invalid Objective function object. The valid Objective \
@@ -390,7 +406,7 @@ def validate_estimator(estimator):
     validate_progress(estimator.progress)
     validate_summary(estimator.summary)
     validate_bool(param=estimator.check_gradient, param_name='check_gradient')
-    validate_gradient_check(estimator.gradient_check)
+    validate_gradient_checker(estimator.gradient_checker)
 
     if estimator.verbose:
         validate_int(param=estimator.verbose, param_name='verbose',

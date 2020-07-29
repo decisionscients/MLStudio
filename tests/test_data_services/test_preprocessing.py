@@ -72,22 +72,22 @@ class RegressionDataTests:
         check_add_bias(X, X_train, test=self._test)
 
 @mark.data_processing
-@mark.binary_class_data
+@mark.binaryclass_data
 class BinaryClassDataTests:
 
     _test = "Binary classification data"
 
-    def test_binary_class_train_data(self, get_logistic_regression_data):
+    def test_binaryclass_train_data(self, get_logistic_regression_data):
         X, y = get_logistic_regression_data
         y = np.random.choice(["hat", "bowl"], size=y.shape[0])
-        data_processor = DataProcessors.binary_class
+        data_processor = DataProcessors.binaryclass
         X_train, y_train = data_processor().process_train_data(X, y)
         check_add_bias(X, X_train,test = self._test)        
 
-    def test_binary_class_train_val_data(self, get_logistic_regression_data):
+    def test_binaryclass_train_val_data(self, get_logistic_regression_data):
         X, y = get_logistic_regression_data
         y = np.random.choice(["hat", "bowl"], size=y.shape[0])
-        data_processor = DataProcessors.binary_class
+        data_processor = DataProcessors.binaryclass
         X_train, X_val, y_train, y_val = data_processor().process_train_val_data(X, y, val_size=0.3)
         check_add_bias(X, X_train, test = self._test)        
         check_add_bias(X, X_val, test = self._test)        
@@ -95,37 +95,37 @@ class BinaryClassDataTests:
         check_label_encoder(y_train, test=self._test)
         check_label_encoder(y_val, test=self._test)
 
-    def test_binary_class_X_test_data(self, get_logistic_regression_data):
+    def test_binaryclass_X_test_data(self, get_logistic_regression_data):
         X, y = get_logistic_regression_data
         y = np.random.choice(["hat", "bowl"], size=y.shape[0])
-        data_processor = DataProcessors.binary_class
+        data_processor = DataProcessors.binaryclass
         X_train = data_processor().process_X_test_data(X)
         check_add_bias(X, X_train, test=self._test)
 
-    def test_binary_class_y_test_data(self, get_logistic_regression_data):
+    def test_binaryclass_y_test_data(self, get_logistic_regression_data):
         X, y = get_logistic_regression_data
         y = np.random.choice(["hat", "bowl"], size=y.shape[0])        
-        data_processor = DataProcessors.binary_class
+        data_processor = DataProcessors.binaryclass
         y_test = data_processor().process_y_test_data(y) 
         check_label_encoder(y_test, test=self._test)
 
 @mark.data_processing
-@mark.multi_class_data
+@mark.multiclass_data
 class MultiClassDataTests:
 
     _test = "Multi classification data"
 
-    def test_multi_class_train_data(self, get_multiclass_classification_data):
-        X, y = get_multiclass_classification_data
+    def test_multiclass_train_data(self, get_multiclass_data):
+        X, y = get_multiclass_data
         y = np.random.choice(["hat", "bowl", "junky", "riding", "happy"], size=y.shape[0])
-        data_processor = DataProcessors.multi_class
+        data_processor = DataProcessors.multiclass
         X_train, y_train = data_processor().process_train_data(X, y)
         check_add_bias(X, X_train,test = self._test)        
 
-    def test_multi_class_train_val_data(self, get_multiclass_classification_data):
-        X, y = get_multiclass_classification_data
+    def test_multiclass_train_val_data(self, get_multiclass_data):
+        X, y = get_multiclass_data
         y = np.random.choice(["hat", "bowl", "junky", "riding", "happy"], size=y.shape[0])
-        data_processor = DataProcessors.multi_class
+        data_processor = DataProcessors.multiclass
         X_train, X_val, y_train, y_val = data_processor().process_train_val_data(X, y, val_size=0.3)
         check_add_bias(X, X_train, test = self._test)        
         check_add_bias(X, X_val, test = self._test)        
@@ -133,17 +133,17 @@ class MultiClassDataTests:
         check_one_hot_label_encoder(y_train, test=self._test)
         check_one_hot_label_encoder(y_val, test=self._test)
 
-    def test_multi_class_X_test_data(self, get_multiclass_classification_data):
-        X, y = get_multiclass_classification_data
+    def test_multiclass_X_test_data(self, get_multiclass_data):
+        X, y = get_multiclass_data
         y = np.random.choice(["hat", "bowl", "junky", "riding", "happy"], size=y.shape[0])
-        data_processor = DataProcessors.multi_class
+        data_processor = DataProcessors.multiclass
         X_train = data_processor().process_X_test_data(X)
         check_add_bias(X, X_train, test=self._test)
 
-    def test_multi_class_y_test_data(self, get_multiclass_classification_data):
-        X, y = get_multiclass_classification_data
+    def test_multiclass_y_test_data(self, get_multiclass_data):
+        X, y = get_multiclass_data
         y = np.random.choice(["hat", "bowl", "junky", "riding", "happy"], size=y.shape[0])
-        data_processor = DataProcessors.multi_class
+        data_processor = DataProcessors.multiclass
         y_test = data_processor().process_y_test_data(y)         
         check_one_hot_label_encoder(y_test, test=self._test)
         

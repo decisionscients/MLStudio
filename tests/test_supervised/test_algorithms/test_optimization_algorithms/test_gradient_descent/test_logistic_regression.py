@@ -35,7 +35,7 @@ from mlstudio.supervised.algorithms.optimization.observers.learning_rate import 
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import Adaptive
 from mlstudio.supervised.algorithms.optimization.observers.early_stop import EarlyStop
 from mlstudio.supervised.algorithms.optimization.observers.debug import GradientCheck
-from mlstudio.supervised.algorithms.optimization.services.objectives import CrossEntropy
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import CrossEntropy
 from mlstudio.supervised.algorithms.optimization.services.optimizers import GradientDescentOptimizer
 from mlstudio.supervised.algorithms.optimization.services.optimizers import Momentum
 from mlstudio.supervised.algorithms.optimization.services.optimizers import Nesterov

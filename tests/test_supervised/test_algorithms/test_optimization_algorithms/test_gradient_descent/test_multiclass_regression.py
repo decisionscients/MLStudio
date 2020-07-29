@@ -35,7 +35,7 @@ from mlstudio.supervised.algorithms.optimization.observers.learning_rate import 
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import Adaptive
 from mlstudio.supervised.algorithms.optimization.observers.early_stop import EarlyStop
 from mlstudio.supervised.algorithms.optimization.observers.debug import GradientCheck
-from mlstudio.supervised.algorithms.optimization.services.objectives import CategoricalCrossEntropy
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import CategoricalCrossEntropy
 from mlstudio.supervised.algorithms.optimization.services.optimizers import GradientDescentOptimizer
 from mlstudio.supervised.algorithms.optimization.services.optimizers import Momentum
 from mlstudio.supervised.algorithms.optimization.services.optimizers import Nesterov
@@ -78,10 +78,10 @@ estimators = [GDClassifier(metric=scenario[0],
                                        for scenario in scenarios]
 @mark.gd
 @mark.multiclass
-@mark.multiclass_classification_skl
+@mark.multiclass_skl
 #@mark.skip(reason="takes too long")
 @parametrize_with_checks(estimators)
-def test_multiclass_classification_sklearn(estimator, check):    
+def test_multiclass_sklearn(estimator, check):    
     metric = estimator.metric.name
     objective = estimator.objective.name
     early_stop = estimator.early_stop.name if estimator.early_stop else None
@@ -94,10 +94,10 @@ def test_multiclass_classification_sklearn(estimator, check):
 
 @mark.gd
 @mark.multiclass
-@mark.multiclass_classification
+@mark.multiclass
 #@mark.skip(reason="takes too long")
-def test_multiclass_classification(get_multiclass_classification_data_split):
-    X_train, X_test, y_train, y_test = get_multiclass_classification_data_split
+def test_multiclass(get_multiclass_data_split):
+    X_train, X_test, y_train, y_test = get_multiclass_data_split
     n_within_1_pct = 0
     n_within_10_pct = 0    
     s_num = 0

@@ -123,7 +123,7 @@ class GradientDescent(BaseEstimator):
                  theta_init=None, optimizer=None, early_stop=None, 
                  learning_rate=None,  observer_list=None, progress=None, 
                  blackbox=None, summary=None, verbose=False, random_state=None,
-                 check_gradient=False, gradient_check=None):
+                 check_gradient=False, gradient_checker=None):
 
         self.task = task
         self.eta0 = eta0
@@ -141,7 +141,7 @@ class GradientDescent(BaseEstimator):
         self.verbose = verbose
         self.random_state = random_state    
         self.check_gradient = check_gradient
-        self.gradient_check = gradient_check
+        self.gradient_checker = gradient_checker
 
     # ----------------------------------------------------------------------- #                
     @property
@@ -205,24 +205,44 @@ class GradientDescent(BaseEstimator):
         self._converged = x      
 
     @property
-    def X(self):
-        return self._data['train']['X'] 
+    def theta(self):
+        return self._theta
 
     @property
-    def y(self):
-        return self._data['train']['y']
+    def train_data_package(self):
+        return self._train_data_package
+
+    @property
+    def X_train(self):
+        return self._X_train 
+
+    @property
+    def y_train(self):
+        return self._y_train 
 
     @property
     def X_val(self):
-        return self._data['validation'].get('X', None)
+        try:
+            return self._X_val
+        except:
+            warnings.warn("This estimator has non X_val attribute.")
 
     @property
     def y_val(self):
-        return self._data['validation'].get('y', None)      
+        try:
+            return self._y_val
+        except:
+            warnings.warn("This estimator has non y_val attribute.")
 
-    @property
-    def data(self):
-        return self._data  
+    def get_blackbox(self):
+        return self._blackbox
+
+    # TODO: add evaluator and profiler observers
+    def get_evaluator(self):
+        pass
+
+    def get_profiler(self):
+        pass
 
     # ----------------------------------------------------------------------- #
     def _compile(self, log=None):
@@ -234,10 +254,8 @@ class GradientDescent(BaseEstimator):
         self._optimizer = copy.deepcopy(self.optimizer)
         self._progress = copy.deepcopy(self.progress)
         self._summary = copy.deepcopy(self.summary) 
-        self._gradient_check = copy.deepcopy(self.gradient_check)
-
-        # Attributes
-        self.blackbox_ = copy.deepcopy(self.blackbox)        
+        self._gradient_checker = copy.deepcopy(self.gradient_checker)
+        self._blackbox = copy.deepcopy(self.blackbox)
 
         # Optional dependencies
         self._learning_rate = copy.deepcopy(self.learning_rate) if \
@@ -251,20 +269,31 @@ class GradientDescent(BaseEstimator):
         """Initializes variables that represent teh state of the estimator."""
         self._epoch = 0      
         self._batch = 0 
-        self.theta_ = None
+        self._train_data_package = None
+        self._theta = None
         self._gradient = None
         self._converged = False
 
     # ----------------------------------------------------------------------- #    
     def _prepare_data(self, X, y):
         """Prepares data for training and creates data and metadata attributes."""        
-        self._data = self._task.prepare_data(X, y, self.val_size)                
+        if self.val_size:
+            self._train_data_package = self._task.prepare_train_val_data(X, y, self.val_size, \
+                    self.random_state)      
+            self._X_train = self._train_data_package['X_train']['data']          
+            self._X_val = self._train_data_package['X_val']['data']
+            self._y_train = self._train_data_package['y_train']['data']
+            self._y_val = self._train_data_package['y_val']['data']
+        else:
+            self._train_data_package = self._task.prepare_train_data(X, y, self.random_state)
+            self._X_train = self._train_data_package['X_train']['data']          
+            self._y_train = self._train_data_package['y_train']['data']
 
     # ----------------------------------------------------------------------- #
     def _initialize_observers(self, log=None):
         """Initialize remaining observers. Create and initialize observer list."""        
 
-        self._observer_list.append(self.blackbox_)
+        self._observer_list.append(self._blackbox)
         self._observer_list.append(self._summary)
 
         if self.verbose:
@@ -277,7 +306,7 @@ class GradientDescent(BaseEstimator):
             self._observer_list.append(self._early_stop)
 
         if self.check_gradient:
-            self._observer_list.append(self._gradient_check)
+            self._observer_list.append(self._gradient_checker)
         
         # Publish model parameters and estimator instance on observer objects.
         self._observer_list.set_params(self.get_params())
@@ -286,7 +315,7 @@ class GradientDescent(BaseEstimator):
     # ----------------------------------------------------------------------- #
     def _init_weights(self):
         """Initialize weights with user values or random values."""
-        self.theta_ = self._task.init_weights(self.theta_init) 
+        self._theta = self._task.init_weights(self.theta_init) 
     # ----------------------------------------------------------------------- #
     def _on_train_begin(self, log=None):
         """Compiles the estimator, initializes weights, observers, and state"""
@@ -301,21 +330,19 @@ class GradientDescent(BaseEstimator):
     def _on_train_end(self, log=None):
         """Finalizes training and posts model parameter attributes."""
         log = log or {}
-        self._memory_monitor.stop()
         self.n_iter_ = self._epoch         
-        self.intercept_, self.coef_ = unpack_parameters(self.theta_)
+        self.intercept_, self.coef_ = unpack_parameters(self._theta)
         self._observer_list.on_train_end()        
     # ----------------------------------------------------------------------- #
     def _on_epoch_begin(self, log=None):
         """Initializes the epoch and notifies observers."""
-        log = log or {}
-        self._set_current_state()
-        self._observer_list.on_epoch_begin(epoch=self._epoch, log=self._current_state)
+        log = log or {}        
+        self._observer_list.on_epoch_begin(epoch=self._epoch, log=log)
     # ----------------------------------------------------------------------- #
     def _on_epoch_end(self, log=None):
         """Finalizes epoching and notifies observers."""
         log = log or {}
-        self._observer_list.on_epoch_end(epoch=self._epoch, log=self._current_state)
+        self._observer_list.on_epoch_end(epoch=self._epoch, log=log)
         self._epoch += 1
     # ----------------------------------------------------------------------- #            
     def _on_batch_begin(self, log=None):
@@ -373,6 +400,31 @@ class GradientDescent(BaseEstimator):
         """
         return self._task.compute_loss(theta, y, y_out)
 
+    # ----------------------------------------------------------------------- #            
+    def train_epoch(self):
+        """Trains a single epoch."""
+        self._on_epoch_begin()
+
+        for X_batch, y_batch in batch_iterator(self._X_train, self._y_train, batch_size=self.batch_size):
+            self._on_batch_begin()
+
+            y_out = self.compute_output(self._theta, X_batch)     
+            cost = self.compute_loss(self._theta, y_batch, y_out)
+            # Grab theta for the batch log before it is updated
+            log = {'batch': self._batch,'theta': self._theta, 
+                    'train_cost': cost}
+            # Update the model parameters and return gradient for monitoring purposes.
+            self._theta, self._gradient = self._optimizer(gradient=self._task.loss.gradient, \
+                learning_rate=self._eta, theta=copy.copy(self._theta),  X=X_batch, y=y_batch,\
+                    y_out=y_out)                       
+            
+            log['gradient_norm'] = np.linalg.norm(self._gradient) 
+            self._on_batch_end(log=log)
+            
+        log = {'epoch': self._epoch, 'theta': self._theta}        
+        self._on_epoch_end(log)
+
+
     # ----------------------------------------------------------------------- #    
     def fit(self, X, y):
         """Trains model until stop condition is met.
@@ -387,29 +439,12 @@ class GradientDescent(BaseEstimator):
         -------
         self : returns instance of self
         """        
-        train_log = {'X': X, 'y': y}
-        self._on_train_begin(train_log)        
+        log = {'X': X, 'y': y}
+        self._on_train_begin(log)        
 
         while (self._epoch < self.epochs and not self._converged):            
-            self._on_epoch_begin()
+            self.train_epoch()
 
-            for X_batch, y_batch in batch_iterator(self.X_, self.y_, batch_size=self.batch_size):
-                self._on_batch_begin()
-
-                y_out = self.compute_output(self.theta_, X_batch)     
-                cost = self.compute_loss(self.theta_, y_batch, y_out)
-                # Grab theta for the batch log before it is updated
-                log = {'batch': self._batch,'theta': self.theta_, 
-                       'train_cost': cost}
-                # Update the model parameters and return gradient for monitoring purposes.
-                self.theta_, self._gradient = self._optimizer(gradient=self._task.loss.gradient, \
-                    learning_rate=self._eta, theta=copy.copy(self.theta_),  X=X_batch, y=y_batch,\
-                        y_out=y_out)                       
-                
-                log['gradient_norm'] = np.linalg.norm(self._gradient) 
-                self._on_batch_end(log=log)
-
-            self._on_epoch_end()
         self._on_train_end()
         return self 
 
@@ -427,32 +462,8 @@ class GradientDescent(BaseEstimator):
         y_pred : prediction
         """
         validation.check_is_fitted(self)
-        X = AddBiasTerm().fit_transform(X)
-        return self._task.predict(self.theta_, X)    
+        return self._task.predict(X, self._theta)    
 
-    # ----------------------------------------------------------------------- #    
-    def score_internal(self, X, y):
-        """Computes the training (and validation) scores during training.
-
-        This private method computes scores during training to monitor 
-        optimization performance. Unlike the public score method, the 
-        input data has already been processed and therefore, it contains
-        the intercept term. 
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features+1)
-            The input data
-
-        y : array-like of shape (n_samples,) 
-        
-        Returns
-        -------
-        score 
-        """        
-        y_pred = self._task.predict(self.theta_, X)
-        return self._task.score(y, y_pred, self.n_features_)
-        
 
     # ----------------------------------------------------------------------- #    
     def score(self, X, y):
@@ -471,17 +482,12 @@ class GradientDescent(BaseEstimator):
         score based upon the metric object.
         
         """
-        y_pred = self.predict(X)
-        return self._task.score(y, y_pred, self.n_features_)        
-    # ----------------------------------------------------------------------- #
-        
+        return self._task.score(X, y, self._theta)               
 
     # ----------------------------------------------------------------------- #    
     def summarize(self):  
         """Prints and optimization report. """
         self._summary.report()      
-
-
 
 
 # =========================================================================== #
@@ -510,24 +516,10 @@ class GD(BaseEstimator):
             if self.theta_init.shape[0] != 2:
                 raise ValueError("Parameters theta must have shape (2,)")
             else:
-                self.theta_ = self.theta_init
+                self._theta = self.theta_init
         else:            
             rng = np.random.RandomState(self.random_state)         
-            self.theta_ = rng.randn(2)    
-
-    # ----------------------------------------------------------------------- #
-    def _set_current_state(self):
-        """Takes snapshot of current state and performance."""        
-        s = {}
-        s['epoch'] = self._epoch
-        s['eta'] = self._eta
-        s['theta'] = self.theta_
-        s['train_cost'] = self._objective(self.theta_)
-        s['gradient'] = self._gradient
-        s['gradient_norm'] = None
-        if self._gradient is not None:
-            s['gradient_norm'] = np.linalg.norm(self._gradient)
-        self._current_state = s
+            self._theta = rng.randn(2)    
 
     # ----------------------------------------------------------------------- #            
     def fit(self, X=None, y=None):
@@ -549,10 +541,10 @@ class GD(BaseEstimator):
 
             self._on_epoch_begin()
 
-            cost = self._objective(self.theta_)
+            cost = self._objective(self._theta)
 
-            self.theta_, self._gradient = self._optimizer(gradient=self._objective.gradient, \
-                    learning_rate=self._eta, theta=copy.deepcopy(self.theta_))                    
+            self._theta, self._gradient = self._optimizer(gradient=self._objective.gradient, \
+                    learning_rate=self._eta, theta=copy.deepcopy(self._theta))                    
 
             self._on_epoch_end()
 

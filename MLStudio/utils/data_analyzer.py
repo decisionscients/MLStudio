@@ -20,6 +20,7 @@
 # =========================================================================== #
 """Data analysis helper functions."""
 from collections import OrderedDict
+import sys
 
 import numpy as np
 import pandas as pd
@@ -141,9 +142,19 @@ def get_features(X):
         features = ['X_' + str(i) for i in range(X.shape[1])]
     return features
 
+def get_feature_info(X):
+    d = OrderedDict()
+    d['n_observations'] = X.shape[0]    
+    d['n_features'] = X.shape[1]
+    d['size (Bytes)'] = sys.getsizeof(X)
+    return d
+    
+
 def get_target_info(y):
     """Obtains target data type and class information for classification data."""
-    
+    d = OrderedDict()
+    d['n_observations'] = y.shape[0]    
+
     if isinstance(y, (pd.DataFrame, pd.Series)):
         y = y.to_numpy()        
     else:
@@ -183,12 +194,12 @@ def get_target_info(y):
             data_class = "Binary"
         else:
             data_class = "Nominal"        
-
-    d = OrderedDict()
+    
     d['data_type'] = data_type
     d['data_class'] = data_class
     d['classes'] = classes
     d['n_classes'] = n_classes
+    d['size (Bytes)'] = sys.getsizeof(y)
     return d
     
 

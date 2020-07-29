@@ -31,8 +31,6 @@ from mlstudio.supervised.algorithms.optimization.gradient_descent import Gradien
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
 from mlstudio.supervised.algorithms.optimization.observers import monitor
 from mlstudio.supervised.algorithms.optimization.services import optimizers
-from mlstudio.supervised.performance.regression import R2
-from mlstudio.supervised.performance.classification import Accuracy
 from mlstudio.factories.tasks import Task
 from mlstudio.factories.observers import Summary
 
@@ -40,8 +38,8 @@ from mlstudio.factories.observers import Summary
 # --------------------------------------------------------------------------- #
 class GradientDescent(containers.DeclarativeContainer):
     """IoC Container for gradient descent estimator providers."""                                    
-    regressor_factory = providers.Factory(GradientDescent,
-                                    task=Task.linear_regression_factory(),
+    regression = providers.Factory(GradientDescent,
+                                    task=Task.regression(),
                                     eta0=0.01,
                                     epochs=1000,
                                     batch_size=None,
@@ -57,11 +55,11 @@ class GradientDescent(containers.DeclarativeContainer):
                                     verbose=False,
                                     random_state=None,
                                     check_gradient=False,
-                                    gradient_check=debug.GradientCheck()
+                                    gradient_checker=debug.GradientCheck()
                                     )
 
-    binary_classifier_factory = providers.Factory(GradientDescent,
-                                    task=Task.logistic_regression_factory(),
+    binaryclass = providers.Factory(GradientDescent,
+                                    task=Task.binaryclass(),
                                     eta0=0.01,
                                     epochs=1000,
                                     batch_size=None,
@@ -77,11 +75,11 @@ class GradientDescent(containers.DeclarativeContainer):
                                     verbose=False,
                                     random_state=None,
                                     check_gradient=False,
-                                    gradient_check=debug.GradientCheck()
+                                    gradient_checker=debug.GradientCheck()
                                     )
 
-    multiclass_classification_factory = providers.Factory(GradientDescent,
-                                    task=Task.multiclass_classification_factory(),
+    multiclass = providers.Factory(GradientDescent,
+                                    task=Task.multiclass(),
                                     eta0=0.01,
                                     epochs=1000,
                                     batch_size=None,
@@ -97,5 +95,5 @@ class GradientDescent(containers.DeclarativeContainer):
                                     verbose=False,
                                     random_state=None,
                                     check_gradient=False,
-                                    gradient_check=debug.GradientCheck()
+                                    gradient_checker=debug.GradientCheck()
                                     )

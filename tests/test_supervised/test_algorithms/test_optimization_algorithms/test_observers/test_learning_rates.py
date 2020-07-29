@@ -104,8 +104,8 @@ class StepDecayTests:
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate monitoring
-        epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('eta')
+        epochs = est.get_blackbox().epoch_log.get('epoch')
+        act_results = est.get_blackbox().epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -170,8 +170,8 @@ class TimeDecayTests:
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate monitoring
-        epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('eta')
+        epochs = est.get_blackbox().epoch_log.get('epoch')
+        act_results = est.get_blackbox().epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -236,8 +236,8 @@ class SqrtTimeDecayTests:
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate monitoring
-        epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('eta')
+        epochs = est.get_blackbox().epoch_log.get('epoch')
+        act_results = est.get_blackbox().epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -301,8 +301,8 @@ class ExponentialDecayTests:
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate monitoring
-        epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('eta')
+        epochs = est.get_blackbox().epoch_log.get('epoch')
+        act_results = est.get_blackbox().epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -385,8 +385,8 @@ class ExponentialStepDecayTests:
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate monitoring
-        epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('eta')
+        epochs = est.get_blackbox().epoch_log.get('epoch')
+        act_results = est.get_blackbox().epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -469,8 +469,8 @@ class ExponentialStepDecayStaircaseTests:
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate monitoring
-        epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('eta')
+        epochs = est.get_blackbox().epoch_log.get('epoch')
+        act_results = est.get_blackbox().epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -534,8 +534,8 @@ class PolynomialDecayTests:
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate monitoring
-        epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('eta')
+        epochs = est.get_blackbox().epoch_log.get('epoch')
+        act_results = est.get_blackbox().epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -606,8 +606,8 @@ class PolynomialStepDecayTests:
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate monitoring
-        epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('eta')
+        epochs = est.get_blackbox().epoch_log.get('epoch')
+        act_results = est.get_blackbox().epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -678,8 +678,8 @@ class PowerScheduleTests:
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate monitoring
-        epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('eta')
+        epochs = est.get_blackbox().epoch_log.get('epoch')
+        act_results = est.get_blackbox().epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)
@@ -744,8 +744,8 @@ class BottouScheduleTests:
         est = Estimator(epochs=10, eta0=0.1, observers=observers)
         est.fit()
         # Extract learning rate monitoring
-        epochs = est.blackbox_.epoch_log.get('epoch')
-        act_results = est.blackbox_.epoch_log.get('eta')
+        epochs = est.get_blackbox().epoch_log.get('epoch')
+        act_results = est.get_blackbox().epoch_log.get('eta')
         # Compare two arrays
         act_res_len = len(act_results)
         exp_res_len = len(exp_results)

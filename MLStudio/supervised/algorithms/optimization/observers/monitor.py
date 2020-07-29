@@ -29,12 +29,18 @@ import numpy as np
 import pandas as pd
 
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
+from mlstudio.supervised.algorithms.optimization.services.activations import Activation
+from mlstudio.supervised.algorithms.optimization.services.loss import Loss
+from mlstudio.supervised.algorithms.optimization.services.optimizers import Optimizer
+from mlstudio.supervised.algorithms.optimization.services.regularizers import Regularizer
+from mlstudio.supervised.algorithms.optimization.services.tasks import Task
+from mlstudio.supervised.performance.base import BaseMeasure, BaseMetric
 from mlstudio.utils.data_manager import dict_search
 from mlstudio.utils.validation import validate_metric, validate_int
 from mlstudio.utils.validation import validate_zero_to_one
 from mlstudio.utils.format import proper
 from mlstudio.utils.print import Printer
-from mlstudio.supervised.performance.base import BaseMeasure, BaseMetric
+
 # --------------------------------------------------------------------------- #
 #                                BLACKBOX                                     #
 # --------------------------------------------------------------------------- #
@@ -69,11 +75,6 @@ class BlackBox(base.Observer):
         """
         self.end = datetime.datetime.now()
         self.duration = (self.end-self.start).total_seconds() 
-        # Extracts final results and updates the model object.
-        final_results = {}
-        for k, v in self.epoch_log.items():
-            final_results[k] = v[-1]
-        self.model.final_results_ = final_results
 
     def on_batch_end(self, batch, log=None):
         """Updates data and statistics relevant to the training batch.
@@ -87,11 +88,12 @@ class BlackBox(base.Observer):
             Dictionary containing batch statistics, such as batch size, current
             weights and training cost.
         """
+        log = log or {}
         self.total_batches += 1
         for k,v in log.items():
             self.batch_log.setdefault(k,[]).append(v)            
 
-    def on_epoch_begin(self, epoch, log=None):
+    def on_epoch_end(self, epoch, log=None):
         """Updates data and statistics relevant to the training epoch.
 
         Parameters
@@ -109,28 +111,7 @@ class BlackBox(base.Observer):
         for k,v in log.items():
             self.epoch_log.setdefault(k,[]).append(v)
 
-    def _evaluate(self, epoch, log=None):
-        """Performs an evaluation of the estimator at current epoch.""" 
-        d = {}
-        d['epoch'] = epoch
-        d['eta'] = self.model.eta
-        d['theta'] = self.model.theta_
 
-        y_out = self.model.compute_output(self.model.theta_, self.model.X_train_)
-        d['train_cost'] = self.model.compute_loss(self.model.theta_, self.model.y_train_, y_out)        
-        d['train_score'] = self.score_internal(self.model.X_train_, self.model.y_train_)
-
-        # Check not only val_size but also for empty validation sets 
-        if self.val_size:
-            if self.X_val_.shape[0] > 0:                
-                y_out_val = self._task.compute_output(self.theta_, self.X_val_)
-                s['val_cost'] = self._task.compute_loss(self.theta_, self.y_val_, y_out_val)                                
-                s['val_score'] = self._score(self.X_val_, self.y_val_)
-
-        s['gradient'] = self._gradient
-        s['gradient_norm'] = None
-        if self._gradient is not None:
-            s['gradient_norm'] = np.linalg.norm(self._gradient) 
 
 
 # --------------------------------------------------------------------------- #
@@ -173,10 +154,6 @@ class Progress(base.Observer):
 class Summary(base.Observer):
     """Optimization summary class."""
 
-    _implicit_dependencies = (debug.GradientCheck, BlackBox, Printer, 
-                              Progress, base.ObserverList, BaseMetric,
-                              BaseMeasure)
-    
     def __init__(self, printer=None):
         super(Summary, self).__init__()
         self.printer = printer
@@ -185,7 +162,7 @@ class Summary(base.Observer):
     def _optimization_summary(self):
         """Prints optimization summary information."""
         
-        bb = self.model.blackbox_
+        bb = self.model.get_blackbox()
 
         optimization_summary = {'Name': self.model.description,
                                 'Start': str(bb.start),
@@ -197,64 +174,94 @@ class Summary(base.Observer):
 
     def _data_summary(self):
         """Prints summary of the data used for training (and validation)."""
+        print("**********************************")
+        print(self.model.train_data_package['X_train']['metadata'])
 
-        train_metadata = self.model.data['train']['metadata']
-        self.printer.print_dictionary(train_metadata, "Training Set")
-        try:            
-            val_metadata = self.model.data['validation']['metadata']
-        except:
-            val_metadata = None
-        if val_metadata:
-            self.printer.print_dictionary(val_metadata, "Validation Set")        
+        X_train_metadata = self.model.train_data_package['X_train']['metadata']
+        self.printer.print_dictionary(X_train_metadata, "Training Set (X)")
+        y_train_metadata = self.model.train_data_package['y_train']['metadata']
+        self.printer.print_dictionary(y_train_metadata, "Training Set (y)") 
+
+        if self.model.train_data_package.get('X_val'):       
+            X_val_metadata = self.model.train_data_package['X_val']['metadata']
+            self.printer.print_dictionary(X_val_metadata, "Validation Set (X)")
+            y_val_metadata = self.model.train_data_package['y_val']['metadata']
+            self.printer.print_dictionary(y_val_metadata, "Validation Set (y)") 
 
     def _performance_summary(self):        
         """Renders early stop optimization data."""
+        #TODO: update once evaluator observer is done.
+        pass
 
-        log = self.model.blackbox_.epoch_log
-        datasets = {'train': 'Training', 'val': 'Validation'}
-        keys = ['train', 'val']
-        metrics = ['cost', 'score']
-        print_data = []
-        # Format labels and data for printing from result parameter
-        for performance in list(itertools.product(keys, metrics)):
-            d = {}
-            key = performance[0] + '_' + performance[1]
-            if log.get(key):
-                label = datasets[performance[0]] + ' ' + proper(performance[1]) 
-                d['label'] = label
-                if performance[1] == 'score' and hasattr(self.model, 'metric'):                    
-                    d['data'] = str(np.round(log.get(key)[-1],4)) + " " + self.model.metric.name
-                else:
-                    d['data'] = str(np.round(log.get(key)[-1],4)) 
-                print_data.append(d) 
+        # log = self.model.blackbox.epoch_log
+        # datasets = {'train': 'Training', 'val': 'Validation'}
+        # keys = ['train', 'val']
+        # metrics = ['cost', 'score']
+        # print_data = []
+        # # Format labels and data for printing from result parameter
+        # for performance in list(itertools.product(keys, metrics)):
+        #     d = {}
+        #     key = performance[0] + '_' + performance[1]
+        #     if log.get(key):
+        #         label = datasets[performance[0]] + ' ' + proper(performance[1]) 
+        #         d['label'] = label
+        #         if performance[1] == 'score' and hasattr(self.model, 'metric'):                    
+        #             d['data'] = str(np.round(log.get(key)[-1],4)) + " " + self.model.metric.name
+        #         else:
+        #             d['data'] = str(np.round(log.get(key)[-1],4)) 
+        #         print_data.append(d) 
 
-        # Print performance statistics
-        performance_summary = OrderedDict()
-        for i in range(len(print_data)):
-            performance_summary[print_data[i]['label']] = print_data[i]['data']
-        title = "Performance Summary"
-        self.printer.print_dictionary(performance_summary, title)        
+        # # Print performance statistics
+        # performance_summary = OrderedDict()
+        # for i in range(len(print_data)):
+        #     performance_summary[print_data[i]['label']] = print_data[i]['data']
+        # title = "Performance Summary"
+        # self.printer.print_dictionary(performance_summary, title)    
+        # 
+    _hdf = pd.DataFrame()
+    def _update_params(self, level, k, v):
+        """Adds a k,v pair of params to the hyperparameter dataframe."""        
+        if v:
+            obj = k.split("__")[0]                        
+            d = {'level': level, 'object':obj, 'Hyperparameter': k, 'Value': v}
+            df = pd.DataFrame(data=d, index=[0])
+            self._hdf = pd.concat([self._hdf, df])
+        else:
+            obj = k.split("__")[0]                        
+            d = {'level': level, 'object':obj, 'Hyperparameter': k, 'Value': None}
+            df = pd.DataFrame(data=d, index=[0])
+            self._hdf = pd.concat([self._hdf, df])            
 
-    def _hyperparameter_summary(self):
-        """Displays model hyperparameters."""
 
-        hyperparameters = OrderedDict()
-        def get_params(o):
-            params = o.get_params()
-            for k, v in params.items():
-                if isinstance(v, (str, dict, bool, int, float, np.ndarray, \
-                    np.generic, list)) or v is None:
-                    k = o.__class__.__name__ + '__' + k
-                    hyperparameters[k] = str(v)
-                else:
-                    if not isinstance(v, self._implicit_dependencies) and\
-                        self.__class__.__name__ != v.__class__.__name__:
-                        k = v.__class__.__name__
-                        hyperparameters[k] = ""                        
-                        get_params(v)
-        get_params(self.model)
+    def _get_params(self, obj):
+        """Gets the hyperparameters for an object."""        
+        self._implicit_dependencies = (debug.GradientCheck, BlackBox, Printer, 
+                              Progress, base.ObserverList, BaseMetric,
+                              BaseMeasure, self.__class__)        
+        object_name = obj.__class__.__name__        
+        params = obj.get_params()
+        for k, v in params.items():
+            if isinstance(v, (str, dict, bool, int, float, np.ndarray, \
+                np.generic, list)) or v is None:                                
+                level = k.count("__")
+                k = object_name + "__" + k                                
+                self._update_params(level, k, v)                        
+            else:
+                if not isinstance(v, self._implicit_dependencies):                    
+                    self._update_params(level=0, k=" ", v=" ")                        
+                    k = v.__class__.__name__
+                    level = k.count("__")
+                    self._update_params(level, k, v=" ")                        
+                    self._get_params(v)        
 
-        self.printer.print_dictionary(hyperparameters, "Model HyperParameters")             
+    def _hyperparameter_summary(self):        
+        """Displays model hyperparameters."""        
+        
+        self.printer.print_title("Model Hyperparameters")
+        self._get_params(self.model)
+        hdf = self._hdf.loc[self._hdf['level'] == 0]
+        print(hdf[['Hyperparameter', 'Value']].to_string(index=False))
+
 
     def report(self):
           

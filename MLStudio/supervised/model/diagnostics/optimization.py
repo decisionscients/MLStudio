@@ -27,7 +27,7 @@ from mlstudio.utils.data_analyzer import describe_numeric_array
 
 def diagnose_gradient(estimator):
     """Produces descriptive statistics for the gradient."""
-    gradient_norms = estimator.blackbox_.epoch_log.get('gradient_norm')    
+    gradient_norms = estimator.get_blackbox().epoch_log.get('gradient_norm')    
     df = describe_numeric_array(gradient_norms, fmt='df')            
     print(tabulate(df, headers='keys', tablefmt='psql', showindex=False))
     return df

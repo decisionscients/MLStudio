@@ -99,7 +99,7 @@ def animate_optimization(estimators, max_frames=None, filepath=None, show=True):
         xm, xM = x['min'], x['max']
         ym, yM = y['min'], y['max']
         # Extract model data for plotting gradient descent models         
-        theta = model.blackbox_.epoch_log.get('theta')
+        theta = model.get_blackbox().epoch_log.get('theta')
         # Obtain step number for slicing if max_frames is provided.
         step = math.floor(len(theta) / max_frames) if max_frames else None
         # Clip thetas to plotting range 
@@ -109,7 +109,7 @@ def animate_optimization(estimators, max_frames=None, filepath=None, show=True):
         d = OrderedDict()
         d['theta_0'] = theta_0[::step]
         d['theta_1'] = theta_1[::step]
-        d['cost'] = model.blackbox_.epoch_log.get('train_cost')[::step]
+        d['cost'] = model.get_blackbox().epoch_log.get('train_cost')[::step]
         models[name] = d
         # Place index for models dictionary in a list for easy access
         names.append(name)
@@ -308,7 +308,7 @@ def animate_optimization_regression(estimators, max_frames=None, filepath=None, 
     models = OrderedDict()
     names = [] 
     for name, estimator in estimators.items():
-        theta = estimator.blackbox_.epoch_log.get('theta')
+        theta = estimator.get_blackbox().epoch_log.get('theta')
         # Obtain step number for slicing if max_frames is provided.
         step = math.floor(len(theta) / max_frames) if max_frames else None
         # Thetas converted to individual columns in dataframe and extacted  
@@ -318,7 +318,7 @@ def animate_optimization_regression(estimators, max_frames=None, filepath=None, 
         d = OrderedDict()
         d['theta_0'] = theta['theta_0'][::step].values.flatten()
         d['theta_1'] = theta['theta_1'][::step].values.flatten()
-        d['cost'] = estimator.blackbox_.epoch_log.get('train_cost')[::step]
+        d['cost'] = estimator.get_blackbox().epoch_log.get('train_cost')[::step]
         models[name] = d
         names.append(name)
 
@@ -505,15 +505,15 @@ class SingleModelSearch3D:
         sns.set(style="whitegrid", font_scale=1)
 
         # Create index for n <= maxframes number of points
-        iterations = np.arange(1, model.blackbox_.total_epochs+1)
-        idx = np.arange(0,model.blackbox_.total_epochs)
-        nth = math.floor(model.blackbox_.total_epochs/maxframes)
+        iterations = np.arange(1, model.get_blackbox().total_epochs+1)
+        idx = np.arange(0,model.get_blackbox().total_epochs)
+        nth = math.floor(model.get_blackbox().total_epochs/maxframes)
         nth = max(nth,1) 
         idx = idx[::nth]
         points = len(idx)
 
         # Create the x=theta0, y=theta1 grid for plotting
-        weights = todf(model.blackbox_.epoch_log['theta'], stub='theta_')        
+        weights = todf(model.get_blackbox().epoch_log['theta'], stub='theta_')        
         theta0 = weights['theta_0']
         theta1 = weights['theta_1']
 
@@ -591,10 +591,10 @@ class SingleModelSearch3D:
         def animate(i):
             # Animate 3d Line
             line3d.set_data(theta0[:idx[i]], theta1[:idx[i]])
-            line3d.set_3d_properties(model.blackbox_.epoch_log['train_cost'][:idx[i]])
+            line3d.set_3d_properties(model.get_blackbox().epoch_log['train_cost'][:idx[i]])
             # Animate 3d points
             point3d.set_data(theta0[idx[i]], theta1[idx[i]])
-            point3d.set_3d_properties(model.blackbox_.epoch_log['train_cost'][idx[i]])
+            point3d.set_3d_properties(model.get_blackbox().epoch_log['train_cost'][idx[i]])
             # Animate 2d Line
             line2d.set_data(theta0[:idx[i]], theta1[:idx[i]])
             line2d.set_3d_properties(0)
@@ -608,7 +608,7 @@ class SingleModelSearch3D:
                       r'$\quad\theta_0=$ ' + str(round(theta0[idx[i]],3)) \
                           + r'$\quad\theta_1=$ ' + str(round(theta1[idx[i]],3)) +\
                             '  Cost: ' + \
-                                str(np.round(model.blackbox_.epoch_log['train_cost'][idx[i]], 3))
+                                str(np.round(model.get_blackbox().epoch_log['train_cost'][idx[i]], 3))
             display.set_text(metrics)            
 
             return(line3d, point3d, line2d, point2d, display)
@@ -637,17 +637,17 @@ class SingleModelFit2D:
         y = model.y_train_        
 
         # Create index for n <= maxframes number of points
-        iterations = np.arange(1, model.blackbox_.total_epochs+1)
-        idx = np.arange(0,model.blackbox_.total_epochs)
-        nth = math.floor(model.blackbox_.total_epochs/maxframes)
+        iterations = np.arange(1, model.get_blackbox().total_epochs+1)
+        idx = np.arange(0,model.get_blackbox().total_epochs)
+        nth = math.floor(model.get_blackbox().total_epochs/maxframes)
         nth = max(nth,1) 
         idx = idx[::nth]
         points = len(idx)
 
         # Extract data for plotting
         x = model.X[:,1]        
-        cost = model.blackbox_.epoch_log['train_cost']        
-        weights = todf(model.blackbox_.epoch_log['theta'], stub='theta_')        
+        cost = model.get_blackbox().epoch_log['train_cost']        
+        weights = todf(model.get_blackbox().epoch_log['theta'], stub='theta_')        
         theta0 = weights['theta_0']
         theta1 = weights['theta_1']
         theta = np.array([theta0, theta1])
@@ -763,10 +763,10 @@ class MultiModelSearch3D(animation.FuncAnimation):
         theta1_maxs = []
 
         for _, v in models.items():
-            theta0_mins.append(min(item[0] for item in v.blackbox_.batch_log.get('theta')))
-            theta1_mins.append(min(item[1] for item in v.blackbox_.batch_log.get('theta')))
-            theta0_maxs.append(max(item[0] for item in v.blackbox_.batch_log.get('theta')))
-            theta1_maxs.append(max(item[1] for item in v.blackbox_.batch_log.get('theta')))
+            theta0_mins.append(min(item[0] for item in v.get_blackbox().batch_log.get('theta')))
+            theta1_mins.append(min(item[1] for item in v.get_blackbox().batch_log.get('theta')))
+            theta0_maxs.append(max(item[0] for item in v.get_blackbox().batch_log.get('theta')))
+            theta1_maxs.append(max(item[1] for item in v.get_blackbox().batch_log.get('theta')))
         
         theta0_min = min(theta0_mins)
         theta1_min = min(theta1_mins)
@@ -822,8 +822,8 @@ class MultiModelSearch3D(animation.FuncAnimation):
         zpaths=[]
         methods = []        
         for k, v in models.items():    
-            paths.append(np.array(v.blackbox_.epoch_log.get('theta')).T)
-            zpaths.append(np.array(v.blackbox_.epoch_log.get('train_cost'))) 
+            paths.append(np.array(v.get_blackbox().epoch_log.get('theta')).T)
+            zpaths.append(np.array(v.get_blackbox().epoch_log.get('train_cost'))) 
             methods.append(k)  
             X = v.X_train_
             y = v.y_train_
@@ -908,7 +908,7 @@ class MultiModelFit2D(animation.FuncAnimation):
         paths=[]
         methods = []
         for k, v in models.items():    
-            paths.append(np.array(v.blackbox_.batch_log.get('theta')).T)
+            paths.append(np.array(v.get_blackbox().batch_log.get('theta')).T)
             methods.append(k)  
             self.X = v.X_train_
             self.y = v.y_train_

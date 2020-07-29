@@ -31,27 +31,27 @@ from mlstudio.supervised.algorithms.optimization.services import activations
 from mlstudio.supervised.algorithms.optimization.services import loss
 from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
-from mlstudio.supervised.performance import regression, binary_class
-from mlstudio.factories.data_processor import DataProcessors
+from mlstudio.supervised.performance import regression, binaryclass, multiclass
+from mlstudio.factories.data import DataProcessors
 # --------------------------------------------------------------------------- #
 class Task(containers.DeclarativeContainer):
     """IoC container for task providers."""
 
-    linear_regression_factory = providers.Factory(tasks.LinearRegression,
+    regression = providers.Factory(tasks.LinearRegression,
                                           loss=loss.Quadratic(),
                                           scorer=regression.R2(),
                                           data_processor=DataProcessors.regression(),
                                           activation=None)
 
-    logistic_regression_factory = providers.Factory(tasks.LogisticRegression,
+    binaryclass = providers.Factory(tasks.LogisticRegression,
                                           loss=loss.CrossEntropy(),
-                                          scorer=classification.Accuracy(),
-                                          data_processor=DataProcessors.binary_classification(),
+                                          scorer=binaryclass.Accuracy(),
+                                          data_processor=DataProcessors.binaryclass(),
                                           activation=activations.Sigmoid())     
 
-    multiclass_classification_factory = providers.Factory(tasks.MulticlassClassification,
+    multiclass = providers.Factory(tasks.MulticlassClassification,
                                           loss=loss.CategoricalCrossEntropy(),
-                                          scorer=classification.Accuracy(),
-                                          data_processor=DataProcessors.multiclass_classification(),
+                                          scorer=multiclass.Accuracy(),
+                                          data_processor=DataProcessors.multiclass(),
                                           activation=activations.Softmax())
 

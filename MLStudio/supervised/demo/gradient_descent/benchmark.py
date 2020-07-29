@@ -33,8 +33,8 @@ sys.path.append(homedir)
 
 from mlstudio.supervised.machine_learning.gradient_descent import GDPureOptimizer
 from mlstudio.supervised.visual.animations import animate_optimization
-from mlstudio.supervised.algorithms.optimization.services.objectives import Adjiman, StyblinskiTank, Wikipedia
-from mlstudio.supervised.algorithms.optimization.services.objectives import ThreeHumpCamel, Ursem01, Branin02
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import Adjiman, StyblinskiTank, Wikipedia
+from mlstudio.supervised.algorithms.optimization.services.benchmarks import ThreeHumpCamel, Ursem01, Branin02
 from mlstudio.supervised.algorithms.optimization.services.optimizers import GradientDescentOptimizer, Momentum, Nesterov
 from mlstudio.supervised.algorithms.optimization.services.optimizers import Adagrad, Adadelta, RMSprop
 from mlstudio.supervised.algorithms.optimization.services.optimizers import Adam, AdaMax, AdamW
@@ -82,9 +82,9 @@ for objective in objectives:
             d['Schedule'] = model.schedule.name              
         else:
             d['Schedule'] = None            
-        d['gradient_min'] = np.min(model.blackbox_.epoch_log.get('gradient_norm'))
-        d['gradient_max'] = np.max(model.blackbox_.epoch_log.get('gradient_norm'))        
-        d['gradient_mean'] = np.mean(model.blackbox_.epoch_log.get('gradient_norm'))        
+        d['gradient_min'] = np.min(model.get_blackbox().epoch_log.get('gradient_norm'))
+        d['gradient_max'] = np.max(model.get_blackbox().epoch_log.get('gradient_norm'))        
+        d['gradient_mean'] = np.mean(model.get_blackbox().epoch_log.get('gradient_norm'))        
         d['True'] = objective.minimum
         d['est'] = model.theta_
         d['sim'] = sim

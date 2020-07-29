@@ -57,8 +57,8 @@ class Printer:
         anchor = self._compute_budgets(anchor)    
 
         # Get line lengths from content
-        lhs_lens = [len(k) for k in content.keys()]
-        rhs_lens = [len(v) for v in content.values()]    
+        lhs_lens = [len(str(k)) for k in content.keys()]
+        rhs_lens = [len(str(v)) for v in content.values()]    
 
         # If all lengths are within budget return self._anchor_pos
         if max(lhs_lens) <= anchor['lhs_budget'] and \
@@ -87,9 +87,11 @@ class Printer:
     def _print_line(self, anchor, k, v):
         lhs_pad = ' ' * int(anchor['pos'] - anchor['lhs_pad'] - len(k))
         line = lhs_pad + k + ' '*anchor['lhs_pad'] + anchor['style'] + \
-            ' '*anchor['rhs_pad'] + v
+            ' '*anchor['rhs_pad'] + str(v)
         print(line)
 
+    def print_blank_line(self):
+        print("\n")
 
     def print_dictionary(self, content, title=None):
         """Pretty prints a title and dictionary."""

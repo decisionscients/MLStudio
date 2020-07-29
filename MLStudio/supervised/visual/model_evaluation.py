@@ -582,16 +582,16 @@ class OptimizationCurve(BaseVisualizer):
     def _get_data(self):
         """Extracts data from blackbox and returns a dictionary for plotting."""
         d = {}
-        d['Epoch'] = np.arange(1,self.estimator.blackbox_.total_epochs+1)
+        d['Epoch'] = np.arange(1,self.estimator.get_blackbox().total_epochs+1)
         if self.metric == 'cost':
             d['yaxis_title'] = self.estimator.objective.name
-            d['Training Loss'] = self.estimator.blackbox_.epoch_log.get('train_cost')
+            d['Training Loss'] = self.estimator.get_blackbox().epoch_log.get('train_cost')
 
         else:
             d['yaxis_title'] = self.estimator.metric.label
-            d['Training Score'] = self.estimator.blackbox_.epoch_log.get('train_score')
-            if self.estimator.blackbox_.epoch_log.get('val_score'):
-                d['Validation Score'] = self.estimator.blackbox_.epoch_log.get('val_score')            
+            d['Training Score'] = self.estimator.get_blackbox().epoch_log.get('train_score')
+            if self.estimator.get_blackbox().epoch_log.get('val_score'):
+                d['Validation Score'] = self.estimator.get_blackbox().epoch_log.get('val_score')            
         return d
 
     def fit(self, X, y):

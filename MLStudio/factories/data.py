@@ -46,12 +46,12 @@ class DataProcessors(containers.DeclarativeContainer):
                                    add_bias_transformer=DataTransformers.add_bias_term,
                                    split_transformer=DataTransformers.data_splitter)
 
-    binary_class = providers.Factory(BinaryClassDataProcessor,
+    binaryclass = providers.Factory(BinaryClassDataProcessor,
                                    add_bias_transformer=DataTransformers.add_bias_term,
                                    split_transformer=DataTransformers.data_splitter,
                                    label_encoder=DataTransformers.label_encoder)                                   
 
-    multi_class = providers.Factory(MultiClassDataProcessor,
+    multiclass = providers.Factory(MultiClassDataProcessor,
                                    add_bias_transformer=DataTransformers.add_bias_term,
                                    split_transformer=DataTransformers.data_splitter,
                                    label_encoder=DataTransformers.label_encoder,

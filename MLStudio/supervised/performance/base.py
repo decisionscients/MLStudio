@@ -38,9 +38,6 @@ import pandas as pd
 class BasePerformance(ABC, BaseEstimator):
     """Abstract base class for performance analytics."""
     
-    def __init__(self, id):
-        self._id = id
-
     @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
         raise NotImplementedError("This method is not implemented for "
@@ -98,15 +95,14 @@ class BasePerformance(ABC, BaseEstimator):
     def epsilon_factor(self):
         return self._epsilon_factor   
 
+    @property
+    def is_probability_metric(self):
+        return self._is_probability_metric   
+
 
 class BaseMeasure(BasePerformance):
     """Base class for performance measures."""
-
-    @abstractmethod
-    def __init__(self):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
-
+    
     @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
         raise NotImplementedError("This method is not implemented for "
@@ -116,11 +112,6 @@ class BaseMetric(BasePerformance):
     """Base class for performance metrics."""
 
     @abstractmethod
-    def __init__(self):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
-
-    @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
@@ -128,10 +119,6 @@ class BaseMetric(BasePerformance):
 class BaseRegressionMeasure(BaseMeasure):
     """Base class for regresssion measures."""
 
-    @abstractmethod
-    def __init__(self):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
 
     @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
@@ -142,22 +129,12 @@ class BaseRegressionMetric(BaseMetric):
     """Base class for regresssion metrics."""
 
     @abstractmethod
-    def __init__(self):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
-
-    @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
 class BaseBinaryClassificationMeasure(BaseMeasure):
     """Base class for regresssion measures."""
-
-    @abstractmethod
-    def __init__(self):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
 
     @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
@@ -168,11 +145,6 @@ class BaseBinaryClassificationMetric(BaseMetric):
     """Base class for regresssion metrics."""
 
     @abstractmethod
-    def __init__(self):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
-
-    @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
@@ -181,22 +153,12 @@ class BaseMultiClassificationMeasure(BaseMeasure):
     """Base class for regresssion measures."""
 
     @abstractmethod
-    def __init__(self):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
-
-    @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
 class BaseMultiClassificationMetric(BaseMetric):
     """Base class for regresssion metrics."""
-
-    @abstractmethod
-    def __init__(self):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
 
     @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
