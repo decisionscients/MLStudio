@@ -33,10 +33,9 @@ from mlstudio.utils import validation
 class Task(ABC, BaseEstimator):
     """Defines the base class for all tasks."""
 
-    def __init__(self, loss, scorer, data_processor, activation=None, 
+    def __init__(self, loss, data_processor, activation=None, 
                  random_state=None):
-        self.loss = loss
-        self.scorer = scorer
+        self.loss = loss        
         self.data_processor = data_processor
         self.activation = activation        
         self.random_state = random_state
@@ -50,10 +49,6 @@ class Task(ABC, BaseEstimator):
 
     @abstractproperty
     def loss(self):
-        pass
-
-    @abstractproperty
-    def scorer(self):
         pass
 
     @abstractproperty
@@ -217,28 +212,6 @@ class Task(ABC, BaseEstimator):
         """
         pass
 
-    @abstractmethod
-    def score(self, X, y, theta):
-        """Computes the score using the designated scorer object.
-        
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The input data
-
-        y : array-like shape (n_samples,)
-            The true target values
-
-        theta : array-like of shape (n_features) or (n_features, n_classes)
-            The model parameters
-
-        Returns
-        -------
-        score : the score for the prediction
-        
-        """
-        pass
-
     
 # --------------------------------------------------------------------------  #
 class LinearRegression(Task):
@@ -258,15 +231,6 @@ class LinearRegression(Task):
         self._loss = x
 
     @property
-    def scorer(self):
-        return self._scorer
-
-    @scorer.setter
-    def scorer(self, x):
-        validation.validate_regression_scorer(x)
-        self._scorer = x
-
-    @property
     def data_processor(self):
         return self._data_processor
 
@@ -279,31 +243,11 @@ class LinearRegression(Task):
         X = self._check_X(X, theta)
         return self.compute_output(theta, X)
 
-    def score(self, X, y, theta):
-        y_pred = self.predict(X, theta)          
-        return self._scorer(y, y_pred, n_features=self._n_features)
-
     def predict_proba(self, theta, X):
         raise NotImplementedError("predict_proba is not implemented for the LinearRegression task.")
 
 # --------------------------------------------------------------------------  #
-class ClassificationTask(Task):
-    """Abstract class for binary and multiclass classification subclasses."""
-
-    @abstractmethod
-    def _check_y(self, y):
-        pass    
-
-    def score(self, X, y, theta):
-        y = self._check_y(y)
-        if self._scorer.is_probability_metric:
-            y_pred = self.predict_proba(X, theta)
-        else:
-            y_pred = self.predict(X, theta)          
-        return self._scorer(y, y_pred, n_features=self._n_features)
-
-# --------------------------------------------------------------------------  #
-class LogisticRegression(ClassificationTask):
+class LogisticRegression(Task):
     """Defines the logistic regression task."""
 
     @property
@@ -318,15 +262,6 @@ class LogisticRegression(ClassificationTask):
     def loss(self, x):
         validation.validate_binaryclass_loss(x)
         self._loss = x
-
-    @property
-    def scorer(self):
-        return self._scorer
-
-    @scorer.setter
-    def scorer(self, x):
-        validation.validate_binaryclass_scorer(x)
-        self._scorer = x
     
     @property
     def data_processor(self):
@@ -412,7 +347,7 @@ class LogisticRegression(ClassificationTask):
         return self.compute_output(theta, X)     
 
 # --------------------------------------------------------------------------  #
-class MulticlassClassification(ClassificationTask):
+class MulticlassClassification(Task):
     """Defines the multiclass classification task."""
 
     @property
@@ -427,15 +362,6 @@ class MulticlassClassification(ClassificationTask):
     def loss(self, x):
         validation.validate_multiclass_loss(x)
         self._loss = x
-
-    @property
-    def scorer(self):
-        return self._scorer
-
-    @scorer.setter
-    def scorer(self, x):
-        validation.validate_multiclass_scorer(x)
-        self._scorer = x
 
     @property
     def data_processor(self):

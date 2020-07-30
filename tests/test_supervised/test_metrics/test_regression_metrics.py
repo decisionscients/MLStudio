@@ -26,7 +26,7 @@ from sklearn.metrics import explained_variance_score, mean_absolute_error
 from sklearn.metrics import mean_squared_error, mean_squared_log_error
 from sklearn.metrics import median_absolute_error, r2_score
 
-from mlstudio.supervised.performance import regression 
+from mlstudio.supervised.metrics import regression 
 # --------------------------------------------------------------------------- #
 @mark.metrics
 @mark.regression_metrics
@@ -55,7 +55,7 @@ class RegressionMetricsTests:
 
     def test_mse(self, get_regression_prediction):
         X, y, y_pred = get_regression_prediction
-        x = regression.MSE()(y, y_pred)        
+        x = regression.MeanSquaredError()(y, y_pred)        
         skl = mean_squared_error(y, y_pred)
         assert isinstance(x, float), "MSE is not a float"        
         assert x > 0, "MSE is not positive"
@@ -63,7 +63,7 @@ class RegressionMetricsTests:
 
     def test_nmse(self, get_regression_prediction):
         X, y, y_pred = get_regression_prediction
-        x = regression.NMSE()(y, y_pred)      
+        x = regression.NegativeMeanSquaredError()(y, y_pred)      
         skl = -1*mean_squared_error(y, y_pred)  
         assert isinstance(x, float), "NMSE is not a float"                
         assert x < 0, "NMSE is not negative"
@@ -71,7 +71,7 @@ class RegressionMetricsTests:
 
     def test_rmse(self, get_regression_prediction):
         X, y, y_pred = get_regression_prediction
-        x = regression.RMSE()(y, y_pred)      
+        x = regression.RootMeanSquaredError()(y, y_pred)      
         skl = mean_squared_error(y, y_pred)  
         assert isinstance(x, float), "RMSE is not a float"                
         assert x > 0, "RMSE is not positive"        

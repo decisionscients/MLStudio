@@ -31,7 +31,6 @@ from mlstudio.supervised.algorithms.optimization.services import activations
 from mlstudio.supervised.algorithms.optimization.services import loss
 from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
-from mlstudio.supervised.performance import regression, binaryclass, multiclass
 from mlstudio.factories.data import DataProcessors
 # --------------------------------------------------------------------------- #
 class Task(containers.DeclarativeContainer):
@@ -39,19 +38,16 @@ class Task(containers.DeclarativeContainer):
 
     regression = providers.Factory(tasks.LinearRegression,
                                           loss=loss.Quadratic(),
-                                          scorer=regression.R2(),
                                           data_processor=DataProcessors.regression(),
                                           activation=None)
 
     binaryclass = providers.Factory(tasks.LogisticRegression,
                                           loss=loss.CrossEntropy(),
-                                          scorer=binaryclass.Accuracy(),
                                           data_processor=DataProcessors.binaryclass(),
                                           activation=activations.Sigmoid())     
 
     multiclass = providers.Factory(tasks.MulticlassClassification,
                                           loss=loss.CategoricalCrossEntropy(),
-                                          scorer=multiclass.Accuracy(),
                                           data_processor=DataProcessors.multiclass(),
                                           activation=activations.Softmax())
 

@@ -19,12 +19,13 @@
 import math
 import numpy as np
 
-from mlstudio.supervised.performance.base import BaseRegressionMetric
+from mlstudio.supervised.metrics.base import BaseRegressionMetric
 # --------------------------------------------------------------------------- #
-class SSR(BaseRegressionMetric):
+class ResidualSumSquaredError(BaseRegressionMetric):    
     """Computes sum squared residuals given"""
 
     _mode  = 'min'
+    _code = 'SSR'
     _name  = 'residual_sum_squared_error'
     _label  = "Residual Sum Squared Error"
     
@@ -37,11 +38,12 @@ class SSR(BaseRegressionMetric):
         e = y - y_pred
         return np.sum(e**2)  
 
-class SST(BaseRegressionMetric):
+class TotalSumSquaredError(BaseRegressionMetric):
     """Computes total sum of squares"""
 
     
     _mode  = 'min'
+    _code = "SST"
     _name  = 'total_sum_squared_error'
     _label  = "Total Sum Squared Error"
     
@@ -61,8 +63,9 @@ class R2(BaseRegressionMetric):
 
     
     _mode  = 'max'   
-    _name  = 'coefficient_of_determination'
-    _label  = 'R2'
+    _code = "R2"
+    _name  = 'R2'
+    _label  = 'Coefficient of Determination (R2)'
     
     _best  = np.max
     _better  = np.greater
@@ -71,8 +74,8 @@ class R2(BaseRegressionMetric):
 
     
     def __call__(self, y, y_pred, *args, **kwargs):
-        self._ssr = SSR()
-        self._sst = SST()
+        self._ssr = ResidualSumSquaredError()
+        self._sst = TotalSumSquaredError()
         r2 = 1 - (self._ssr(y, y_pred)/self._sst(y, y_pred))     
         return r2
 
@@ -82,8 +85,9 @@ class AdjustedR2(BaseRegressionMetric):
 
     
     _mode  = 'max'   
+    _code = "AR2"
     _name  = 'adjusted_r2'
-    _label  = r"$\text{Adjusted }R^2$"
+    _label  = "Adjusted R2"
     
     _best  = np.max
     _better  = np.greater
@@ -99,11 +103,12 @@ class AdjustedR2(BaseRegressionMetric):
         ar2 = 1 - (1 - r2) * (n-1) / (n-p-1)
         return ar2
 
-class VarExplained(BaseRegressionMetric):
+class PercentVarianceExplained(BaseRegressionMetric):
     """Computes proportion of variance explained."""
 
     
     _mode  = 'max'
+    _code = "PVE"
     _name  = 'percent_variance_explained'
     _label  = "Percent Variance Explained"
     
@@ -115,13 +120,14 @@ class VarExplained(BaseRegressionMetric):
     
     def __call__(self, y, y_pred, *args, **kwargs):
         var_explained = 1 - (np.var(y-y_pred) / np.var(y))
-        return var_explained                   
+        return var_explained * 100                   
 
-class MAE(BaseRegressionMetric):
+class MeanAbsoluteError(BaseRegressionMetric):
     """Computes mean absolute error given data and parameters."""
 
     
     _mode  = 'min'
+    _code = "MAE"
     _name  = 'mean_absolute_error'
     _label  = "Mean Absolute Error"
     
@@ -135,11 +141,12 @@ class MAE(BaseRegressionMetric):
         return np.mean(e)
 
 
-class MSE(BaseRegressionMetric):
+class MeanSquaredError(BaseRegressionMetric):
     """Computes mean squared error given data and parameters."""
 
     
     _mode  = 'min'
+    _code = "MSE"
     _name  = 'mean_squared_error'
     _label  = "Mean Squared Error"
     
@@ -152,11 +159,12 @@ class MSE(BaseRegressionMetric):
         e = y - y_pred
         return np.mean(e**2)
 
-class NMSE(BaseRegressionMetric):
+class NegativeMeanSquaredError(BaseRegressionMetric):
     """Computes negative mean squared error given data and parameters."""
 
     
     _mode  = 'max'
+    _code = "NMSE"
     _name  = 'negative_mean_squared_error'
     _label  = "Negative Mean Squared Error"
     
@@ -170,11 +178,12 @@ class NMSE(BaseRegressionMetric):
         e = y - y_pred
         return -np.mean(e**2)
 
-class RMSE(BaseRegressionMetric):
+class RootMeanSquaredError(BaseRegressionMetric):
     """Computes root mean squared error given data and parameters."""
 
     
     _mode  = 'min'
+    _code = "RMSE"
     _name  = 'root_mean_squared_error'
     _label  = "Root Mean Squared Error"
     
@@ -187,11 +196,12 @@ class RMSE(BaseRegressionMetric):
         e = y-y_pred
         return np.sqrt(np.mean(e**2)) 
 
-class NRMSE(BaseRegressionMetric):
+class NegativeRootMeanSquaredError(BaseRegressionMetric):
     """Computes negative root mean squared error given data and parameters."""
 
     
     _mode  = 'max'
+    _code = "NRMSE"
     _name  = 'negative_root_mean_squared_error'
     _label  = "Negative Root Mean Squared Error"
     
@@ -205,11 +215,12 @@ class NRMSE(BaseRegressionMetric):
         e = y-y_pred
         return -np.sqrt(np.mean(e**2))
 
-class MSLE(BaseRegressionMetric):
+class MeanSquaredLogError(BaseRegressionMetric):
     """Computes mean squared log error given data and parameters."""
 
     
     _mode  = 'min'
+    _code = "MSLE"
     _name  = 'mean_squared_log_error'
     _label  = "Mean Squared Log Error"
     
@@ -225,30 +236,12 @@ class MSLE(BaseRegressionMetric):
         e = np.log(y)-np.log(y_pred)
         return np.mean(e**2)
 
-class RMSLE(BaseRegressionMetric):
-    """Computes root mean squared log error given data and parameters."""
-
-    
-    _mode  = 'min'
-    _name  = 'root_mean_squared_log_error'
-    _label  = "Root Mean Squared Log Error"
-    
-    _best  = np.min
-    _better  = np.less
-    _worst  = np.Inf
-    _epsilon_factor  = -1
-    
-    def __call__(self, y, y_pred, *args, **kwargs):
-        y = np.clip(y, 1e-15, 1-1e-15)    
-        y_pred = np.clip(y_pred, 1e-15, 1-1e-15)    
-        e = np.log(y)-np.log(y_pred)
-        return np.sqrt(np.mean(e**2))
-
-class MEDAE(BaseRegressionMetric):
+class MedianAbsoluteError(BaseRegressionMetric):
     """Computes median absolute error given data and parameters."""
 
     
     _mode  = 'min'
+    _code = "MdAE"
     _name  = 'median_absolute_error'
     _label  = "Median Absolute Error"
     
@@ -260,9 +253,10 @@ class MEDAE(BaseRegressionMetric):
     def __call__(self, y, y_pred, *args, **kwargs):        
         return np.median(np.abs(y_pred-y))
 
-class MAPE(BaseRegressionMetric):
+class MeanAbsolutePercentageError(BaseRegressionMetric):
     """Computes mean absolute percentage given data and parameters."""
     _mode  = 'min'
+    _code = "MAPE"
     _name  = 'mean_absolute_percentage_error'
     _label  = "Mean Absolute Percentage Error"
 

@@ -25,7 +25,7 @@ import numpy as np
 from tabulate import tabulate
 
 from mlstudio.supervised.algorithms.optimization.observers.base import Observer, PerformanceObserver
-from mlstudio.supervised.performance.regression import MSE
+from mlstudio.supervised.metrics.regression import MeanSquaredError
 from mlstudio.utils.validation import validate_bool
 from mlstudio.utils.validation import validate_int
 from mlstudio.utils.validation import validate_objective, validate_optimizer

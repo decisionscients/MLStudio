@@ -31,6 +31,7 @@ from mlstudio.supervised.algorithms.optimization.gradient_descent import Gradien
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
 from mlstudio.supervised.algorithms.optimization.observers import report, history
 from mlstudio.supervised.algorithms.optimization.services import optimizers
+from mlstudio.supervised.metrics import regression, binaryclass, multiclass
 from mlstudio.factories.tasks import Task
 from mlstudio.factories.observers import Summary
 
@@ -46,6 +47,7 @@ class GradientDescent(containers.DeclarativeContainer):
                                     val_size=0.3,
                                     theta_init=None,
                                     optimizer=optimizers.GradientDescentOptimizer(),                                    
+                                    scorer=regression.R2(),
                                     early_stop=None,
                                     learning_rate=None,                           
                                     observer_list=base.ObserverList(),
@@ -66,6 +68,7 @@ class GradientDescent(containers.DeclarativeContainer):
                                     val_size=0.3,
                                     theta_init=None,
                                     optimizer=optimizers.GradientDescentOptimizer(),
+                                    scorer=binaryclass.Accuracy(),
                                     early_stop=None,
                                     learning_rate=None,                           
                                     observer_list=base.ObserverList(),
@@ -86,6 +89,7 @@ class GradientDescent(containers.DeclarativeContainer):
                                     val_size=0.3,
                                     theta_init=None,
                                     optimizer=optimizers.GradientDescentOptimizer(),
+                                    scorer=multiclass.Accuracy(),
                                     early_stop=None,
                                     learning_rate=None,                           
                                     observer_list=base.ObserverList(),

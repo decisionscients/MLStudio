@@ -211,10 +211,18 @@ def validate_observers(param, param_name='observers'):
             msg = name + " is not a valid Observer object."
             raise TypeError(msg)
     return True
-    
+# --------------------------------------------------------------------------  #
+def validate_scorer(task, scorer):
+    classname = task.__class__.__name__
+    if "Regression" in classname:
+        validate_regression_scorer(scorer)    
+    elif "Binary" in classname:
+        validate_binaryclass_scorer(scorer)
+    else:
+        validate_multiclass_scorer(scorer)
 # --------------------------------------------------------------------------  #
 def validate_regression_scorer(scorer):    
-    from mlstudio.supervised.performance.base import BaseRegressionMetric
+    from mlstudio.supervised.metrics.base import BaseRegressionMetric
     valid_scorers = [cls.__name__ for cls in BaseRegressionMetric.__subclasses__()]
     if not isinstance(scorer, BaseRegressionMetric):
         msg = "{s} is an invalid scorer object. The valid scorer classes include : \
@@ -224,7 +232,7 @@ def validate_regression_scorer(scorer):
         return True
 # --------------------------------------------------------------------------  #
 def validate_binaryclass_scorer(scorer):    
-    from mlstudio.supervised.performance.base import BaseBinaryClassificationMetric
+    from mlstudio.supervised.metrics.base import BaseBinaryClassificationMetric
     valid_scorers = [cls.__name__ for cls in BaseBinaryClassificationMetric.__subclasses__()]
     if not isinstance(scorer, BaseBinaryClassificationMetric):
         msg = "{s} is an invalid scorer object. The valid scorer classes include : \
@@ -235,7 +243,7 @@ def validate_binaryclass_scorer(scorer):
 
 # --------------------------------------------------------------------------  #
 def validate_multiclass_scorer(scorer):    
-    from mlstudio.supervised.performance.base import BaseMultiClassificationMetric
+    from mlstudio.supervised.metrics.base import BaseMultiClassificationMetric
     valid_scorers = [cls.__name__ for cls in BaseMultiClassificationMetric.__subclasses__()]
     if not isinstance(scorer, BaseMultiClassificationMetric):
         msg = "{s} is an invalid scorer object. The valid scorer classes include : \
@@ -393,6 +401,7 @@ def validate_estimator(estimator):
                                 minimum=0, maximum=1, left='closed', 
                                 right='open')
     validate_optimizer(estimator.optimizer)
+    validate_scorer(estimator.task, estimator.scorer)    
        
     if estimator.early_stop:
         validate.observers(estimator.early_stop, 

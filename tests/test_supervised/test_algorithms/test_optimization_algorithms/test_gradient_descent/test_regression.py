@@ -33,7 +33,7 @@ from mlstudio.supervised.algorithms.optimization.observers import history
 from mlstudio.supervised.algorithms.optimization.observers import report
 from mlstudio.supervised.algorithms.optimization.services import tasks
 from mlstudio.supervised.algorithms.optimization.services import optimizers
-from mlstudio.supervised.performance import regression
+from mlstudio.supervised import metrics 
 # --------------------------------------------------------------------------  #
 @mark.regressor
 class GradientRegressorTests:
@@ -42,6 +42,8 @@ class GradientRegressorTests:
         est = algorithms.GradientDescent.regression()       
         assert isinstance(est.task, tasks.LinearRegression), "Error GradientRegressorTest: task is invalid."        
         assert isinstance(est.optimizer, optimizers.GradientDescentOptimizer), "Error GradientRegressorTest: optimizer is invalid."        
+        assert isinstance(est.scorer, (metrics.base.BaseRegressionMeasure,
+                                       metrics.base.BaseRegressionMetric)), "Error GradientRegressorTest: scorer is invalid."        
         assert isinstance(est.observer_list, base.ObserverList), "Error GradientRegressorTest: observer_list is invalid."        
         assert isinstance(est.progress, report.Progress), "Error GradientRegressorTest: progress is invalid."        
         assert isinstance(est.blackbox, history.BlackBox), "Error GradientRegressorTest: blackbox is invalid."
@@ -87,6 +89,15 @@ class GradientRegressorTests:
         print("\nSKL {k}     MLS {m}     RDIF {d}".format(k=str(skl_scores), m=str(est_scores), d=str(d)))
         assert np.isclose(skl.score(X_train,y_train), est.score(X_train, y_train), rtol=1e-2), "Regressor: inaccurate train scores "
         assert np.isclose(skl.score(X_test,y_test), est.score(X_test, y_test), rtol=1e-2), "Regressor: inaccurate test scores "
+        # Test reset scorer
+        est.set_scorer(metrics.regression.AdjustedR2())
+        est_scores_ar2 = est.score(X_train, y_train)
+        assert est_scores != est_scores_ar2, "Regressor: ar2 score not different than r2"
+        assert isinstance(est_scores_ar2, float), "Regressor: ar2 score not float"
+        est.set_scorer(metrics.regression.MeanAbsolutePercentageError())
+        est_scores_mape =  est.score(X_train, y_train)
+        assert est_scores_ar2 != est_scores_mape, "Regressor: ar2 score not different than mape"
+        assert isinstance(est_scores_mape, float), "Regressor: mape score not float"
         # Test summary
         est.summarize()
 

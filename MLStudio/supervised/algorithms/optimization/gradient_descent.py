@@ -110,7 +110,7 @@ class GradientDescent(BaseEstimator):
     """
 
     def __init__(self, task, eta0=0.01, epochs=1000,  batch_size=None,  val_size=0.3, 
-                 theta_init=None, optimizer=None, early_stop=None, 
+                 theta_init=None, optimizer=None, scorer=None, early_stop=None, 
                  learning_rate=None,  observer_list=None, progress=None, 
                  blackbox=None, summary=None, verbose=False, random_state=None,
                  check_gradient=False, gradient_checker=None):
@@ -121,7 +121,8 @@ class GradientDescent(BaseEstimator):
         self.batch_size = batch_size
         self.val_size = val_size
         self.theta_init = theta_init
-        self.optimizer = optimizer                    
+        self.optimizer = optimizer            
+        self.scorer = scorer        
         self.early_stop=early_stop            
         self.learning_rate = learning_rate
         self.observer_list = observer_list
@@ -185,13 +186,14 @@ class GradientDescent(BaseEstimator):
     @eta.setter  
     def eta(self, x):
         self._eta = x
-        
+
     @property
     def converged(self):
         return self._converged
 
     @converged.setter
     def converged(self, x):
+        validation.validate_bool(x)
         self._converged = x      
 
     @property
@@ -227,21 +229,17 @@ class GradientDescent(BaseEstimator):
     def get_blackbox(self):
         return self._blackbox
 
-    # TODO: add evaluator and profiler observers
-    def performance_log(self):
+    def get_scorer(self):
         try:
-            return self._performance_log
+            scorer = self._scorer
         except:
-            warnings.warn("No performance log until the fit method is called.")
-            return None
+            scorer = self.scorer
+        return scorer
 
-    def profile_log(self):
-        try:
-            return self._profile_log
-        except:
-            warnings.warn("No profile log until the fit method is called.")
-            return None
-
+    def set_scorer(self, x):
+        validation.validate_scorer(self._task, x)
+        self._scorer = x
+    
     # ----------------------------------------------------------------------- #
     def _compile(self, log=None):
         """Makes copies of mutable parameters and makes them private members."""
@@ -250,6 +248,7 @@ class GradientDescent(BaseEstimator):
         self._task = copy.deepcopy(self.task) 
         self._observer_list = copy.deepcopy(self.observer_list)           
         self._optimizer = copy.deepcopy(self.optimizer)
+        self._scorer = copy.deepcopy(self.scorer)
         self._progress = copy.deepcopy(self.progress)
         self._summary = copy.deepcopy(self.summary) 
         self._gradient_checker = copy.deepcopy(self.gradient_checker)
@@ -293,6 +292,8 @@ class GradientDescent(BaseEstimator):
             self._train_data_package = self._task.prepare_train_data(X, y, self.random_state)
             self._X_train = self._train_data_package['X_train']['data']          
             self._y_train = self._train_data_package['y_train']['data']
+        self.n_features_ = self._train_data_package['X_train']['metadata']['n_features']
+        self.n_classes_ = self._train_data_package['y_train']['metadata']['n_classes']
 
     # ----------------------------------------------------------------------- #
     def _initialize_observers(self, log=None):
@@ -429,16 +430,14 @@ class GradientDescent(BaseEstimator):
         y_out = self._task.compute_output(self._theta, self._X_train)
         log['train_cost'] = self._task.compute_loss(self._theta, self._y_train,
                                                     y_out)
-        log['train_score'] = self._task.score(self._X_train, self._y_train,
-                                              self._theta)
+        log['train_score'] = self.score(self._X_train, self._y_train)
 
         # Check not only val_size but also for empty validation sets 
         if self.val_size:
             if self._X_val.shape[0] > 0:                
                 y_out_val = self._task.compute_output(self._theta, self._X_val)
                 log['val_cost'] = self._task.compute_loss(self._theta, self._y_val, y_out_val)                                
-                log['val_score'] = self._task.score(self._X_val, self._y_val,
-                                                    self._theta)
+                log['val_score'] = self.score(self._X_val, self._y_val)
         # Store the gradient and its magnitude
         log['gradient'] = self._gradient
         log['gradient_norm'] = None
@@ -509,8 +508,16 @@ class GradientDescent(BaseEstimator):
         -------
         y_pred : prediction
         """
-        validation.check_is_fitted(self)
-        return self._task.predict(X, self._theta)    
+        try:
+            probability_metric = self._scorer.is_probability_metric()
+        except:
+            probability_metric = False
+
+        if probability_metric:
+            y_pred = self._task.predict_proba(X, self._theta)
+        else:
+            y_pred = self._task.predict(X, self._theta)    
+        return y_pred
 
 
     # ----------------------------------------------------------------------- #    
@@ -530,7 +537,8 @@ class GradientDescent(BaseEstimator):
         score based upon the metric object.
         
         """
-        return self._task.score(X, y, self._theta)               
+        y_pred = self.predict(X)
+        return self._scorer(y, y_pred, n_features=self.n_features_)               
 
     # ----------------------------------------------------------------------- #    
     def summarize(self):  

@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.supervised.performance.regression import R2
+from mlstudio.supervised.metrics.regression import R2
 from mlstudio.supervised.model.development import ModelBuilder
 from mlstudio.IoC.loss import IoCQuadratic
 from mlstudio.IoC.tasks import Tasks

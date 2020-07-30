@@ -41,7 +41,7 @@ from sklearn.pipeline import Pipeline
 from mlstudio.supervised.machine_learning.gradient_descent import GDRegressor
 from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic
 from mlstudio.supervised.algorithms.optimization.services.regularizers import L1, L2, L1_L2
-from mlstudio.supervised.performance.regression import R2
+from mlstudio.supervised.metrics.regression import R2
 from mlstudio.supervised.algorithms.optimization.observers.early_stop import EarlyStop
 from mlstudio.utils.data_manager import StandardScaler, data_split
 from mlstudio.utils.file_manager import save_fig

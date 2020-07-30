@@ -41,7 +41,7 @@ warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
 from mlstudio.supervised.algorithms.optimization.services.optimizers import Adagrad
 from mlstudio.supervised.algorithms.optimization.services.benchmarks import StyblinskiTank
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import TimeDecay
-from mlstudio.supervised.performance.regression import MSE
+from mlstudio.supervised.metrics.regression import MeanSquaredError
 from mlstudio.utils.data_manager import StandardScaler
 
 

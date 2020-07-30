@@ -28,7 +28,7 @@ import pandas as pd
 from tabulate import tabulate
 
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
-from mlstudio.supervised.performance.base import BaseMeasure, BaseMetric
+from mlstudio.supervised.metrics.base import BaseMeasure, BaseMetric
 from mlstudio.supervised.algorithms.optimization.observers.history import BlackBox
 from mlstudio.utils.format import proper
 from mlstudio.utils.print import Printer
@@ -145,7 +145,7 @@ class Summary(base.Observer):
                 label = datasets[performance[0]] + ' ' + proper(performance[1]) 
                 d['label'] = label
                 if performance[1] == 'score':                    
-                    d['data'] = str(np.round(log.get(key)[-1],4)) + " " + self.model.task.scorer.label
+                    d['data'] = str(np.round(log.get(key)[-1],4)) + " " + self.model.get_scorer().label
                 else:
                     d['data'] = str(np.round(log.get(key)[-1],4)) 
                 print_data.append(d) 

@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 # =========================================================================== #
 # Project : MLStudio                                                          #
-# File    : \classification.py                                                #
+# File    : \mult_class.py                                                    #
 # Python  : 3.8.3                                                             #
 # --------------------------------------------------------------------------- #
 # Author  : John James                                                        #
@@ -9,30 +9,24 @@
 # Email   : jjames@nov8.ai                                                    #
 # URL     : https://github.com/nov8ai/MLStudio                                #
 # --------------------------------------------------------------------------- #
-# Created       : Thursday, July 16th 2020, 2:26:07 am                        #
-# Last Modified : Thursday, July 16th 2020, 2:26:07 am                        #
+# Created       : Tuesday, July 28th 2020, 8:46:39 am                         #
+# Last Modified : Tuesday, July 28th 2020, 8:48:00 am                         #
 # Modified By   : John James (jjames@nov8.ai)                                 #
 # --------------------------------------------------------------------------- #
 # License : BSD                                                               #
 # Copyright (c) 2020 nov8.ai                                                  #
 # =========================================================================== #
-"""Performance analytics classes for classification problems. 
-This module contains classification measures and metrics. Measures are derived
-from taking a measurement, e.g. true positives. Metrics are computed based
-upon two or more measures, e.g. true positive rate. Measures and metrics
-are used to report performance; however, only metrics can be used for 
-scoring and performance generalization estimation.
-"""
+"""Performance analytics classes for multiclass classification problems."""
 import math
 import numpy as np
-from mlstudio.supervised.performance.base import BaseBinaryClassificationMeasure
-from mlstudio.supervised.performance.base import BaseBinaryClassificationMetric
+from mlstudio.supervised.metrics.base import BaseMultiClassificationMeasure
+from mlstudio.supervised.metrics.base import BaseMultiClassificationMetric
 # --------------------------------------------------------------------------- #
 #                        CLASSIFICATION MEASURES                              #
 # --------------------------------------------------------------------------- #
 # -------------------------- BASE MEASURES ---------------------------------- #
 
-class TruePositive(BaseBinaryClassificationMeasure):
+class TruePositive(BaseMultiClassificationMeasure):
     """Computes the number true positives."""    
     _code = "TP"        
     _name = 'true_positive'
@@ -44,7 +38,7 @@ class TruePositive(BaseBinaryClassificationMeasure):
         return len(result.index)    
 
 
-class TrueNegative(BaseBinaryClassificationMeasure):
+class TrueNegative(BaseMultiClassificationMeasure):
     """Computes the number true negatives."""
     _code = "TN"        
     _name = 'true_negative'
@@ -55,7 +49,7 @@ class TrueNegative(BaseBinaryClassificationMeasure):
         result = df[(df['y'] == negative) & (df['y_pred'] == negative)]
         return len(result.index)    
 
-class FalsePositive(BaseBinaryClassificationMeasure):
+class FalsePositive(BaseMultiClassificationMeasure):
     """Computes the number false positives."""
     _code = "FP"        
     _name = 'false_positive'
@@ -66,7 +60,7 @@ class FalsePositive(BaseBinaryClassificationMeasure):
         result = df[(df['y'] == negative) & (df['y_pred'] == positive)]
         return len(result.index)    
 
-class FalseNegative(BaseBinaryClassificationMeasure):
+class FalseNegative(BaseMultiClassificationMeasure):
     """Computes the number false negatives."""
     _code = "FN"        
     _name = 'false_negative'
@@ -78,7 +72,7 @@ class FalseNegative(BaseBinaryClassificationMeasure):
         return len(result.index)            
 # -------------------------- 1st LEVEL MEASURES ----------------------------- #
 
-class PositiveCondition(BaseBinaryClassificationMeasure):
+class PositiveCondition(BaseMultiClassificationMeasure):
     """Computes positive condition as true positives + false negatives."""
     _code = "P"        
     _name = 'positive_condition'
@@ -91,7 +85,7 @@ class PositiveCondition(BaseBinaryClassificationMeasure):
                               positive=positive)                              
         return tp + fn
 
-class NegativeCondition(BaseBinaryClassificationMeasure):
+class NegativeCondition(BaseMultiClassificationMeasure):
     """Computes negative condition as false positives + true negatives."""    
     _code = "N"        
     _name = 'negative_condition'
@@ -105,7 +99,7 @@ class NegativeCondition(BaseBinaryClassificationMeasure):
         return fp + tn        
 # --------------------------------------------------------------------------- #
 
-class OutcomePositive(BaseBinaryClassificationMeasure):
+class OutcomePositive(BaseMultiClassificationMeasure):
     """Computes outcome positive as true positives plus false positives."""
     _code = "OP"    
     _name = 'outcome_positive'    
@@ -118,7 +112,7 @@ class OutcomePositive(BaseBinaryClassificationMeasure):
                               positive=positive)                              
         return tp + fp
 
-class OutcomeNegative(BaseBinaryClassificationMeasure):
+class OutcomeNegative(BaseMultiClassificationMeasure):
     """Computes outcome positive as false negatives plus true negatives."""    
     _code = "ON"        
     _name = 'outcome_negative'
@@ -132,7 +126,7 @@ class OutcomeNegative(BaseBinaryClassificationMeasure):
         return fn + tn        
 # --------------------------------------------------------------------------- #
 
-class TrueClassification(BaseBinaryClassificationMeasure):
+class TrueClassification(BaseMultiClassificationMeasure):
     """True classification is the sum of true positives and true negatives.""" 
     _code = "TC"        
     _name = 'true_classification'
@@ -145,7 +139,7 @@ class TrueClassification(BaseBinaryClassificationMeasure):
                               positive=positive)                              
         return tp + tn        
 
-class FalseClassification(BaseBinaryClassificationMeasure):
+class FalseClassification(BaseMultiClassificationMeasure):
     """False classification is the sum of false positives and false negatives."""
     _code = "FC"        
     _name = 'false_classification'
@@ -159,7 +153,7 @@ class FalseClassification(BaseBinaryClassificationMeasure):
         return fp + fn        
 # ------------------------ 2ND LEVEL MEASURES ------------------------------- #
 
-class PositiveLikelihoodRatio(BaseBinaryClassificationMeasure):
+class PositiveLikelihoodRatio(BaseMultiClassificationMeasure):
     """Positive likelihood ratio is true positive rate / false positive rate."""
     _code = 'LRP'
     _name = 'positive_likelihood_ratio'
@@ -170,7 +164,7 @@ class PositiveLikelihoodRatio(BaseBinaryClassificationMeasure):
         fpr = FalsePositiveRate()(y, y_pred, *args, **kwargs)
         return tpr / fpr    
 
-class NegativeLikelihoodRatio(BaseBinaryClassificationMeasure):
+class NegativeLikelihoodRatio(BaseMultiClassificationMeasure):
     """Negative likelihood ratio is false negative rate / true negative rate."""
     _code = 'LRP'
     _name = 'negative_likelihood_ratio'
@@ -182,7 +176,7 @@ class NegativeLikelihoodRatio(BaseBinaryClassificationMeasure):
         return fnr / tnr
 # --------------------------------------------------------------------------- #
 
-class Bias(BaseBinaryClassificationMeasure):
+class Bias(BaseMultiClassificationMeasure):
     """Computes bias as the ratio of outcome positive and the sample size."""
     _code = 'BIAS'
     _name = 'bias'
@@ -193,7 +187,7 @@ class Bias(BaseBinaryClassificationMeasure):
         return op / y.shape[0]
 # --------------------------------------------------------------------------- #
 
-class Prevalence(BaseBinaryClassificationMeasure):
+class Prevalence(BaseMultiClassificationMeasure):
     """Computes prevalence as positive condition / sample size."""
     _code = 'PREV'
     _name = 'prevalence'
@@ -203,7 +197,7 @@ class Prevalence(BaseBinaryClassificationMeasure):
         p = PositiveCondition()(y, y_pred, *args, **kwargs)        
         return p / y.shape[0]
 
-class Skew(BaseBinaryClassificationMeasure):
+class Skew(BaseMultiClassificationMeasure):
     """Computes skew as ratio of negative and positive condition."""
     _code = 'SKEW'
     _name = 'skew'
@@ -215,7 +209,7 @@ class Skew(BaseBinaryClassificationMeasure):
         return n / p
 # --------------------------------------------------------------------------- #
 
-class CohensKappaChance(BaseBinaryClassificationMeasure):
+class CohensKappaChance(BaseMultiClassificationMeasure):
     """Computes Cohens Kappa Chance as (P*OP + N*ON) / sample size squared."""
     _code = 'CKc'
     _name = 'cohens_kappa_chance'
@@ -229,7 +223,7 @@ class CohensKappaChance(BaseBinaryClassificationMeasure):
         return ((p * op) + (n * on)) / y.shape[0]**2
 # ------------------------ 3RD LEVEL MEASURES ------------------------------- #
 
-class OddsRatio(BaseBinaryClassificationMeasure):
+class OddsRatio(BaseMultiClassificationMeasure):
     """Computes odds ratio as (tp-tn) / (fp-fn)."""
     _code = 'OR'
     _name = 'odds_ratio'
@@ -242,7 +236,7 @@ class OddsRatio(BaseBinaryClassificationMeasure):
         fn = FalseNegative()(y, y_pred, *args, **kwargs)        
         return (tp-tn) / (fp-fn)        
 
-class DiscrimitivePower(BaseBinaryClassificationMeasure):
+class DiscrimitivePower(BaseMultiClassificationMeasure):
     """Computes descrimitive power as:
     .. math:: \frac{\sqrt{3}}{\pi}\text{log(OR)}
     """
@@ -258,7 +252,7 @@ class DiscrimitivePower(BaseBinaryClassificationMeasure):
 # --------------------------------------------------------------------------- #
 # --------------------------- BASE METRICS ---------------------------------- #
 
-class Accuracy(BaseBinaryClassificationMetric):
+class Accuracy(BaseMultiClassificationMetric):
     """Computes accuracy ratio of true classification and sample size."""
     _code = "ACC"
     _name = 'accuracy'
@@ -273,7 +267,7 @@ class Accuracy(BaseBinaryClassificationMetric):
         tc = TrueClassification()(y, y_pred, *args, **kwargs)   
         return tc / y.shape[0]
 
-class DetectionRate(BaseBinaryClassificationMetric):
+class DetectionRate(BaseMultiClassificationMetric):
     """Computes detection rate as tp/sn."""
     _code = "DR"
     _name = 'detection_rate'
@@ -288,7 +282,7 @@ class DetectionRate(BaseBinaryClassificationMetric):
         tp = TruePositive()(y, y_pred, *args, **kwargs)
         return tp / y.shape[0]        
 
-class RejectionRate(BaseBinaryClassificationMetric):
+class RejectionRate(BaseMultiClassificationMetric):
     """Computes rejection rate as tn/sn."""
     _code = "CRR"
     _name = 'rejection_rate'
@@ -304,7 +298,7 @@ class RejectionRate(BaseBinaryClassificationMetric):
         return tn / y.shape[0]
 # --------------------------------------------------------------------------- #
 
-class PositivePredictiveValue(BaseBinaryClassificationMetric):
+class PositivePredictiveValue(BaseMultiClassificationMetric):
     """Positive predictive value as ratio of true positives and outcome positive."""       
     _code = "PPV"
     _name = 'precision'
@@ -332,7 +326,7 @@ class for PositivePredictiveValue."""
     _epsilon_factor  = 1
     _is_probability_metric = False    
 
-class NegativePredictiveValue(BaseBinaryClassificationMetric):
+class NegativePredictiveValue(BaseMultiClassificationMetric):
     """Negative predictive value as ratio of true negatives and outcome negative."""       
     _code = "NPV"
     _name = 'negative_predictive_value'
@@ -348,7 +342,7 @@ class NegativePredictiveValue(BaseBinaryClassificationMetric):
         on = OutcomeNegative()(y, y_pred, *args, **kwargs)
         return tn / on
 
-class FalseDiscoveryRate(BaseBinaryClassificationMetric):
+class FalseDiscoveryRate(BaseMultiClassificationMetric):
     """False discovery rate as ratio of false positives and outcome positive."""       
     _code = "FDR"
     _name = 'false_discovery_rate'
@@ -364,7 +358,7 @@ class FalseDiscoveryRate(BaseBinaryClassificationMetric):
         op = OutcomePositive()(y, y_pred, *args, **kwargs)
         return fp / op
 
-class FalseOmissionRate(BaseBinaryClassificationMetric):
+class FalseOmissionRate(BaseMultiClassificationMetric):
     """False omission rate as ratio of false negatives and outcome negative."""       
     _code = "FOR"
     _name = 'false_omission_rate'
@@ -380,7 +374,7 @@ class FalseOmissionRate(BaseBinaryClassificationMetric):
         on = OutcomeNegative()(y, y_pred, *args, **kwargs)
         return fn / on
 
-class PredictedPositiveConditionRate(BaseBinaryClassificationMetric):
+class PredictedPositiveConditionRate(BaseMultiClassificationMetric):
     """False omission rate as ratio of false negatives and outcome negative."""       
     _code = "PPCR"
     _name = 'predicted_positive_condition_rte'
@@ -440,7 +434,7 @@ class AUC:
         return self._roc_data['auc'].sum()
 # --------------------------------------------------------------------------- #
 
-class TruePositiveRate(BaseBinaryClassificationMetric):
+class TruePositiveRate(BaseMultiClassificationMetric):
     """True positive rate computed as true positives / positive condition."""       
     _code = "TPR"
     _name = 'true_positive_rate'
@@ -478,7 +472,7 @@ class Recall(TruePositiveRate):
     _epsilon_factor  = 1
     _is_probability_metric = False
 
-class FalseNegativeRate(BaseBinaryClassificationMetric):
+class FalseNegativeRate(BaseMultiClassificationMetric):
     """False negative rate computed as false negatives / positive condition."""       
     _code = "FNR"
     _name = 'false_negative_rate'
@@ -494,7 +488,7 @@ class FalseNegativeRate(BaseBinaryClassificationMetric):
         p = PositiveCondition()(y, y_pred, *args, **kwargs)
         return fn / p
 
-class TrueNegativeRate(BaseBinaryClassificationMetric):
+class TrueNegativeRate(BaseMultiClassificationMetric):
     """True negative rate computed as true negatives / negative condition."""       
     _code = "TNR"
     _name = 'true_negative_rate'
@@ -521,7 +515,7 @@ class Specificity(TrueNegativeRate):
     _epsilon_factor  = 1
     _is_probability_metric = False
 
-class FalsePositiveRate(BaseBinaryClassificationMetric):
+class FalsePositiveRate(BaseMultiClassificationMetric):
     """False positive rate computed as false positives / negative condition."""       
     _code = "FPR"
     _name = 'false_positive_rate'
@@ -538,7 +532,7 @@ class FalsePositiveRate(BaseBinaryClassificationMetric):
         return fp / n
 # --------------------------------------------------------------------------- #
 
-class MissclassificationRate(BaseBinaryClassificationMetric):
+class MissclassificationRate(BaseMultiClassificationMetric):
     """Missclassification rate computed as false classification / negative condition."""       
     _code = "MCR"
     _name = 'missclassification_rate'
@@ -554,7 +548,7 @@ class MissclassificationRate(BaseBinaryClassificationMetric):
         return fc / y.shape[0]
 # -------------------------- 1ST LEVEL METRICS ------------------------------ #
 
-class F1(BaseBinaryClassificationMetric):
+class F1(BaseMultiClassificationMetric):
     """F1 score computed as 2 * (PPV * TPR) / (PPV + TPR)."""       
     _code = "F1"
     _name = 'f1_score'
@@ -570,7 +564,7 @@ class F1(BaseBinaryClassificationMetric):
         tpr = TruePositiveRate()(y, y_pred, *args, **kwargs)        
         return 2 * (ppv * tpr) / (ppv + tpr)
 
-class F05(BaseBinaryClassificationMetric):
+class F05(BaseMultiClassificationMetric):
     """F0.5 score computed as (1.25 * PPV * TPR) / (0.25 * PPV + TPR)."""       
     _code = "F0.5"
     _name = 'f0.5_score'
@@ -586,7 +580,7 @@ class F05(BaseBinaryClassificationMetric):
         tpr = TruePositiveRate()(y, y_pred, *args, **kwargs)        
         return (1.25 * ppv * tpr) / (0.25 * ppv + tpr)
 
-class F2(BaseBinaryClassificationMetric):
+class F2(BaseMultiClassificationMetric):
     """F2 score computed as (5 * PPV * TPR) / (4 * PPV + TPR)."""       
     _code = "F2"
     _name = 'f2_score'
@@ -602,7 +596,7 @@ class F2(BaseBinaryClassificationMetric):
         tpr = TruePositiveRate()(y, y_pred, *args, **kwargs)        
         return (5 * ppv * tpr) / (4 * ppv + tpr)
 
-class FBeta(BaseBinaryClassificationMetric):
+class FBeta(BaseMultiClassificationMetric):
     """FBeta score computed as ((1+beta^2) * PPV * TPR) / ((1+beta^2) * PPV + TPR)."""       
     _code = "FBeta"
     _name = 'fbeta_score'
@@ -619,7 +613,7 @@ class FBeta(BaseBinaryClassificationMetric):
         return ((1+beta**2) * ppv * tpr) / ((1+beta**2) * ppv + tpr)
 # --------------------------------------------------------------------------- #
 
-class Informedness(BaseBinaryClassificationMetric):
+class Informedness(BaseMultiClassificationMetric):
     """Informedness is computed as TPR + TNR - 1."""       
     _code = "INFORM"
     _name = 'informedness'
@@ -635,7 +629,7 @@ class Informedness(BaseBinaryClassificationMetric):
         tnr = TrueNegativeRate()(y, y_pred, *args, **kwargs)        
         return tpr + tnr - 1
 
-class Markedness(BaseBinaryClassificationMetric):
+class Markedness(BaseMultiClassificationMetric):
     """Markedness is computed as PPV + NPV - 1."""       
     _code = "MARK"
     _name = 'markedness'
@@ -652,7 +646,7 @@ class Markedness(BaseBinaryClassificationMetric):
         return ppv + npv - 1
 
 # --------------------------------------------------------------------------- #
-class BalancedAccuracy(BaseBinaryClassificationMetric):
+class BalancedAccuracy(BaseMultiClassificationMetric):
     """Balanced accuracy is computed as (TPR + TNR) / 2."""       
     _code = "BACC"
     _name = 'balanced_accuracy'
@@ -668,7 +662,7 @@ class BalancedAccuracy(BaseBinaryClassificationMetric):
         tnr = TrueNegativeRate()(y, y_pred, *args, **kwargs)        
         return (tpr + tnr) / 2
 
-class FowlkesMallowsIndex(BaseBinaryClassificationMetric):
+class FowlkesMallowsIndex(BaseMultiClassificationMetric):
     """Computes Fowlkes-Mallows index as sqrt(PPV * TPR)."""
     _code = "FM"
     _name = 'fowlkes_mallows_index'
@@ -684,7 +678,7 @@ class FowlkesMallowsIndex(BaseBinaryClassificationMetric):
         tpr = TruePositiveRate()(y, y_pred, *args, **kwargs)        
         return np.sqrt(ppv * tpr)
 
-class OptimizationPrecision(BaseBinaryClassificationMetric):
+class OptimizationPrecision(BaseMultiClassificationMetric):
     """Computes Optimization Precision as ACC - (|TPR-TNR|)/(TPR+TNR)."""
     _code = "OPR"
     _name = 'optimization_precision'
@@ -702,7 +696,7 @@ class OptimizationPrecision(BaseBinaryClassificationMetric):
         return acc - (abs(tpr-tnr)) / (tpr+tnr)
 
 
-class Jaccard(BaseBinaryClassificationMetric):
+class Jaccard(BaseMultiClassificationMetric):
     """Computes Jaccard's Similarity Coefficient as TP/(TP+FP+FN)."""
     _code = "JAC"
     _name = 'jaccard_similarity_coefficient'
@@ -722,7 +716,7 @@ class Jaccard(BaseBinaryClassificationMetric):
 
 # --------------------------------------------------------------------------- #
 
-class CohensKappa(BaseBinaryClassificationMetric):
+class CohensKappa(BaseMultiClassificationMetric):
     """Computes Cohen's Kappa as (ACC-CKc) / (1-CKc)."""
     _code = "CK"
     _name = 'cohens_kappa'
@@ -739,7 +733,7 @@ class CohensKappa(BaseBinaryClassificationMetric):
         return (acc-ckc) / (1-ckc)
 
 # --------------------------------------------------------------------------- #
-class GeometricMean(BaseBinaryClassificationMetric):
+class GeometricMean(BaseMultiClassificationMetric):
     """Computes Geometric Mean as sqrt(tp*tn)."""
     _code = "GM"
     _name = 'geometric_mean'
@@ -756,7 +750,7 @@ class GeometricMean(BaseBinaryClassificationMetric):
         return np.sqrt(tp*tn)
 
 # --------------------------------------------------------------------------- #
-class AdjustedGeometricMean(BaseBinaryClassificationMetric):
+class AdjustedGeometricMean(BaseMultiClassificationMetric):
     """Computes Adjusted Geometric Mean as GM+TNR(FP+TN)/(1+FP+TN) if TPR>0, 0 otherwise."""
     _code = "AGM"
     _name = 'adjusted_geometric_mean'
@@ -780,7 +774,7 @@ class AdjustedGeometricMean(BaseBinaryClassificationMetric):
 
 # -------------------------- 2nd LEVEL METRIC ------------------------------- #
 
-class MatthewsCorrelationCoefficient(BaseBinaryClassificationMetric):
+class MatthewsCorrelationCoefficient(BaseMultiClassificationMetric):
     """Computes Mathew's Correlation Coefficient as sqrt(INFORM * MARK)."""
     _code = "MCC"
     _name = 'matthews_correlation_coefficient'
@@ -797,7 +791,7 @@ class MatthewsCorrelationCoefficient(BaseBinaryClassificationMetric):
         return np.sqrt(inform * mark)
 
 # --------------------------- TEST DIAGNOSTICS ------------------------------ #
-class Significance(BaseBinaryClassificationMetric):
+class Significance(BaseMultiClassificationMetric):
     """Computes Significance as [(TP*TN-FP*FN)^2 (TP+TN+FP+FN)] / [(TP+FP)(TP+FN)(TN+FP)(TN+FN)]."""
     _code = "SIG"
     _name = 'significance'
