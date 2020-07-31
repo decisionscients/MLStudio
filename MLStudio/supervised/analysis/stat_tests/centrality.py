@@ -380,7 +380,7 @@ class AnovaOne(AbstractStatisticalTest):
         print(tabulate(result, headers='keys'))        
 
 # --------------------------------------------------------------------------- #
-#                       One-Way ANOVA Repeated Measures                       #
+#                       One-Way ANOVA Repeated Metrics                       #
 # --------------------------------------------------------------------------- #
 class AnovaR(AbstractStatisticalTest):
     """ Repeated measures Anova using least squares regression

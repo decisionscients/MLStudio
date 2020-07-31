@@ -28,7 +28,7 @@ import pandas as pd
 from tabulate import tabulate
 
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
-from mlstudio.supervised.metrics.base import BaseMeasure, BaseMetric
+from mlstudio.supervised.metrics.base import BaseMetric, BaseMetric
 from mlstudio.supervised.algorithms.optimization.observers.history import BlackBox
 from mlstudio.utils.format import proper
 from mlstudio.utils.print import Printer
@@ -176,7 +176,7 @@ class Summary(base.Observer):
         """Gets the hyperparameters for an object."""        
         self._implicit_dependencies = (debug.GradientCheck, BlackBox, Printer, 
                               Progress, base.ObserverList, BaseMetric,
-                              BaseMeasure, self.__class__)        
+                              BaseMetric, self.__class__)        
         object_name = obj.__class__.__name__        
         params = obj.get_params()
         for k, v in params.items():

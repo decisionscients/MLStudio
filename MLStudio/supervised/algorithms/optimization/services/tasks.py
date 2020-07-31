@@ -247,7 +247,7 @@ class LinearRegression(Task):
         raise NotImplementedError("predict_proba is not implemented for the LinearRegression task.")
 
 # --------------------------------------------------------------------------  #
-class LogisticRegression(Task):
+class BinaryClassification(Task):
     """Defines the logistic regression task."""
 
     @property
@@ -300,7 +300,7 @@ class LogisticRegression(Task):
         -------
         y_out
         """
-        z = super(LogisticRegression, self).compute_output(theta, X)        
+        z = super(BinaryClassification, self).compute_output(theta, X)        
         return self._activation(z)
 
     def _check_y(self, y):
@@ -347,7 +347,7 @@ class LogisticRegression(Task):
         return self.compute_output(theta, X)     
 
 # --------------------------------------------------------------------------  #
-class MulticlassClassification(Task):
+class MultiClassification(Task):
     """Defines the multiclass classification task."""
 
     @property
@@ -430,7 +430,7 @@ class MulticlassClassification(Task):
         -------
         y_out
         """      
-        z = super(MulticlassClassification, self).compute_output(theta, X)
+        z = super(MultiClassification, self).compute_output(theta, X)
         return self._activation(z)        
 
     def _check_y(self, y):

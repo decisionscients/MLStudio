@@ -16,17 +16,17 @@
 # License : BSD                                                               #
 # Copyright (c) 2020 nov8.ai                                                  #
 # =========================================================================== #
-"""Performance analytics classes for multiclass classification problems."""
+"""Scorers for multiclass classification metrics."""
 import math
 import numpy as np
-from mlstudio.supervised.metrics.base import BaseMultiClassificationMeasure
+from mlstudio.supervised.metrics.base import BaseMultiClassificationMetric
 from mlstudio.supervised.metrics.base import BaseMultiClassificationMetric
 # --------------------------------------------------------------------------- #
 #                        CLASSIFICATION MEASURES                              #
 # --------------------------------------------------------------------------- #
 # -------------------------- BASE MEASURES ---------------------------------- #
 
-class TruePositive(BaseMultiClassificationMeasure):
+class TruePositive(BaseMultiClassificationMetric):
     """Computes the number true positives."""    
     _code = "TP"        
     _name = 'true_positive'
@@ -38,7 +38,7 @@ class TruePositive(BaseMultiClassificationMeasure):
         return len(result.index)    
 
 
-class TrueNegative(BaseMultiClassificationMeasure):
+class TrueNegative(BaseMultiClassificationMetric):
     """Computes the number true negatives."""
     _code = "TN"        
     _name = 'true_negative'
@@ -49,7 +49,7 @@ class TrueNegative(BaseMultiClassificationMeasure):
         result = df[(df['y'] == negative) & (df['y_pred'] == negative)]
         return len(result.index)    
 
-class FalsePositive(BaseMultiClassificationMeasure):
+class FalsePositive(BaseMultiClassificationMetric):
     """Computes the number false positives."""
     _code = "FP"        
     _name = 'false_positive'
@@ -60,7 +60,7 @@ class FalsePositive(BaseMultiClassificationMeasure):
         result = df[(df['y'] == negative) & (df['y_pred'] == positive)]
         return len(result.index)    
 
-class FalseNegative(BaseMultiClassificationMeasure):
+class FalseNegative(BaseMultiClassificationMetric):
     """Computes the number false negatives."""
     _code = "FN"        
     _name = 'false_negative'
@@ -72,7 +72,7 @@ class FalseNegative(BaseMultiClassificationMeasure):
         return len(result.index)            
 # -------------------------- 1st LEVEL MEASURES ----------------------------- #
 
-class PositiveCondition(BaseMultiClassificationMeasure):
+class PositiveCondition(BaseMultiClassificationMetric):
     """Computes positive condition as true positives + false negatives."""
     _code = "P"        
     _name = 'positive_condition'
@@ -85,7 +85,7 @@ class PositiveCondition(BaseMultiClassificationMeasure):
                               positive=positive)                              
         return tp + fn
 
-class NegativeCondition(BaseMultiClassificationMeasure):
+class NegativeCondition(BaseMultiClassificationMetric):
     """Computes negative condition as false positives + true negatives."""    
     _code = "N"        
     _name = 'negative_condition'
@@ -99,7 +99,7 @@ class NegativeCondition(BaseMultiClassificationMeasure):
         return fp + tn        
 # --------------------------------------------------------------------------- #
 
-class OutcomePositive(BaseMultiClassificationMeasure):
+class OutcomePositive(BaseMultiClassificationMetric):
     """Computes outcome positive as true positives plus false positives."""
     _code = "OP"    
     _name = 'outcome_positive'    
@@ -112,7 +112,7 @@ class OutcomePositive(BaseMultiClassificationMeasure):
                               positive=positive)                              
         return tp + fp
 
-class OutcomeNegative(BaseMultiClassificationMeasure):
+class OutcomeNegative(BaseMultiClassificationMetric):
     """Computes outcome positive as false negatives plus true negatives."""    
     _code = "ON"        
     _name = 'outcome_negative'
@@ -126,7 +126,7 @@ class OutcomeNegative(BaseMultiClassificationMeasure):
         return fn + tn        
 # --------------------------------------------------------------------------- #
 
-class TrueClassification(BaseMultiClassificationMeasure):
+class TrueClassification(BaseMultiClassificationMetric):
     """True classification is the sum of true positives and true negatives.""" 
     _code = "TC"        
     _name = 'true_classification'
@@ -139,7 +139,7 @@ class TrueClassification(BaseMultiClassificationMeasure):
                               positive=positive)                              
         return tp + tn        
 
-class FalseClassification(BaseMultiClassificationMeasure):
+class FalseClassification(BaseMultiClassificationMetric):
     """False classification is the sum of false positives and false negatives."""
     _code = "FC"        
     _name = 'false_classification'
@@ -153,7 +153,7 @@ class FalseClassification(BaseMultiClassificationMeasure):
         return fp + fn        
 # ------------------------ 2ND LEVEL MEASURES ------------------------------- #
 
-class PositiveLikelihoodRatio(BaseMultiClassificationMeasure):
+class PositiveLikelihoodRatio(BaseMultiClassificationMetric):
     """Positive likelihood ratio is true positive rate / false positive rate."""
     _code = 'LRP'
     _name = 'positive_likelihood_ratio'
@@ -164,7 +164,7 @@ class PositiveLikelihoodRatio(BaseMultiClassificationMeasure):
         fpr = FalsePositiveRate()(y, y_pred, *args, **kwargs)
         return tpr / fpr    
 
-class NegativeLikelihoodRatio(BaseMultiClassificationMeasure):
+class NegativeLikelihoodRatio(BaseMultiClassificationMetric):
     """Negative likelihood ratio is false negative rate / true negative rate."""
     _code = 'LRP'
     _name = 'negative_likelihood_ratio'
@@ -176,7 +176,7 @@ class NegativeLikelihoodRatio(BaseMultiClassificationMeasure):
         return fnr / tnr
 # --------------------------------------------------------------------------- #
 
-class Bias(BaseMultiClassificationMeasure):
+class Bias(BaseMultiClassificationMetric):
     """Computes bias as the ratio of outcome positive and the sample size."""
     _code = 'BIAS'
     _name = 'bias'
@@ -187,7 +187,7 @@ class Bias(BaseMultiClassificationMeasure):
         return op / y.shape[0]
 # --------------------------------------------------------------------------- #
 
-class Prevalence(BaseMultiClassificationMeasure):
+class Prevalence(BaseMultiClassificationMetric):
     """Computes prevalence as positive condition / sample size."""
     _code = 'PREV'
     _name = 'prevalence'
@@ -197,7 +197,7 @@ class Prevalence(BaseMultiClassificationMeasure):
         p = PositiveCondition()(y, y_pred, *args, **kwargs)        
         return p / y.shape[0]
 
-class Skew(BaseMultiClassificationMeasure):
+class Skew(BaseMultiClassificationMetric):
     """Computes skew as ratio of negative and positive condition."""
     _code = 'SKEW'
     _name = 'skew'
@@ -209,7 +209,7 @@ class Skew(BaseMultiClassificationMeasure):
         return n / p
 # --------------------------------------------------------------------------- #
 
-class CohensKappaChance(BaseMultiClassificationMeasure):
+class CohensKappaChance(BaseMultiClassificationMetric):
     """Computes Cohens Kappa Chance as (P*OP + N*ON) / sample size squared."""
     _code = 'CKc'
     _name = 'cohens_kappa_chance'
@@ -223,7 +223,7 @@ class CohensKappaChance(BaseMultiClassificationMeasure):
         return ((p * op) + (n * on)) / y.shape[0]**2
 # ------------------------ 3RD LEVEL MEASURES ------------------------------- #
 
-class OddsRatio(BaseMultiClassificationMeasure):
+class OddsRatio(BaseMultiClassificationMetric):
     """Computes odds ratio as (tp-tn) / (fp-fn)."""
     _code = 'OR'
     _name = 'odds_ratio'
@@ -236,7 +236,7 @@ class OddsRatio(BaseMultiClassificationMeasure):
         fn = FalseNegative()(y, y_pred, *args, **kwargs)        
         return (tp-tn) / (fp-fn)        
 
-class DiscrimitivePower(BaseMultiClassificationMeasure):
+class DiscrimitivePower(BaseMultiClassificationMetric):
     """Computes descrimitive power as:
     .. math:: \frac{\sqrt{3}}{\pi}\text{log(OR)}
     """

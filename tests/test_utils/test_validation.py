@@ -169,9 +169,9 @@ def test_validate_metric():
 @mark.validation
 def test_validate_application():    
     from mlstudio.utils.validation import validate_application
-    from mlstudio.supervised.algorithms.optimization.services.tasks import LogisticRegression    
+    from mlstudio.supervised.algorithms.optimization.services.tasks import BinaryClassification    
     with pytest.raises(TypeError) as v:
         validate_application('hand')
         assert "value error"  in str(v.value)
-    validate_application(LogisticRegression())           
+    validate_application(BinaryClassification())           
 

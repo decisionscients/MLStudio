@@ -16,150 +16,132 @@
 # License : BSD                                                               #
 # Copyright (c) 2020 nov8.ai                                                  #
 # =========================================================================== #
-"""Performance analytics classes for classification problems. 
-This module contains classification measures and metrics. Measures are derived
-from taking a measurement, e.g. true positives. Metrics are computed based
-upon two or more measures, e.g. true positive rate. Measures and metrics
-are used to report performance; however, only metrics can be used for 
-scoring and performance generalization estimation.
-"""
+"""Scorers for binary classification metrics."""
 import math
 import numpy as np
-from mlstudio.supervised.metrics.base import BaseBinaryClassificationMeasure
+from mlstudio.supervised.metrics.base import BaseBinaryClassificationMetric
 from mlstudio.supervised.metrics.base import BaseBinaryClassificationMetric
 # --------------------------------------------------------------------------- #
 #                        CLASSIFICATION MEASURES                              #
 # --------------------------------------------------------------------------- #
 # -------------------------- BASE MEASURES ---------------------------------- #
 
-class TruePositive(BaseBinaryClassificationMeasure):
+class TruePositive(BaseBinaryClassificationMetric):
     """Computes the number true positives."""    
     _code = "TP"        
     _name = 'true_positive'
     _label = "True Positive (Power)"
 
     def __call__(self, y, y_pred,  *args, **kwargs):
-        df = self._format_results(y=y, y_pred=y_pred, *args, **kwargs)
-        result = df[(df['y'] == positive) & (df['y_pred'] == positive)]
+        df = self._format_results(y=y, y_pred=y_pred)
+        result = df[(df['y'] == 1) & (df['y_pred'] == 1)]
         return len(result.index)    
 
 
-class TrueNegative(BaseBinaryClassificationMeasure):
+class TrueNegative(BaseBinaryClassificationMetric):
     """Computes the number true negatives."""
     _code = "TN"        
     _name = 'true_negative'
     _label = "True Negative"
 
     def __call__(self, y, y_pred,  *args, **kwargs):
-        df = self._format_results(y=y, y_pred=y_pred, *args, **kwargs)
-        result = df[(df['y'] == negative) & (df['y_pred'] == negative)]
+        df = self._format_results(y=y, y_pred=y_pred)
+        result = df[(df['y'] == 0) & (df['y_pred'] == 0)]
         return len(result.index)    
 
-class FalsePositive(BaseBinaryClassificationMeasure):
+class FalsePositive(BaseBinaryClassificationMetric):
     """Computes the number false positives."""
     _code = "FP"        
     _name = 'false_positive'
     _label = "False Positive (Type I Error)"
 
     def __call__(self, y, y_pred,  *args, **kwargs):
-        df = self._format_results(y=y, y_pred=y_pred, *args, **kwargs)
-        result = df[(df['y'] == negative) & (df['y_pred'] == positive)]
+        df = self._format_results(y=y, y_pred=y_pred)
+        result = df[(df['y'] == 0) & (df['y_pred'] == 1)]
         return len(result.index)    
 
-class FalseNegative(BaseBinaryClassificationMeasure):
+class FalseNegative(BaseBinaryClassificationMetric):
     """Computes the number false negatives."""
     _code = "FN"        
     _name = 'false_negative'
     _label = "False Negative (Type II Error)"
 
     def __call__(self, y, y_pred,  *args, **kwargs):
-        df = self._format_results(y=y, y_pred=y_pred, *args, **kwargs)
-        result = df[(df['y'] == positive) & (df['y_pred'] == negative)]
+        df = self._format_results(y=y, y_pred=y_pred)
+        result = df[(df['y'] == 1) & (df['y_pred'] == 0)]
         return len(result.index)            
 # -------------------------- 1st LEVEL MEASURES ----------------------------- #
 
-class PositiveCondition(BaseBinaryClassificationMeasure):
+class PositiveCondition(BaseBinaryClassificationMetric):
     """Computes positive condition as true positives + false negatives."""
     _code = "P"        
     _name = 'positive_condition'
     _label = "Positive Condition"
 
     def __call__(self, y, y_pred,  *args, **kwargs):
-        tp = TruePositive()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)
-        fn = FalseNegative()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)                              
+        tp = TruePositive()(y=y, y_pred=y_pred)
+        fn = FalseNegative()(y=y, y_pred=y_pred)                              
         return tp + fn
 
-class NegativeCondition(BaseBinaryClassificationMeasure):
+class NegativeCondition(BaseBinaryClassificationMetric):
     """Computes negative condition as false positives + true negatives."""    
     _code = "N"        
     _name = 'negative_condition'
     _label = "Negative Condition"
 
     def __call__(self, y, y_pred,  *args, **kwargs):
-        fp = FalsePositive()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)
-        tn = TrueNegative()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)                              
+        fp = FalsePositive()(y=y, y_pred=y_pred)
+        tn = TrueNegative()(y=y, y_pred=y_pred)                              
         return fp + tn        
 # --------------------------------------------------------------------------- #
 
-class OutcomePositive(BaseBinaryClassificationMeasure):
+class OutcomePositive(BaseBinaryClassificationMetric):
     """Computes outcome positive as true positives plus false positives."""
     _code = "OP"    
     _name = 'outcome_positive'    
     _label = "Outcome Positive"
 
     def __call__(self, y, y_pred,  *args, **kwargs):
-        tp = TruePositive()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)
-        fp = FalsePositive()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)                              
+        tp = TruePositive()(y=y, y_pred=y_pred)
+        fp = FalsePositive()(y=y, y_pred=y_pred)                              
         return tp + fp
 
-class OutcomeNegative(BaseBinaryClassificationMeasure):
+class OutcomeNegative(BaseBinaryClassificationMetric):
     """Computes outcome positive as false negatives plus true negatives."""    
     _code = "ON"        
     _name = 'outcome_negative'
     _label = "Outcome Negative"
 
     def __call__(self, y, y_pred,  *args, **kwargs):
-        fn = FalseNegative()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)
-        tn = TrueNegative()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)                              
+        fn = FalseNegative()(y=y, y_pred=y_pred)
+        tn = TrueNegative()(y=y, y_pred=y_pred)                              
         return fn + tn        
 # --------------------------------------------------------------------------- #
 
-class TrueClassification(BaseBinaryClassificationMeasure):
+class TrueClassification(BaseBinaryClassificationMetric):
     """True classification is the sum of true positives and true negatives.""" 
     _code = "TC"        
     _name = 'true_classification'
     _label = "True Classification"
 
     def __call__(self, y, y_pred,  *args, **kwargs):
-        tp = TruePositive()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)
-        tn = TrueNegative()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)                              
+        tp = TruePositive()(y=y, y_pred=y_pred)
+        tn = TrueNegative()(y=y, y_pred=y_pred)                              
         return tp + tn        
 
-class FalseClassification(BaseBinaryClassificationMeasure):
+class FalseClassification(BaseBinaryClassificationMetric):
     """False classification is the sum of false positives and false negatives."""
     _code = "FC"        
     _name = 'false_classification'
     _label = "False Classification"
 
     def __call__(self, y, y_pred,  *args, **kwargs):
-        fp = FalsePositive()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)
-        fn = FalseNegative()(y=y, y_pred=y_pred, negative=negative, 
-                              positive=positive)                              
+        fp = FalsePositive()(y=y, y_pred=y_pred)
+        fn = FalseNegative()(y=y, y_pred=y_pred)                              
         return fp + fn        
 # ------------------------ 2ND LEVEL MEASURES ------------------------------- #
 
-class PositiveLikelihoodRatio(BaseBinaryClassificationMeasure):
+class PositiveLikelihoodRatio(BaseBinaryClassificationMetric):
     """Positive likelihood ratio is true positive rate / false positive rate."""
     _code = 'LRP'
     _name = 'positive_likelihood_ratio'
@@ -170,7 +152,7 @@ class PositiveLikelihoodRatio(BaseBinaryClassificationMeasure):
         fpr = FalsePositiveRate()(y, y_pred, *args, **kwargs)
         return tpr / fpr    
 
-class NegativeLikelihoodRatio(BaseBinaryClassificationMeasure):
+class NegativeLikelihoodRatio(BaseBinaryClassificationMetric):
     """Negative likelihood ratio is false negative rate / true negative rate."""
     _code = 'LRP'
     _name = 'negative_likelihood_ratio'
@@ -182,7 +164,7 @@ class NegativeLikelihoodRatio(BaseBinaryClassificationMeasure):
         return fnr / tnr
 # --------------------------------------------------------------------------- #
 
-class Bias(BaseBinaryClassificationMeasure):
+class Bias(BaseBinaryClassificationMetric):
     """Computes bias as the ratio of outcome positive and the sample size."""
     _code = 'BIAS'
     _name = 'bias'
@@ -193,7 +175,7 @@ class Bias(BaseBinaryClassificationMeasure):
         return op / y.shape[0]
 # --------------------------------------------------------------------------- #
 
-class Prevalence(BaseBinaryClassificationMeasure):
+class Prevalence(BaseBinaryClassificationMetric):
     """Computes prevalence as positive condition / sample size."""
     _code = 'PREV'
     _name = 'prevalence'
@@ -203,7 +185,7 @@ class Prevalence(BaseBinaryClassificationMeasure):
         p = PositiveCondition()(y, y_pred, *args, **kwargs)        
         return p / y.shape[0]
 
-class Skew(BaseBinaryClassificationMeasure):
+class Skew(BaseBinaryClassificationMetric):
     """Computes skew as ratio of negative and positive condition."""
     _code = 'SKEW'
     _name = 'skew'
@@ -215,7 +197,7 @@ class Skew(BaseBinaryClassificationMeasure):
         return n / p
 # --------------------------------------------------------------------------- #
 
-class CohensKappaChance(BaseBinaryClassificationMeasure):
+class CohensKappaChance(BaseBinaryClassificationMetric):
     """Computes Cohens Kappa Chance as (P*OP + N*ON) / sample size squared."""
     _code = 'CKc'
     _name = 'cohens_kappa_chance'
@@ -229,7 +211,7 @@ class CohensKappaChance(BaseBinaryClassificationMeasure):
         return ((p * op) + (n * on)) / y.shape[0]**2
 # ------------------------ 3RD LEVEL MEASURES ------------------------------- #
 
-class OddsRatio(BaseBinaryClassificationMeasure):
+class OddsRatio(BaseBinaryClassificationMetric):
     """Computes odds ratio as (tp-tn) / (fp-fn)."""
     _code = 'OR'
     _name = 'odds_ratio'
@@ -242,7 +224,7 @@ class OddsRatio(BaseBinaryClassificationMeasure):
         fn = FalseNegative()(y, y_pred, *args, **kwargs)        
         return (tp-tn) / (fp-fn)        
 
-class DiscrimitivePower(BaseBinaryClassificationMeasure):
+class DiscrimitivePower(BaseBinaryClassificationMetric):
     """Computes descrimitive power as:
     .. math:: \frac{\sqrt{3}}{\pi}\text{log(OR)}
     """
@@ -321,9 +303,8 @@ class PositivePredictiveValue(BaseBinaryClassificationMetric):
         return tp / op
 
 class Precision(PositivePredictiveValue):
-    """Alias 
-class for PositivePredictiveValue."""
-    _code = "PPV"
+    """Alias class for PositivePredictiveValue."""
+    _code = "PREC"
     _name = 'precision'
     _label = "Precision"
     _best = np.max
@@ -458,7 +439,7 @@ class TruePositiveRate(BaseBinaryClassificationMetric):
 
 class Sensitivity(TruePositiveRate):
     """Alias for True Positive Rate."""       
-    _code = "TPR"
+    _code = "SENS"
     _name = 'sensitivity'
     _label = "Sensitivity"
     _best = np.max
@@ -469,7 +450,7 @@ class Sensitivity(TruePositiveRate):
 
 class Recall(TruePositiveRate):
     """Alias for True Positive Rate."""       
-    _code = "TPR"
+    _code = "REC"
     _name = 'recall'
     _label = "Recall"
     _best = np.max
@@ -558,7 +539,7 @@ class F1(BaseBinaryClassificationMetric):
     """F1 score computed as 2 * (PPV * TPR) / (PPV + TPR)."""       
     _code = "F1"
     _name = 'f1_score'
-    _label = r"$F_1$ Score"
+    _label = "F1 Score"
     _best = np.max
     _better  = np.greater
     _worst  = -np.Inf
@@ -574,7 +555,7 @@ class F05(BaseBinaryClassificationMetric):
     """F0.5 score computed as (1.25 * PPV * TPR) / (0.25 * PPV + TPR)."""       
     _code = "F0.5"
     _name = 'f0.5_score'
-    _label = r"$F_{0.5}$ Score"
+    _label = "F0.5 Score"
     _best = np.max
     _better  = np.greater
     _worst  = -np.Inf
@@ -590,7 +571,7 @@ class F2(BaseBinaryClassificationMetric):
     """F2 score computed as (5 * PPV * TPR) / (4 * PPV + TPR)."""       
     _code = "F2"
     _name = 'f2_score'
-    _label = r"$F_{2}$ Score"
+    _label = "F2 Score"
     _best = np.max
     _better  = np.greater
     _worst  = -np.Inf
@@ -606,7 +587,7 @@ class FBeta(BaseBinaryClassificationMetric):
     """FBeta score computed as ((1+beta^2) * PPV * TPR) / ((1+beta^2) * PPV + TPR)."""       
     _code = "FBeta"
     _name = 'fbeta_score'
-    _label = r"$F_{\beta}$ Score"
+    _label = "FBeta Score"
     _best = np.max
     _better  = np.greater
     _worst  = -np.Inf

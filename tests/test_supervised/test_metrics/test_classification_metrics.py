@@ -16,7 +16,7 @@
 # License : BSD                                                               #
 # Copyright (c) 2020 nov8.ai                                                  #
 # =========================================================================== #
-"""Tests Classification Measures and Metrics."""
+"""Tests Classification Metrics and Metrics."""
 #%%
 import math
 import numpy as np
@@ -136,7 +136,7 @@ class ClassificationMetricTests:
     def test_g_measure(self, get_classification_metric_test_package):
         test = 'G Measure score '
         metric = 'GM'
-        scorer = classification.GMeasure()
+        scorer = classification.GMetric()
         d = get_classification_metric_test_package        
         self._evaluate(d, scorer, test, metric)                                                 
 

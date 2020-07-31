@@ -74,7 +74,7 @@ class LinearRegressionTaskTests:
 
 @mark.tasks
 @mark.logistic_regression
-class LogisticRegressionTaskTests:
+class BinaryClassificationTaskTests:
 
     def test_logistic_regression_validation(self, get_logistic_regression_data):        
         with pytest.raises(TypeError):        
@@ -92,24 +92,24 @@ class LogisticRegressionTaskTests:
         task = Task.binaryclass()
         d = get_logistic_regression_task_package        
         # Test loss function
-        assert isinstance(task.loss, loss.CrossEntropy), "LogisticRegression loss value not correct"        
+        assert isinstance(task.loss, loss.CrossEntropy), "BinaryClassification loss value not correct"        
         task = Task.binaryclass(loss=loss.CrossEntropy(regularizer=regularizers.L1(alpha=0.1)))
-        assert isinstance(task.loss.regularizer, regularizers.L1), "LogisticRegression loss regularizer value not correct"
-        assert task.loss.regularizer.alpha == 0.1, "LogisticRegression loss regularizer value not correct"
+        assert isinstance(task.loss.regularizer, regularizers.L1), "BinaryClassification loss regularizer value not correct"
+        assert task.loss.regularizer.alpha == 0.1, "BinaryClassification loss regularizer value not correct"
         # Test data processor
-        assert isinstance(task.data_processor, BinaryClassDataProcessor), "LogisticRegression data processor error."
+        assert isinstance(task.data_processor, BinaryClassDataProcessor), "BinaryClassification data processor error."
         # Test output 
         task = Task.binaryclass()
         y_prob = task.predict_proba(theta=d['theta'], X=d['X'])
         y_pred = task.predict(theta=d['theta'], X=d['X'])
-        assert np.allclose(y_pred, d['y_pred']), "LogisticRegression prediction error."
-        assert np.allclose(y_prob, d['y_prob']), "LogisticRegression probability prediction error."
+        assert np.allclose(y_pred, d['y_pred']), "BinaryClassification prediction error."
+        assert np.allclose(y_prob, d['y_prob']), "BinaryClassification probability prediction error."
 
 
 
 @mark.tasks
 @mark.multiclass
-class MulticlassClassificationTaskTests:
+class MultiClassificationTaskTests:
 
     def test_multiclass_validation(self):        
         with pytest.raises(TypeError):        
@@ -127,15 +127,15 @@ class MulticlassClassificationTaskTests:
         task = Task.multiclass()
         d = get_multiclass_task_package        
         # Test loss function
-        assert isinstance(task.loss, loss.CategoricalCrossEntropy), "MulticlassClassification loss value not correct"        
+        assert isinstance(task.loss, loss.CategoricalCrossEntropy), "MultiClassification loss value not correct"        
         task = Task.multiclass(loss=loss.CategoricalCrossEntropy(regularizer=regularizers.L1(alpha=0.1)))
-        assert isinstance(task.loss.regularizer, regularizers.L1), "MulticlassClassification loss regularizer value not correct"
-        assert task.loss.regularizer.alpha == 0.1, "MulticlassClassification loss regularizer value not correct"
+        assert isinstance(task.loss.regularizer, regularizers.L1), "MultiClassification loss regularizer value not correct"
+        assert task.loss.regularizer.alpha == 0.1, "MultiClassification loss regularizer value not correct"
         # Test data processor
-        assert isinstance(task.data_processor, MultiClassDataProcessor), "MulticlassClassification data processor error."
+        assert isinstance(task.data_processor, MultiClassDataProcessor), "MultiClassification data processor error."
         # Test output 
         task = Task.multiclass()
         y_prob = task.predict_proba(theta=d['theta'], X=d['X'])
         y_pred = task.predict(theta=d['theta'], X=d['X'])
-        assert np.allclose(y_prob, d['y_prob']), "MulticlassClassification probability prediction error."
-        assert np.allclose(y_pred, d['y_pred']), "MulticlassClassification prediction error."
+        assert np.allclose(y_prob, d['y_prob']), "MultiClassification probability prediction error."
+        assert np.allclose(y_pred, d['y_pred']), "MultiClassification prediction error."

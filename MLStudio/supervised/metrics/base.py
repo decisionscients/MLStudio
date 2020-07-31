@@ -20,15 +20,15 @@
 
 The PerformanceAnalytics class occupies the top of the class hierarchy. 
 
-From this class, we derive the Measures and Metrics subclasses.  Measures,
+From this class, we derive the Metrics and Metrics subclasses.  Metrics,
 primarily used in classification problems, are derived from taking a 
 measurement. Examples include the number of true positives. A metric is
 a calculation between two or more measures, e.g. true positive rate.
-Measures can be reported; whereas metrics can be used for scoring and
+Metrics can be reported; whereas metrics can be used for scoring and
 generalized performance estimation.
 
-The RegressionMetrics, ClassificationMeasures and ClassificationMetrics
-classes are derived from Measures and Metrics.
+The RegressionMetrics, ClassificationMetrics and ClassificationMetrics
+classes are derived from Metrics and Metrics.
 """
 from abc import ABC, abstractmethod
 from sklearn.base import BaseEstimator
@@ -99,26 +99,8 @@ class BasePerformance(ABC, BaseEstimator):
     def is_probability_metric(self):
         return self._is_probability_metric   
 
-
-class BaseMeasure(BasePerformance):
-    """Base class for performance measures."""
-    
-    @abstractmethod
-    def __call__(self, y, y_pred, *args, **kwargs):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
-
 class BaseMetric(BasePerformance):
     """Base class for performance metrics."""
-
-    @abstractmethod
-    def __call__(self, y, y_pred, *args, **kwargs):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
-
-class BaseRegressionMeasure(BaseMeasure):
-    """Base class for regresssion measures."""
-
 
     @abstractmethod
     def __call__(self, y, y_pred, *args, **kwargs):
@@ -133,13 +115,6 @@ class BaseRegressionMetric(BaseMetric):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
-class BaseBinaryClassificationMeasure(BaseMeasure):
-    """Base class for regresssion measures."""
-
-    @abstractmethod
-    def __call__(self, y, y_pred, *args, **kwargs):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
 
 class BaseBinaryClassificationMetric(BaseMetric):
     """Base class for regresssion metrics."""
@@ -149,13 +124,6 @@ class BaseBinaryClassificationMetric(BaseMetric):
         raise NotImplementedError("This method is not implemented for "
                                   "this Abstract Base Class.")
 
-class BaseMultiClassificationMeasure(BaseMeasure):
-    """Base class for regresssion measures."""
-
-    @abstractmethod
-    def __call__(self, y, y_pred, *args, **kwargs):
-        raise NotImplementedError("This method is not implemented for "
-                                  "this Abstract Base Class.")
 
 class BaseMultiClassificationMetric(BaseMetric):
     """Base class for regresssion metrics."""

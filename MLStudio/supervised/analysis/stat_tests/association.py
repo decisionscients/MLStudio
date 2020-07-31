@@ -68,7 +68,7 @@ Predictive Analytics
     * Discriminant Analysis
     * Factorial Logistic Regression
     * Ordered Logistic Regression
-    * Repeated Measures Logistic Regression
+    * Repeated Metrics Logistic Regression
 
 Note: This package makes liberal use of three statistical software packages.
 

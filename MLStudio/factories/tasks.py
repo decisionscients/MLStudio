@@ -41,12 +41,12 @@ class Task(containers.DeclarativeContainer):
                                           data_processor=DataProcessors.regression(),
                                           activation=None)
 
-    binaryclass = providers.Factory(tasks.LogisticRegression,
+    binaryclass = providers.Factory(tasks.BinaryClassification,
                                           loss=loss.CrossEntropy(),
                                           data_processor=DataProcessors.binaryclass(),
                                           activation=activations.Sigmoid())     
 
-    multiclass = providers.Factory(tasks.MulticlassClassification,
+    multiclass = providers.Factory(tasks.MultiClassification,
                                           loss=loss.CategoricalCrossEntropy(),
                                           data_processor=DataProcessors.multiclass(),
                                           activation=activations.Softmax())

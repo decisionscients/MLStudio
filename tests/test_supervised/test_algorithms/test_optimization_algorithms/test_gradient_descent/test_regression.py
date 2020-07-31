@@ -42,7 +42,7 @@ class GradientRegressorTests:
         est = algorithms.GradientDescent.regression()       
         assert isinstance(est.task, tasks.LinearRegression), "Error GradientRegressorTest: task is invalid."        
         assert isinstance(est.optimizer, optimizers.GradientDescentOptimizer), "Error GradientRegressorTest: optimizer is invalid."        
-        assert isinstance(est.scorer, (metrics.base.BaseRegressionMeasure,
+        assert isinstance(est.scorer, (metrics.base.BaseRegressionMetric,
                                        metrics.base.BaseRegressionMetric)), "Error GradientRegressorTest: scorer is invalid."        
         assert isinstance(est.observer_list, base.ObserverList), "Error GradientRegressorTest: observer_list is invalid."        
         assert isinstance(est.progress, report.Progress), "Error GradientRegressorTest: progress is invalid."        
