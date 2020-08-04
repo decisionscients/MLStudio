@@ -29,6 +29,13 @@ class BlackBox(Observer):
     def __init__(self):
         super(BlackBox, self).__init__()
         self.name = "BlackBox"
+        self.total_epochs = 0
+        self.total_batches = 0
+        self.start = None 
+        self.end = None
+        self.duration = None
+        self.epoch_log = {}
+        self.batch_log = {}            
 
     def on_train_begin(self, log=None):
         """Sets instance variables at the beginning of training.
@@ -41,6 +48,8 @@ class BlackBox(Observer):
         self.total_epochs = 0
         self.total_batches = 0
         self.start = datetime.datetime.now()
+        self.end = None
+        self.duration = None
         self.epoch_log = {}
         self.batch_log = {}        
 

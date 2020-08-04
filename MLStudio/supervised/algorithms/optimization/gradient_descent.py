@@ -33,6 +33,7 @@ site.addsitedir(PROJECT_DIR)
 
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
+from tabulate import tabulate
 
 from mlstudio.utils.data_manager import unpack_parameters
 from mlstudio.utils.data_manager import batch_iterator
@@ -150,34 +151,7 @@ class GradientDescent(ABC, BaseEstimator):
     @property
     def description(self):
         """Creates and returns the estimator description."""                   
-
-        try:
-            schedule = " with " + self.learning_rate.name + " Learning Rate Schedule"
-        except:
-            schedule = ""           
-
-        try:
-            objective = " Optimizing " + self.task.loss.name
-        except:
-            objective = ""            
-        
-        try:
-            optimizer = " with " + self.optimizer.name
-        except:
-            optimizer = ""
-
-        try:
-            early_stop = " implementing " + self.early_stop.name
-        except:
-            early_stop = ""
-               
-        try: 
-            regularizer = " with  " + self.task.loss.regularizer.name 
-        except:
-            regularizer = ""        
-        
-        return self._task.name + " with " + self.variant + optimizer +\
-            objective + regularizer + optimizer + early_stop + schedule
+        return self._task.name + " by " + self.variant 
 
     @property
     def eta(self):
@@ -225,7 +199,7 @@ class GradientDescent(ABC, BaseEstimator):
             return self._y_val
         except:
             warnings.warn("This estimator has no y_val attribute.")
-
+    
     def get_blackbox(self):
         return self._blackbox
 
@@ -244,7 +218,7 @@ class GradientDescent(ABC, BaseEstimator):
     def _compile(self, log=None):
         """Makes copies of mutable parameters and makes them private members."""
 
-        self._eta = copy.copy(self.eta0)
+        self._eta = self.learning_rate.eta0 if self.learning_rate else self.eta0 
         self._task = copy.deepcopy(self.task) 
         self._observer_list = copy.deepcopy(self.observer_list)           
         self._optimizer = copy.deepcopy(self.optimizer)
@@ -301,6 +275,7 @@ class GradientDescent(ABC, BaseEstimator):
     # ----------------------------------------------------------------------- #
     def _initialize_observers(self, log=None):
         """Initialize remaining observers. Create and initialize observer list."""        
+        log = log or {}        
 
         self._observer_list.append(self._blackbox)
         self._observer_list.append(self._summary)
@@ -341,7 +316,7 @@ class GradientDescent(ABC, BaseEstimator):
         log = log or {}
         self.n_iter_ = self._epoch         
         self.intercept_, self.coef_ = unpack_parameters(self._theta)
-        self._observer_list.on_train_end()        
+        self._observer_list.on_train_end()                
     # ----------------------------------------------------------------------- #
     def _on_epoch_begin(self, log=None):
         """Initializes the epoch and notifies observers."""
@@ -448,13 +423,15 @@ class GradientDescent(ABC, BaseEstimator):
         if self._gradient is not None:
             log['gradient_norm'] = np.linalg.norm(self._gradient) 
 
-        return log
-            
+        return log           
 
     # ----------------------------------------------------------------------- #            
     def train_epoch(self):
         """Trains a single epoch."""
         self._on_epoch_begin()
+        
+        log = {}
+        log['epoch'] = self._epoch
 
         for X_batch, y_batch in batch_iterator(self._X_train, self._y_train, batch_size=self.batch_size):
             self._on_batch_begin()
@@ -470,10 +447,9 @@ class GradientDescent(ABC, BaseEstimator):
                     y_out=y_out)                       
             
             log['gradient_norm'] = np.linalg.norm(self._gradient) 
-            self._on_batch_end(log=log)
-            
-        log = {'epoch': self._epoch, 'theta': self._theta}        
-        self._on_epoch_end(log)
+            self._on_batch_end(log=log)           
+        
+        self._on_epoch_end()
 
 
     # ----------------------------------------------------------------------- #    

@@ -106,40 +106,39 @@ class StepDecay(LearningRateSchedule):
         The factor used as the base of the polynomial used to compute
         the decayed learning rate.
 
-    decay_steps : int (default=100)
-        The total number of steps to decay the rate from the initial
-        learning rate to the minimum learning rate.
+    step_size : int (default=100)
+        The total number of steps taken between drops in the 
+        learning rate.
 
     """
 
     def __init__(self, eta0=0.1, 
                        eta_min=1e-4,
                        decay_factor=0.5,
-                       decay_steps=10):        
+                       step_size=10):        
         super(StepDecay, self).__init__(
             eta0=eta0,
             eta_min=eta_min,
             decay_factor=decay_factor)              
 
         self.name = "Step Decay Learning Rate Schedule"
-        self.decay_steps = decay_steps
+        self.step_size = step_size
 
     def _validate(self):
         """Performs hyperparameter validation """
         super(StepDecay, self)._validate()
-        validate_int(param=self.decay_steps, 
-                     param_name='decay_steps',
+        validate_int(param=self.step_size, 
+                     param_name='step_size',
                      minimum=1, left='closed', right='open')                
 
     def _compute_learning_rate(self, epoch, log):        
-        exponent = (1 + epoch) // self._steps
+        exponent = (1 + epoch) // self.step_size
         return self.eta0 * \
             np.power(self.decay_factor, exponent)
 
     def on_train_begin(self, log=None):
         super(StepDecay, self).on_train_begin(log=log)        
-        self.decay_steps = min(self.decay_steps, self.model.epochs)            
-        self._steps = self.model.epochs // self.decay_steps
+        self.step_size = min(self.step_size, self.model.epochs)                    
 
 # --------------------------------------------------------------------------  #
 class TimeDecay(LearningRateSchedule):
@@ -233,26 +232,36 @@ class ExponentialDecay(LearningRateSchedule):
 
     decay_factor : float (default= 0.1)
         The decay factor used in the exponent for the learning rate computation
+
+    step_size : int(default-100)
+        The number of steps between each drop in learning rate.
     """
 
     def __init__(self, eta0=0.1, 
                        eta_min=1e-4,
-                       decay_factor=0.1):        
+                       decay_factor=0.96,
+                       step_size=100,
+                       staircase=False):        
         super(ExponentialDecay, self).__init__(
             eta0=eta0,
             eta_min=eta_min,
             decay_factor=decay_factor)
 
+        self.step_size = step_size
+        self.staircase = staircase
         self.name = "Exponential Decay Learning Rate Schedule"
 
     def _compute_learning_rate(self, epoch, log):
+        exponent = epoch // self.step_size if self.staircase else \
+                    epoch / self.step_size
         return self.eta0 * \
-            np.exp(-self.decay_factor * epoch)
+            np.power(self.decay_factor, exponent)
+
 
 # --------------------------------------------------------------------------  #
-class ExponentialStepDecay(LearningRateSchedule):
-    """ Exponential step decay learning rate schedule as implemented in Keras
-    'Source: <https://keras.io/api/optimizers/learning_rate_schedules/exponential_decay/>'_  
+class ExponentialSchedule(LearningRateSchedule):
+    """ Exponential scheduling learning rate schedule as:
+    .. math:: \eta_t=\eta_0 * 10^{-t/r}
 
     Parameters
     ----------
@@ -263,46 +272,23 @@ class ExponentialStepDecay(LearningRateSchedule):
     eta_min : float(default=1e-4)
         The minimum allowable learning rate        
 
-     decay_factor : float (default= 0.96)
-        The factor used as the base of the polynomial used to compute
-        the decayed learning rate.
-
-    decay_steps : int
-        The number of steps between each update
-
-    staircase : Boolean (default=False)
-        If true, the exponent is an integer division and decayed learning
-        rate follows a staircase function. 
+    step_size : int(default-100)
+        The number of steps between each drop in learning rate.
     """
 
-    def __init__(self, eta0=0.1, eta_min=1e-4,
-                       decay_factor=0.96, decay_steps=100, staircase=False):   
-        super(ExponentialStepDecay, self).__init__(
+    def __init__(self, eta0=0.1, 
+                       eta_min=1e-4,
+                       step_size=100):        
+        super(ExponentialSchedule, self).__init__(
             eta0=eta0,
-            eta_min=eta_min,            
-            decay_factor=decay_factor)    
-        self.name = "Exponential Step Decay Learning Rate Schedule"
-        self.decay_steps = decay_steps
-        self.staircase = staircase
+            eta_min=eta_min)
 
-    def _validate(self):
-        """Performs hyperparameter """
-        super(ExponentialStepDecay, self)._validate()
-        validate_int(param=self.decay_steps, 
-                     param_name='decay_steps',
-                     minimum=1, left='open', right='open')        
+        self.step_size = step_size
+        self.name = "Exponential Schedule Learning Rate Schedule"
 
     def _compute_learning_rate(self, epoch, log):
-        exponent =  epoch // self._decay_step_length if self.staircase else \
-            epoch / self._decay_step_length
-        return self.eta0 * np.power(self.decay_factor, \
-            exponent)
-
-    def on_train_begin(self, log=None):
-        super(ExponentialStepDecay, self).on_train_begin(log=log)
-        self.decay_steps = min(self.decay_steps, self.model.epochs)
-        self._decay_step_length = self.model.epochs // self.decay_steps        
-        
+        return self.eta0 *  10 ** (-epoch / self.step_size)
+            
 # --------------------------------------------------------------------------  #
 class PolynomialDecay(LearningRateSchedule):
     """ Polynomial decay learning rate schedule given by:
@@ -319,17 +305,25 @@ class PolynomialDecay(LearningRateSchedule):
 
     power : float (default=1)
         The power to which the polynomial is decayed 
+
+    decay_steps : int(default=100)
+        The number of times the learning rate is decayed from the initial 
+        learning rate to its minimum.
     """
 
     def __init__(self, eta0=0.1, 
                        eta_min=1e-4,
-                       power=1.0):        
+                       power=1.0,
+                       decay_steps=100,
+                       cycle=False):        
         super(PolynomialDecay, self).__init__(
             eta0=eta0,
             eta_min=eta_min)   
 
         self.name = "Polynomial Decay Learning Rate Schedule"
         self.power = power
+        self.decay_steps = decay_steps
+        self.cycle = cycle
 
     def _validate(self):
         """Performs hyperparameter validation"""
@@ -339,70 +333,18 @@ class PolynomialDecay(LearningRateSchedule):
                              left='open', right='closed')                                
 
     def _compute_learning_rate(self, epoch, log):
-        decay = (1 - (epoch / float(self.model.epochs))) ** self.power                
-        return self.eta0 * decay
-
-# --------------------------------------------------------------------------  #
-class PolynomialStepDecay(LearningRateSchedule):
-    """ Polynomial step decay learning rate as implemented in Keras and Tensorflow
-    'Source: <https://keras.io/api/optimizers/learning_rate_schedules/polynomial_decay/>'_    
-
-    Parameters
-    ----------
-    eta0 : float (default=0.1)
-        The initial learning rate that is decayed during optimization. This 
-        will override the eta0 parameter on the estimator.
-
-    eta_min : float(default=1e-4)
-        The minimum allowable learning rate        
-
-    decay_steps : int (default=100)
-        The total number of steps to decay the rate from the initial
-        learning rate to the minimum learning rate.
-
-    power : float (default=1)
-        The power to which the polynomial is decayed 
-    """
-
-    def __init__(self, eta0=0.1, 
-                       eta_min=1e-4,
-                       decay_steps=100,
-                       power=1.0):        
-        super(PolynomialStepDecay, self).__init__(
-            eta0=eta0,
-            eta_min=eta_min)   
-
-        self.name = "Polynomial Decay Learning Rate Schedule"
-        self.decay_steps = decay_steps
-        self.power = power
-
-    def _validate(self):
-        """Performs hyperparameter validation"""
-        super(PolynomialStepDecay, self)._validate()
-        
-        validate_zero_to_one(param=self.power, 
-                             param_name='power',
-                             left='open', right='closed')    
-        
-        validate_int(param=self.decay_steps, 
-                     param_name='decay_steps',
-                     minimum=1, left='open', right='open')                
-
-    def _compute_learning_rate(self, epoch, log):
-        step = min(epoch, self.decay_steps)
-        return (self.eta0 - self.eta_min) *\
-            (1 - step / self.decay_steps) ** self.power +\
-                self.eta_min
-
-    def on_train_begin(self, log=None):
-        super(PolynomialStepDecay, self).on_train_begin(log=log)
-        self.decay_steps = min(self.decay_steps, self.model.epochs)
-        
+        if self.cycle:
+            self.decay_steps = self.decay_steps * np.ceil(epoch / self.decay_steps)
+        else:
+            epoch = min(epoch, self.decay_steps)
+        learning_rate_range = self.eta0 - self.eta_min
+        base = (1 - epoch / self.decay_steps)
+        return learning_rate_range * np.power(base, self.power) + self.eta_min
 
 # --------------------------------------------------------------------------  #
 class PowerSchedule(LearningRateSchedule):
     """ Exponential decay learning rate schedule as:
-    .. math:: \eta_t=\eta_0 / (1+\frac{t}{r})^{c}
+    .. math:: \eta_t=\eta_0 * (1+\frac{t}{r})^{-c}
 
     Parameters
     ----------
@@ -413,11 +355,7 @@ class PowerSchedule(LearningRateSchedule):
     eta_min : float(default=1e-4)
         The minimum allowable learning rate        
 
-    decay_steps : int (default=100)
-        The total number of steps to decay the rate from the initial
-        learning rate to the minimum learning rate.
-
-    power : float (default=1)
+    power : float (default=-1)
         The power to which the polynomial is decayed 
     """
     def __init__(self, eta0=0.1, 
@@ -436,14 +374,14 @@ class PowerSchedule(LearningRateSchedule):
         super(PowerSchedule, self)._validate()
         validate_zero_to_one(param=self.power, 
                              param_name='power',
-                             left='open', right='closed')    
+                             left='closed', right='closed')    
         
         validate_int(param=self.decay_steps, 
                      param_name='decay_steps',
                      minimum=1, left='open', right='open') 
 
     def _compute_learning_rate(self, epoch, log):
-        return self.eta0 / (1 + epoch/self.decay_steps)**self.power
+        return self.eta0 * (1 + epoch/self.decay_steps)**-self.power
 
 # --------------------------------------------------------------------------  #
 class BottouSchedule(LearningRateSchedule):
@@ -517,8 +455,7 @@ class Adaptive(LearningRateSchedule):
 
     def __init__(self, eta0=0.1, eta_min=1e-4,
                  decay_factor=0.5, monitor='train_cost',  epsilon=0.001, 
-                 patience=10,
-                 observer=None):
+                 patience=10):
         super(Adaptive, self).__init__(
             eta0=eta0,
             eta_min=eta_min,
@@ -528,7 +465,9 @@ class Adaptive(LearningRateSchedule):
         self.monitor = monitor
         self.epsilon = epsilon
         self.patience = patience  
-        self.observer = observer      
+        self.observer = PerformanceObserver(monitor=monitor,
+                                            epsilon=epsilon,
+                                            patience=patience)      
 
     def on_train_begin(self, log=None):        
         """Sets key variables at beginning of training.

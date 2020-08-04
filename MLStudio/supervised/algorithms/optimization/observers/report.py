@@ -94,12 +94,12 @@ class Summary(base.Observer):
     def _data_summary(self):
         """Prints summary of the data used for training (and validation)."""
 
-        X_train_metadata = self.model.train_data_package['X_train']['metadata']                
-        y_train_metadata = self.model.train_data_package['y_train']['metadata']
+        X_train_metadata = self.model.train_data_package['X_train']['metadata']['processed']                
+        y_train_metadata = self.model.train_data_package['y_train']['metadata']['processed']
         
         if self.model.train_data_package.get('X_val'):       
-            X_val_metadata = self.model.train_data_package['X_val']['metadata']            
-            y_val_metadata = self.model.train_data_package['y_val']['metadata']
+            X_val_metadata = self.model.train_data_package['X_val']['metadata']['processed']            
+            y_val_metadata = self.model.train_data_package['y_val']['metadata']['processed']
 
             headers = ["n_Observations", "n_Features", "Size (Bytes)"]
             df_X = {'X_train': X_train_metadata, "X_val": X_val_metadata}
@@ -164,7 +164,7 @@ class Summary(base.Observer):
     _hdf = pd.DataFrame()
     def _update_params(self, level, k, v):
         """Adds a k,v pair of params to the hyperparameter dataframe."""        
-        if v:
+        if v is not None:
             obj = k.split("__")[0]                        
             d = {'level': level, 'object':obj, 'Hyperparameter': k, 'Value': v}
             df = pd.DataFrame(data=d, index=[0])

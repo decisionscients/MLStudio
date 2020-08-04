@@ -62,16 +62,12 @@ class LearningRate(containers.DeclarativeContainer):
     exponential_decay_factory = providers.Factory(learning_rate.ExponentialDecay,
                                     eta0=0.1, eta_min=1e-4, decay_factor=0.1)      
 
-    exponential_step_decay_factory = providers.Factory(learning_rate.ExponentialStepDecay,
+    exponential_step_decay_factory = providers.Factory(learning_rate.ExponentialSchedule,
                                     eta0=0.1, eta_min=1e-4, decay_factor=0.96,
                                     staircase=False)                         
 
     polynomial_decay_factory = providers.Factory(learning_rate.PolynomialDecay,
                                     eta0=0.1, eta_min=1e-4, power=1.0)                       
-
-    polynomial_step_decay_factory = providers.Factory(learning_rate.PolynomialStepDecay,
-                                    eta0=0.1, eta_min=1e-4, decay_steps=100,
-                                    power=1.0)
 
     power_decay_factory = providers.Factory(learning_rate.PowerSchedule,
                                     eta0=0.1, eta_min=1e-4, decay_steps=100,

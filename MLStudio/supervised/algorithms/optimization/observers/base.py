@@ -49,9 +49,10 @@ class ObserverList(BaseEstimator):
         observers : list
             List of 'Observer' instances.        
         """
-        self.observers = observers                        
+        self._observers = observers or []                        
         self.params = {}
         self.model = None
+
 
     def append(self, observer):
         """Appends observer to list of observers.
@@ -60,8 +61,6 @@ class ObserverList(BaseEstimator):
         ----------
         observer : Observer instance            
         """
-        observers = deepcopy(self.observers) or []
-        self._observers = [c for c in observers]
         self._observers.append(observer)
 
     def set_params(self, params):
@@ -286,11 +285,11 @@ class Observer(ABC, BaseEstimator):
 class PerformanceObserver(Observer):
     """Base class for performance observers."""
 
-    def __init__(self): 
+    def __init__(self, monitor='train_cost', epsilon=0.01, patience=10): 
         super(PerformanceObserver, self).__init__()               
-        self._monitor = None
-        self._epsilon = None
-        self._patience = None
+        self._monitor = monitor
+        self._epsilon = epsilon
+        self._patience = patience
 
     @property
     def name(self):

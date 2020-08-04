@@ -27,9 +27,8 @@ from sklearn.utils.estimator_checks import check_estimator
 from mlstudio.supervised.machine_learning.gradient_descent import GDClassifier
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import TimeDecay, StepDecay
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialDecay
-from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialStepDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialSchedule
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PolynomialDecay
-from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PolynomialStepDecay
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PowerSchedule
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import BottouSchedule
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import Adaptive
@@ -49,10 +48,10 @@ from mlstudio.supervised.algorithms.optimization.services.regularizers import L1
 from mlstudio.supervised.algorithms.optimization.services import metrics
 # --------------------------------------------------------------------------  #
 count = 0
-early_stops = [None,EarlyStop()]
+early_stops = [EarlyStop()]
 learning_rates = \
-            [None, TimeDecay(), StepDecay(), ExponentialDecay(), 
-             ExponentialStepDecay(), PolynomialDecay(), PolynomialStepDecay(), 
+            [TimeDecay(), StepDecay(), ExponentialDecay(), 
+             PolynomialDecay(), ExponentialSchedule(),
              PowerSchedule(), BottouSchedule(), Adaptive()]
 metric_objects = [metrics.F1(), metrics.Recall(),metrics.Precision(),metrics.Specificity()]
 objectives = [CrossEntropy(), CrossEntropy(regularizer=L1(alpha=0.01)), 

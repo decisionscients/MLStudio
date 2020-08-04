@@ -27,9 +27,8 @@ from pytest import mark
 from mlstudio.supervised.algorithms.optimization.gradient_descent import GD
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import TimeDecay, StepDecay
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialDecay
-from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialStepDecay
+from mlstudio.supervised.algorithms.optimization.observers.learning_rate import ExponentialSchedule
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PolynomialDecay
-from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PolynomialStepDecay
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import PowerSchedule
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import BottouSchedule
 from mlstudio.supervised.algorithms.optimization.observers.learning_rate import Adaptive

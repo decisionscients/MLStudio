@@ -54,7 +54,7 @@ sys.path.append(datadir)
 # ---------------------------------------------------------------------------- #
 
 collect_ignore_glob = ["*ions.py", "*ic_regression.py", "performance*",
-                       "*ss_regression.py", "*metrics.py", 
+                       "*ss_regression.py", "*metrics.py", "*_test.py",
                        "*stop.py", "*IoC.py", "*validation.py",                       
                        "*test_cross_validation.py", "test_pure*.py"]
 
