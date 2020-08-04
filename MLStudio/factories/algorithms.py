@@ -27,7 +27,9 @@ import collections
 import dependency_injector.containers as containers
 import dependency_injector.providers as providers
 
-from mlstudio.supervised.algorithms.optimization.gradient_descent import GradientDescent
+from mlstudio.supervised.algorithms.optimization.gradient_descent import GDRegressor
+from mlstudio.supervised.algorithms.optimization.gradient_descent import GDBinaryClass
+from mlstudio.supervised.algorithms.optimization.gradient_descent import GDMultiClass
 from mlstudio.supervised.algorithms.optimization.observers import base, debug
 from mlstudio.supervised.algorithms.optimization.observers import report, history
 from mlstudio.supervised.algorithms.optimization.services import optimizers
@@ -39,7 +41,7 @@ from mlstudio.factories.observers import Summary
 # --------------------------------------------------------------------------- #
 class GradientDescent(containers.DeclarativeContainer):
     """IoC Container for gradient descent estimator providers."""                                    
-    regression = providers.Factory(GradientDescent,
+    regression = providers.Factory(GDRegressor,
                                     task=Task.regression(),
                                     eta0=0.01,
                                     epochs=1000,
@@ -60,7 +62,7 @@ class GradientDescent(containers.DeclarativeContainer):
                                     gradient_checker=debug.GradientCheck()
                                     )
 
-    binaryclass = providers.Factory(GradientDescent,
+    binaryclass = providers.Factory(GDBinaryClass,
                                     task=Task.binaryclass(),
                                     eta0=0.01,
                                     epochs=1000,
@@ -81,7 +83,7 @@ class GradientDescent(containers.DeclarativeContainer):
                                     gradient_checker=debug.GradientCheck()
                                     )
 
-    multiclass = providers.Factory(GradientDescent,
+    multiclass = providers.Factory(GDMultiClass,
                                     task=Task.multiclass(),
                                     eta0=0.01,
                                     epochs=1000,

@@ -24,6 +24,7 @@ from collections import OrderedDict
 
 import numpy as np
 from sklearn.base import BaseEstimator
+from sklearn.exceptions import DataConversionWarning
 from mlstudio.supervised.algorithms.optimization.services.activations import Sigmoid, Softmax
 from mlstudio.supervised.algorithms.optimization.services.loss import Quadratic 
 from mlstudio.supervised.algorithms.optimization.services.loss import CrossEntropy
@@ -39,7 +40,7 @@ class Task(ABC, BaseEstimator):
         self.data_processor = data_processor
         self.activation = activation        
         self.random_state = random_state
-        self._n_features = None         
+        self._n_features_out = None         
         self._n_classes = None
         self._data_prepared = False
 
@@ -74,7 +75,7 @@ class Task(ABC, BaseEstimator):
         """
 
         data = self._data_processor.process_train_data(X, y, random_state)
-        self._n_features = data['X_train']['metadata']['n_features']
+        self._n_features_out = data['X_train']['metadata']['processed']['n_features']
 
         self._data_prepared = True
 
@@ -108,7 +109,8 @@ class Task(ABC, BaseEstimator):
 
         data = self._data_processor.process_train_val_data(X, y, val_size, 
                                                             random_state)
-        self._n_features = data['X_train']['metadata']['n_features']
+        self._n_features_out = data['X_train']['metadata']['processed']['n_features']
+        self._n_classes = data['y_train']['metadata']['orig']['n_classes']
         self._data_prepared = True
         return data
 
@@ -133,13 +135,13 @@ class Task(ABC, BaseEstimator):
             raise Exception("Data must be prepared before weights are initialized.")
 
         if theta_init is not None:
-            assert theta_init.shape == (self._n_features,),\
+            assert theta_init.shape == (self._n_features_out,),\
                 "Initial parameters theta must have shape (n_features,)."
             theta = theta_init
         else:
             # Random initialization of weights
             rng = np.random.RandomState(self.random_state)                
-            theta = rng.randn(self._n_features) 
+            theta = rng.randn(self._n_features_out) 
             # Set the bias initialization to zero
             theta[0] = 0
         return theta
@@ -188,11 +190,17 @@ class Task(ABC, BaseEstimator):
 
     def _check_X(self, X, theta):
         """Checks X to ensure that it has been processed for training/prediction."""
-        if X.shape[1] != theta.shape[0]:
-            X = validation.check_X(X)        
-            data = self._data_processor.process_X_test_data(X)        
-            return data['X_test']['data']
+        X = validation.check_X(X)        
+        if X.shape[1] != theta.shape[0]:                
+            X = self._data_processor.process_X_test_data(X)                    
         return X
+
+    def _check_y_pred(self, y_pred):
+        if y_pred.ndim > 1:
+            msg = self.__class__.__name__ + " doesn't support multioutput."
+            warnings.warn(msg, DataConversionWarning)        
+        else:
+            return y_pred
 
     @abstractmethod
     def predict(self, X, theta):
@@ -211,7 +219,6 @@ class Task(ABC, BaseEstimator):
         y_pred : prediction
         """
         pass
-
     
 # --------------------------------------------------------------------------  #
 class LinearRegression(Task):
@@ -241,7 +248,9 @@ class LinearRegression(Task):
 
     def predict(self, X, theta):
         X = self._check_X(X, theta)
-        return self.compute_output(theta, X)
+        y_pred = self.compute_output(theta, X)
+        y_pred = self._check_y_pred(y_pred)
+        return y_pred
 
     def predict_proba(self, theta, X):
         raise NotImplementedError("predict_proba is not implemented for the LinearRegression task.")
@@ -326,7 +335,9 @@ class BinaryClassification(Task):
         y_pred : Predicted class
         """        
         o = self.predict_proba(X, theta)
-        return np.round(o).astype(int)
+        y_pred = np.round(o).astype(int)
+        y_pred = self._check_y_pred(y_pred)
+        return y_pred
 
     def predict_proba(self, X, theta):
         """Predicts the probability of the positive class
@@ -344,7 +355,9 @@ class BinaryClassification(Task):
         y_pred : Predicted class probability
         """
         X = self._check_X(X, theta)
-        return self.compute_output(theta, X)     
+        y_pred = self.compute_output(theta, X)     
+        y_pred = self._check_y_pred(y_pred)
+        return y_pred        
 
 # --------------------------------------------------------------------------  #
 class MultiClassification(Task):
@@ -401,13 +414,13 @@ class MultiClassification(Task):
             raise Exception("Data must be prepared before weights are initialized.")
 
         if theta_init is not None:
-            assert theta_init.shape == (self._n_features, self._n_classes),\
+            assert theta_init.shape == (self._n_features_out, self._n_classes),\
                 "Initial parameters theta must have shape (n_features,n_classes)."
             theta = theta_init
         else:
             # Random initialization of weights
             rng = np.random.RandomState(self.random_state)                
-            theta = rng.randn(self._n_features, self._n_classes) 
+            theta = rng.randn(self._n_features_out, self._n_classes) 
             # Set the bias initialization to zero
             theta[0] = 0
         return theta          

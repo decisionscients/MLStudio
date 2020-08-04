@@ -27,7 +27,7 @@ import pandas as pd
 from sklearn.base import BaseEstimator
 
 from mlstudio.utils.validation import validate_int, validate_zero_to_one
-from mlstudio.utils.validation import validate_metric
+from mlstudio.utils.validation import validate_monitor
 # --------------------------------------------------------------------------- #
 #                             PERFORMANCE OBSERVER                            #
 # --------------------------------------------------------------------------- #
@@ -106,7 +106,7 @@ class PerformanceObserver(Observer):
             self._better = np.less            
 
         # Validation
-        validate_metric(self.metric)
+        validate_monitor(self.metric)
         validate_zero_to_one(param=self.epsilon, param_name='epsilon',
                              left='open', right='open')
         validate_int(param=self.patience, param_name='patience')

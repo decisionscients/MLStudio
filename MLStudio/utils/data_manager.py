@@ -24,6 +24,7 @@ from abc import ABC, abstractmethod
 from collections import OrderedDict
 from math import ceil
 import sys
+import warnings
 
 import numpy as np
 from numpy.random import RandomState
@@ -34,11 +35,11 @@ from sklearn.utils import check_array
 from sklearn import preprocessing
 
 from mlstudio.utils.data_analyzer import get_features, get_target_info
-from mlstudio.utils.validation import check_X_y, check_X
+from mlstudio.utils.validation import check_X_y, check_X, check_is_fitted
 # --------------------------------------------------------------------------- #
 #                           DATA PREPARATION                                  #
 # --------------------------------------------------------------------------- #
-def check_y(y):
+def hot_to_cool(y):
     """Converts one-hot vectors to an array of integers."""        
     y = np.array(y)
     if y.ndim > 1:
@@ -46,13 +47,13 @@ def check_y(y):
             y = np.argmax(y, axis=1)
     return y
 
-def check_coo(X):
+def coo_to_csr(X):
     """Converts coo matrices to csr format."""
     if issparse(X):
         if isspmatrix_coo(X):
             X = X.tocsr()
-    return X    
-# --------------------------------------------------------------------------- #
+    return X        
+
 def unpack_parameters(theta):
     """Unpacks the parameters theta and returns bias and weights."""
     if np.ndim(theta) == 0:
@@ -554,11 +555,11 @@ class AddBiasTerm(BaseTransformer, TransformerMixin):
     
     def _transform_csr(self, X):
         """Adds bias term to csr matrix."""
-        X = check_coo(X)
+        X = coo_to_csr(X)
         ones = np.ones((X.shape[0],1))
         bias_term = csr_matrix(ones, dtype=float)
         X = hstack((bias_term, X)) 
-        X = check_coo(X)
+        X = coo_to_csr(X)
         return X
 
     def transform(self, X, y=None):
@@ -572,9 +573,12 @@ class AddBiasTerm(BaseTransformer, TransformerMixin):
     
     def inverse_transform(self, X):
         """Removes bias term from matrix and returns it to caller."""
-        X = check_coo(X)
+        X = coo_to_csr(X)
         return X[:,1:]
-                        
+
+    def fit_transform(self, X):
+        """Combines fit and transform methods."""
+        return self.fit(X).transform(X)                        
 # --------------------------------------------------------------------------- #
 class ZeroBiasTerm(BaseTransformer, TransformerMixin):
     """Zeros out bias term in a parameters matrix or tensor."""
@@ -705,10 +709,8 @@ class DataSplitter(BaseTransformer, TransformerMixin):
         -------
         X_train, X_test, y_train, y_test : Data split in accordance with parameters.
         """ 
-        if isspmatrix_coo(X):
-            X = X.tocsr()
-        if isspmatrix_coo(y):
-            y = y.tocsr()
+        X = X.tocsr() if isspmatrix_coo(X) else check_X(X)
+        y = y.tocsr() if isspmatrix_coo(y) else hot_to_cool(y)
             
         if X.shape[0] != y.shape[0]:
             raise ValueError("X and y have incompatible shapes. Expected "
@@ -742,6 +744,11 @@ class DataSplitter(BaseTransformer, TransformerMixin):
             # Slice and dice.
             y_train, y_test = y[train_idx], y[test_idx]
             X_train, X_test = X[train_idx], X[test_idx]
+
+        if X_train.shape[0] == 0 or X_test.shape[0] == 0:
+            msg = "Train test split resulted in a dataset with zero samples. Returning original data."
+            warnings.warn(msg, UserWarning)            
+            return X, None, y, None
 
         return X_train, X_test, y_train, y_test
 

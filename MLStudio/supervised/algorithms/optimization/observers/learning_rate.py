@@ -20,6 +20,7 @@
 # =========================================================================== #
 """Learning rate schedules."""
 from abc import abstractmethod
+from copy import deepcopy
 import math
 import numpy as np
 from tabulate import tabulate
@@ -29,9 +30,9 @@ from mlstudio.supervised.metrics.regression import MeanSquaredError
 from mlstudio.utils.validation import validate_bool
 from mlstudio.utils.validation import validate_int
 from mlstudio.utils.validation import validate_objective, validate_optimizer
-from mlstudio.utils.validation import validate_metric, validate_string
+from mlstudio.utils.validation import validate_monitor, validate_string
 from mlstudio.utils.validation import validate_zero_to_one, validate_int
-from mlstudio.utils.validation import validate_metric
+from mlstudio.utils.validation import validate_monitor
 # --------------------------------------------------------------------------  #
 class LearningRateSchedule(Observer):
     """Base class for learning rate schedules. 
@@ -496,8 +497,8 @@ class Adaptive(LearningRateSchedule):
         The factor by which the learning rate is decayed when stabilization
         is encountered.
 
-    metric : str, optional (default='train_cost')
-        Specifies which statistic to metric for evaluation purposes.
+    monitor : str, optional (default='train_cost')
+        Specifies the variable that we are monitoring for performance evaluation purposes.
         'train_cost': Training set costs
         'train_score': Training set scores based upon the model's metric parameter
         'val_cost': Validation set costs
@@ -515,7 +516,7 @@ class Adaptive(LearningRateSchedule):
     """
 
     def __init__(self, eta0=0.1, eta_min=1e-4,
-                 decay_factor=0.5, metric='train_cost',  epsilon=0.001, 
+                 decay_factor=0.5, monitor='train_cost',  epsilon=0.001, 
                  patience=10,
                  observer=None):
         super(Adaptive, self).__init__(
@@ -524,10 +525,10 @@ class Adaptive(LearningRateSchedule):
             decay_factor=decay_factor)
 
         self.name = "Adaptive Learning Rate Schedule"        
-        self.metric = metric                
+        self.monitor = monitor
         self.epsilon = epsilon
         self.patience = patience  
-        self._observer = observer      
+        self.observer = observer      
 
     def on_train_begin(self, log=None):        
         """Sets key variables at beginning of training.
@@ -537,9 +538,10 @@ class Adaptive(LearningRateSchedule):
         log : dict
             Contains no information
         """
+        self._observer = deepcopy(self.observer)
         super(Adaptive, self).on_train_begin(log)
         try:
-            self._observer.metric = self.metric
+            self._observer.monitor = self.monitor
             self._observer.epsilon = self.epsilon
             self._observer.patience = self.patience
         except:

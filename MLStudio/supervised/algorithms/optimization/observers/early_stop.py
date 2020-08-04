@@ -33,7 +33,7 @@ import numpy as np
 import pandas as pd
 
 from mlstudio.supervised.algorithms.optimization.observers.base import Observer
-from mlstudio.utils.validation import validate_metric, validate_int
+from mlstudio.utils.validation import validate_monitor, validate_int
 from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
 #                               EARLYSTOP                                     #

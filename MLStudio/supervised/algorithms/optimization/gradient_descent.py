@@ -32,7 +32,7 @@ PROJECT_DIR = Path(__file__).resolve().parents[4]
 site.addsitedir(PROJECT_DIR)
 
 import numpy as np
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
 
 from mlstudio.utils.data_manager import unpack_parameters
 from mlstudio.utils.data_manager import batch_iterator
@@ -40,8 +40,8 @@ from mlstudio.utils import validation
 # =========================================================================== #
 #                              GRADIENT DESCENT                               #
 # =========================================================================== #        
-class GradientDescent(BaseEstimator):
-    """Gradient descent base class for all estimators.
+class GradientDescent(ABC, BaseEstimator):
+    """Gradient descent abstract base class for all estimators.
     
     Performs gradient descent optimization to estimate the parameters theta
     that best fit the data.
@@ -217,14 +217,14 @@ class GradientDescent(BaseEstimator):
         try:
             return self._X_val
         except:
-            warnings.warn("This estimator has non X_val attribute.")
+            warnings.warn("This estimator has no X_val attribute.")
 
     @property
     def y_val(self):
         try:
             return self._y_val
         except:
-            warnings.warn("This estimator has non y_val attribute.")
+            warnings.warn("This estimator has no y_val attribute.")
 
     def get_blackbox(self):
         return self._blackbox
@@ -284,16 +284,19 @@ class GradientDescent(BaseEstimator):
         if self.val_size:
             self._train_data_package = self._task.prepare_train_val_data(X, y, self.val_size, \
                     self.random_state)      
-            self._X_train = self._train_data_package['X_train']['data']          
-            self._X_val = self._train_data_package['X_val']['data']
-            self._y_train = self._train_data_package['y_train']['data']
-            self._y_val = self._train_data_package['y_val']['data']
+            self._X_train = self._train_data_package['X_train'].get('data')          
+            self._y_train = self._train_data_package['y_train'].get('data')          
+            if self._train_data_package.get('X_val'):
+                self._X_val = self._train_data_package['X_val'].get('data')
+                self._y_val = self._train_data_package['y_val'].get('data')
         else:
             self._train_data_package = self._task.prepare_train_data(X, y, self.random_state)
             self._X_train = self._train_data_package['X_train']['data']          
             self._y_train = self._train_data_package['y_train']['data']
-        self.n_features_ = self._train_data_package['X_train']['metadata']['n_features']
-        self.n_classes_ = self._train_data_package['y_train']['metadata']['n_classes']
+            
+        self.n_features_in_ = self._train_data_package['X_train']['metadata']['orig']['n_features']
+        self.classes_ = self._train_data_package['y_train']['metadata']['orig']['classes']
+        self.n_classes_ = self._train_data_package['y_train']['metadata']['orig']['n_classes']
 
     # ----------------------------------------------------------------------- #
     def _initialize_observers(self, log=None):
@@ -434,10 +437,11 @@ class GradientDescent(BaseEstimator):
 
         # Check not only val_size but also for empty validation sets 
         if self.val_size:
-            if self._X_val.shape[0] > 0:                
-                y_out_val = self._task.compute_output(self._theta, self._X_val)
-                log['val_cost'] = self._task.compute_loss(self._theta, self._y_val, y_out_val)                                
-                log['val_score'] = self.score(self._X_val, self._y_val)
+            if hasattr(self, '_X_val'):
+                if self._X_val.shape[0] > 0:                
+                    y_out_val = self._task.compute_output(self._theta, self._X_val)
+                    log['val_cost'] = self._task.compute_loss(self._theta, self._y_val, y_out_val)                                
+                    log['val_score'] = self.score(self._X_val, self._y_val)
         # Store the gradient and its magnitude
         log['gradient'] = self._gradient
         log['gradient_norm'] = None
@@ -496,33 +500,13 @@ class GradientDescent(BaseEstimator):
         return self 
 
     # ----------------------------------------------------------------------- #    
+    @abstractmethod
     def predict(self, X):
-        """Computes prediction on test data.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The input data
-        
-        Returns
-        -------
-        y_pred : prediction
-        """
-        try:
-            probability_metric = self._scorer.is_probability_metric()
-        except:
-            probability_metric = False
-
-        if probability_metric:
-            y_pred = self._task.predict_proba(X, self._theta)
-        else:
-            y_pred = self._task.predict(X, self._theta)    
-        return y_pred
-
+        pass
 
     # ----------------------------------------------------------------------- #    
     def score(self, X, y):
-        """Computes scores for test data after training.
+        """Default behavior for scoring predictions.
 
         Parameters
         ----------
@@ -536,16 +520,191 @@ class GradientDescent(BaseEstimator):
         -------
         score based upon the metric object.
         
-        """
+        """                
         y_pred = self.predict(X)
-        return self._scorer(y, y_pred, n_features=self.n_features_)               
+        return self._scorer(y, y_pred, n_features=self.n_features_in_)               
 
     # ----------------------------------------------------------------------- #    
     def summarize(self):  
         """Prints and optimization report. """
         self._summary.report()      
 
+# --------------------------------------------------------------------------- #
+#                       GRADIENT DESCENT REGRESSOR                            #
+# --------------------------------------------------------------------------- #
+class GDRegressor(GradientDescent, RegressorMixin):
+    """Gradient Descent Regressor."""
 
+    def _get_tags(self):
+        tags = {}
+        tags['X_types'] = ['2darray']
+        tags['poor_score'] = True
+        return tags    
+
+    def predict(self, X):
+        """Predicts the output class.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+        
+        y : array_like of shape (n_samples,) 
+            The target variable.
+        
+        Returns
+        -------
+        y_pred : array-like of shape (n_samples, )
+        
+        """                        
+        return self._task.predict(X, self._theta)
+
+# --------------------------------------------------------------------------- #
+#                       GRADIENT DESCENT REGRESSOR                            #
+# --------------------------------------------------------------------------- #
+class GDBinaryClass(GradientDescent, ClassifierMixin):
+    """Gradient Descent Regressor."""
+
+    def _get_tags(self):
+        tags = {}
+        tags['binary_only'] = True
+        if self.learning_rate or self.task.loss.regularizer:
+            tags['poor_score'] = True
+        return tags
+        
+
+
+    def predict(self, X):
+        """Predicts the output class.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+        
+        y : array_like of shape (n_samples,) 
+            The target variable.
+        
+        Returns
+        -------
+        y_pred : array-like of shape (n_samples, )
+        
+        """                
+        return self._task.predict(X, self._theta)
+
+    def predict_proba(self, X):
+        """Predicts the probability of the positive class.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+        
+        y : array_like of shape (n_samples,) 
+            The target variable.
+        
+        Returns
+        -------
+        y_pred : array-like of shape (n_samples, )
+        
+        """        
+        return self._task.predict_proba(X, self._theta)
+
+    def score(self, X, y):
+        """Computes scores for test data after training.
+
+        Calls the predict function based upon whether the metric for the scorer
+        takes a probability or a predicted class.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+        
+        y : array_like of shape (n_samples,) 
+            The target variable.
+        
+        Returns
+        -------
+        score based upon the metric object.
+        
+        """        
+        if self._scorer.is_probability_metric:
+            y_pred = self.predict_proba(X)
+        else:
+            y_pred = self.predict(X)
+        return self._scorer(y, y_pred, n_features=self.n_features_in_)
+        
+
+# --------------------------------------------------------------------------- #
+#                 GRADIENT DESCENT MULTICLASS CLASSIFIER                      #
+# --------------------------------------------------------------------------- #
+class GDMultiClass(GradientDescent, ClassifierMixin):
+    """Gradient Descent Multiclass Classifier."""
+
+    def _get_tags(self):
+        return {'binary_only': True}    
+
+    def predict(self, X):
+        """Predicts the output class.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+        
+        y : array_like of shape (n_samples,) 
+            The target variable.
+        
+        Returns
+        -------
+        y_pred : array-like of shape (n_samples, )
+        
+        """                
+        return self._task.predict(X, self._theta)
+
+    def predict_proba(self, X):
+        """Predicts the probability of the positive class.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+        
+        y : array_like of shape (n_samples,) 
+            The target variable.
+        
+        Returns
+        -------
+        y_pred : array-like of shape (n_samples, )
+        
+        """        
+        return self._task.predict_proba(X, self._theta)
+
+    def score(self, X, y):
+        """Computes scores for test data after training.
+
+        Calls the predict function based upon whether the metric for the scorer
+        takes a probability or a predicted class.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+        
+        y : array_like of shape (n_samples,) or (n_samples, n_classes) 
+            The target variable.
+        
+        Returns
+        -------
+        score based upon the metric object.
+        
+        """        
+        if self._scorer.is_probability_metric:
+            y_pred = self.predict_proba(X)
+        else:
+            y_pred = self.predict(X)
+        return self._scorer(y, y_pred, n_features=self.n_features_in_)
 # =========================================================================== #
 #                    GRADIENT DESCENT PURE OPTIMIZER                          #
 # =========================================================================== #
@@ -606,4 +765,23 @@ class GD(BaseEstimator):
 
         self._on_train_end()
         return self   
+
+
+    def predict(self, X):
+        """Predicts output as linear combination of inputs and weights.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input data
+        
+        y : array_like of shape (n_samples,) 
+            The target variable.
+        
+        Returns
+        -------
+        y_pred : array-like of shape (n_samples, )
+        
+        """                        
+        return self._objective(X, self._theta)        
 # %%

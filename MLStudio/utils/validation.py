@@ -24,19 +24,58 @@ import sys
 import numpy as np
 import sklearn.utils.validation as skl
 # --------------------------------------------------------------------------  #
+def is_scalar(X):
+    """Returns True of X is a scaler."""
+    try:
+        return(len(X.shape))==0
+    except:
+        return False
+
+def is_compressed(X):
+    """Returns True of X is in 'csr' or 'coo' format."""
+    try:
+        return bool(X.getshape())
+    except:        
+        return False
+
+def is_row_vector(X):
+    """Returns true if array is a row vector."""
+    try:
+        return X.shape[0] == 1
+    except:
+        return False
+
+def is_col_vector(X):
+    """Returns true if array is a row vector."""
+    try:
+        return X.shape[1] == 1
+    except:
+        return False
+
+def is_1d(X):
+    """Returns True if X is a 1d array."""
+    try:
+        return X.ndim == 1
+    except:
+        return False
+
 def check_X(X):
     """Wraps sklearn's check array function."""
     return skl.check_array(array=X, accept_sparse=['csr'], 
-                           accept_large_sparse=True)
+                           ensure_2d=True, accept_large_sparse=True)    
+
+def check_y(y):
+    """Checks target data and returns valid representation."""
+    return skl.check_array(y,accept_sparse=False, accept_large_sparse=False,
+                    ensure_2d=False)                 
 
 def check_X_y(X, y):
     return skl.check_X_y(X, y, accept_sparse=['csr'],  
                         accept_large_sparse=True)    
-
+          
 def check_is_fitted(estimator):
     skl.check_is_fitted(estimator)
     
-# --------------------------------------------------------------------------  #
 def is_valid_array_size(x, lower=1e-10, upper=1e10):
     """Checks whether a vector or matrix norm is within lower and upper bounds.
     
@@ -63,7 +102,7 @@ def is_valid_array_size(x, lower=1e-10, upper=1e10):
 # --------------------------------------------------------------------------  #
 def is_binary(x):
     """Returns true if x is binary"""
-    return np.array_equal(x, x.astype(bool))
+    return set(x) == {0,1}
 
 # --------------------------------------------------------------------------  #
 def is_one_hot(x):
@@ -202,14 +241,9 @@ def validate_observer_list(param):
 # --------------------------------------------------------------------------  #
 def validate_observers(param, param_name='observers'):
     from mlstudio.supervised.algorithms.optimization.observers.base import Observer
-    if not isinstance(param, dict):
-        msg = "The observer parameter must be a dictionary where each entry's \
-            key is the name of the observer and the value is the observer object."
+    if not isinstance(param, Observer):
+        msg = param.__class__.__name__ + " is not a valid Observer object."
         raise TypeError(msg)
-    for name, observer in param.items():
-        if not isinstance(observer, Observer):
-            msg = name + " is not a valid Observer object."
-            raise TypeError(msg)
     return True
 # --------------------------------------------------------------------------  #
 def validate_scorer(task, scorer):
@@ -313,17 +347,17 @@ def validate_task(task):
     else:
         return True           
 # --------------------------------------------------------------------------  #
-def validate_metric(metric):
-    valid_metrics = ['train_cost', 'train_score', 'val_cost', 'val_score',
-                     'gradient_norm']
-    if not isinstance(metric, str):
-        msg = "The metric parameter must be a string including one of {v}.".\
-            format(v=str(valid_metrics))
+def validate_monitor(monitor):
+    valid_variables_to_monitor = ['train_cost', 'train_score', 'val_cost', 
+                                  'val_score', 'gradient_norm']
+    if not isinstance(monitor, str):
+        msg = "The monitor parameter must be a string including one of {v}.".\
+            format(v=str(valid_variables_to_monitor))
         raise TypeError(msg)
-    elif metric not in valid_metrics:
-        msg = "{m} is an invalid metric. The valid metrics include : {v}".\
-            format(m=metric,
-                   v=str(valid_metrics))
+    elif monitor not in valid_variables_to_monitor:
+        msg = "{m} is an invalid monitor parameter. The valid values for monitor include : {v}".\
+            format(m=monitor,
+                   v=str(valid_variables_to_monitor))
         raise ValueError(msg)
     else:
         return True
@@ -404,10 +438,10 @@ def validate_estimator(estimator):
     validate_scorer(estimator.task, estimator.scorer)    
        
     if estimator.early_stop:
-        validate.observers(estimator.early_stop, 
+        validate_observers(estimator.early_stop, 
                                         param_name='early_stop')
     if estimator.learning_rate:
-        validate.observers(estimator.learning_rate, 
+        validate_observers(estimator.learning_rate, 
                                         param_name='learning_rate')   
 
     validate_observer_list(estimator.observer_list)

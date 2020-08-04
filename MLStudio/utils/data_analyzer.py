@@ -25,7 +25,7 @@ import sys
 import numpy as np
 import pandas as pd
 from scipy.stats import skew, kurtosis, ttest_1samp, t
-from sklearn.utils import check_array, check_X_y
+from mlstudio.utils.validation import check_X, check_y, check_X_y
 
 # --------------------------------------------------------------------------- #
 def standardized_residuals(residuals):
@@ -115,8 +115,7 @@ def describe_categorical_array(x, fmt='dict'):
 # --------------------------------------------------------------------------  #
 def n_classes(y):
     """Returns the number of classes for a classification dataset."""
-    y = check_array(y,accept_sparse=True, accept_large_sparse=True,
-                    ensure_2d=False)    
+    y = check_y(y)    
     if y.ndim < 2:
         return len(np.unique(y))
     else:
@@ -124,16 +123,14 @@ def n_classes(y):
 
 def n_features(X):
     """Returns the number of features in a dataset."""
-    X = check_array(X,accept_sparse=True, accept_large_sparse=True,
-                    ensure_2d=False)
-    if X.ndim == 1:
-        return 1
-    else:
-        return X.shape[1]
+    X = check_X(X)
+    n = 1 if X.ndim == 1 else X.shape[1]
+    return n
 
 def get_features(X):
     """Attempts to retrieve the feature names from the dataset."""
     features = OrderedDict()
+    X = check_X(X)
     if isinstance(X, pd.DataFrame):
         features = X.columns
     elif isinstance(X, (np.ndarray, np.generic)):
@@ -144,6 +141,7 @@ def get_features(X):
 
 def get_feature_info(X):
     d = OrderedDict()
+    X = check_X(X)
     d['n_observations'] = X.shape[0]    
     d['n_features'] = X.shape[1]
     d['size (Bytes)'] = sys.getsizeof(X)
@@ -153,18 +151,22 @@ def get_feature_info(X):
 def get_target_info(y):
     """Obtains target data type and class information for classification data."""
     d = OrderedDict()
+    y = check_y(y)
+    classes = None
     d['n_observations'] = y.shape[0]    
 
     if isinstance(y, (pd.DataFrame, pd.Series)):
+        classes = y.columns
         y = y.to_numpy()        
-    else:
+    elif isinstance(y, (np.ndarray, np.generic)):
+        classes = y.dtype.names
         y = np.array(y)
 
     # If 2d matrix, then data is nominal 
     if y.ndim == 2:
         data_class = "Nominal"
         data_type = "Integer" if np.issubdtype(y.dtype, np.number) else "String"
-        classes = np.arange(y.shape[1])
+        classes = classes or np.arange(y.shape[1])
         n_classes = y.shape[1]
 
     elif type(y) == str:
@@ -188,7 +190,7 @@ def get_target_info(y):
             data_class = "Nominal"
     else:
         data_type = "String"
-        classes = np.arange(len(np.unique(y))) if y.ndim==1 else np.arange(y.shape[1])
+        classes = np.unique(y)
         n_classes = len(np.unique(y))
         if n_classes == 2:
             data_class = "Binary"
@@ -197,6 +199,7 @@ def get_target_info(y):
     
     d['data_type'] = data_type
     d['data_class'] = data_class
+    d['classes'] = classes
     d['n_classes'] = n_classes
     d['size (Bytes)'] = sys.getsizeof(y)
     return d

@@ -18,41 +18,35 @@
 # =========================================================================== #
 """Container for data object factories."""
 #%%
+import os
 from pathlib import Path
 import site
-PROJECT_DIR = Path(__file__).resolve().parents[2]
-site.addsitedir(PROJECT_DIR)
+import sys
+PROJECT_DIR = str(Path(__file__).parents[2])
+sys.path.append(PROJECT_DIR)
 
 import dependency_injector.containers as containers
 import dependency_injector.providers as providers
 from sklearn.datasets import load_boston
-
+from mlstudio.utils import data_manager
 # --------------------------------------------------------------------------- #
-class DataTransformers(containers.DeclarativeContainer):
-    from mlstudio.utils.data_manager import AddBiasTerm, DataSplitter
-    from mlstudio.utils.data_manager import LabelEncoder, OneHotLabelEncoder
-    
-    add_bias_term = providers.Factory(AddBiasTerm)
-    data_splitter = providers.Factory(DataSplitter)
-    label_encoder = providers.Factory(LabelEncoder)
-    one_hot_label_encoder = providers.Factory(OneHotLabelEncoder)
-
 class DataProcessors(containers.DeclarativeContainer):
     from mlstudio.data_services.preprocessing import RegressionDataProcessor
     from mlstudio.data_services.preprocessing import BinaryClassDataProcessor
     from mlstudio.data_services.preprocessing import MultiClassDataProcessor
 
     regression = providers.Factory(RegressionDataProcessor,
-                                   add_bias_transformer=DataTransformers.add_bias_term,
-                                   split_transformer=DataTransformers.data_splitter)
+                                   add_bias_transformer=data_manager.AddBiasTerm(),
+                                   split_transformer=data_manager.DataSplitter())
 
     binaryclass = providers.Factory(BinaryClassDataProcessor,
-                                   add_bias_transformer=DataTransformers.add_bias_term,
-                                   split_transformer=DataTransformers.data_splitter,
-                                   label_encoder=DataTransformers.label_encoder)                                   
+                                   add_bias_transformer=data_manager.AddBiasTerm(),
+                                   split_transformer=data_manager.DataSplitter(),
+                                   label_encoder=data_manager.LabelEncoder())                                   
 
     multiclass = providers.Factory(MultiClassDataProcessor,
-                                   add_bias_transformer=DataTransformers.add_bias_term,
-                                   split_transformer=DataTransformers.data_splitter,
-                                   label_encoder=DataTransformers.label_encoder,
-                                   one_hot_label_encoder=DataTransformers.one_hot_label_encoder)                                   
+                                   add_bias_transformer=data_manager.AddBiasTerm(),
+                                   split_transformer=data_manager.DataSplitter(),
+                                   label_encoder=data_manager.LabelEncoder(),
+                                   one_hot_label_encoder=data_manager.OneHotLabelEncoder())                                   
+

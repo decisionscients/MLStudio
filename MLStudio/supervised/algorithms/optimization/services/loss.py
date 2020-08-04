@@ -39,24 +39,29 @@ class Loss(ABC, BaseEstimator):
         threshold = 1e-10 and upper threshold = 1.
     """
 
-    def __init__(self, regularizer=None, gradient_scaler=None):
-        self.regularizer = regularizer
-        self.gradient_scaler = gradient_scaler
+    def __init__(self, regularizer=None, gradient_scaling=False, gradient_scaler=None):
+        self._regularizer = regularizer
+        self._gradient_scaler = gradient_scaler
+        self._gradient_scaling = gradient_scaling
         
     def _validation(self):
         from mlstudio.utils.validation import validate_regularizer                
-        validate_regularizer(self.regularizer)
-        if self.gradient_scaler:
-            validate_gradient_scaler(self.gradient_scaler)
+        validate_regularizer(self._regularizer)
+        if self._gradient_scaling:
+            validate_gradient_scaler(self._gradient_scaler)
 
     def _check_gradient_scale(self, gradient):
-        if self.gradient_scaler:
-            gradient = self.gradient_scaler.fit_transform(gradient)
+        if self._gradient_scaling:
+            gradient = self._gradient_scaler.fit_transform(gradient)
         return gradient
 
     @property
-    def turn_off_gradient_scaling(self):
-        self.gradient_scaler = False
+    def gradient_scaling(self):
+        return self._gradient_scaling 
+
+    @gradient_scaling.setter
+    def gradient_scaling(self, x):
+        self._gradient_scaling = x
 
     @abstractmethod
     def __call__(self, theta, **kwargs):
@@ -96,9 +101,10 @@ class Loss(ABC, BaseEstimator):
 # --------------------------------------------------------------------------  #
 class Quadratic(Loss):
 
-    def __init__(self, regularizer=None, gradient_scaler=None):
+    def __init__(self, regularizer=None, gradient_scaling=False, gradient_scaler=None):
         super(Quadratic, self).__init__(regularizer=regularizer, 
-                                  gradient_scaler=gradient_scaler)
+                                        gradient_scaling=gradient_scaling,
+                                        gradient_scaler=gradient_scaler)
 
         self.name = "Quadratic Loss"        
         self.type = "Regression"
@@ -127,8 +133,8 @@ class Quadratic(Loss):
         # Compute unregularized cost
         J = 0.5 * np.mean((y_out-y)**2)        
         # Apply regularization
-        if self.regularizer:
-            J += self.regularizer(theta)
+        if self._regularizer:
+            J += self._regularizer(theta)
         # Normalize cost and regularization by 
         return J
 
@@ -159,8 +165,8 @@ class Quadratic(Loss):
         # Compute unregularized gradient
         gradient = (1/m) * X.T.dot(y_out-y)                         
         # Apply regularization to the weights (not bias) in gradient
-        if self.regularizer:
-            gradient += self.regularizer.gradient(theta)              
+        if self._regularizer:
+            gradient += self._regularizer.gradient(theta)              
         # Check any vanishing or exploding gradients          
         gradient = self._check_gradient_scale(gradient)                            
         return gradient        
@@ -168,9 +174,10 @@ class Quadratic(Loss):
 # --------------------------------------------------------------------------  #
 class CrossEntropy(Loss):
 
-    def __init__(self, regularizer=None, gradient_scaler=None):
+    def __init__(self, regularizer=None, gradient_scaling=False, gradient_scaler=None):
         super(CrossEntropy, self).__init__(regularizer=regularizer, 
-                                  gradient_scaler=gradient_scaler)
+                                           gradient_scaling=gradient_scaling,
+                                           gradient_scaler=gradient_scaler)
 
         self.name = "Cross Entropy Loss"        
         self.type = "Binary Classification"
@@ -201,8 +208,8 @@ class CrossEntropy(Loss):
         # Compute unregularized cost
         J = -np.mean(y * np.log(y_out) + (1-y) * np.log(1-y_out)) 
         # Apply regularization to the weights (not bias) in gradient
-        if self.regularizer: 
-            J += self.regularizer(theta)
+        if self._regularizer: 
+            J += self._regularizer(theta)
         # Return cost as average of cross entropy
         return J 
 
@@ -233,8 +240,8 @@ class CrossEntropy(Loss):
         # Compute unregularized gradient
         gradient = (1/m) * X.T.dot(y_out-y)         
         # Apply regularization to the weights (not bias) in gradient
-        if self.regularizer:
-            gradient += self.regularizer.gradient(theta)                
+        if self._regularizer:
+            gradient += self._regularizer.gradient(theta)                
         # Check any vanishing or exploding gradients
         gradient = self._check_gradient_scale(gradient)            
         return gradient          
@@ -243,9 +250,10 @@ class CrossEntropy(Loss):
 class CategoricalCrossEntropy(Loss):
 
 
-    def __init__(self, regularizer=None, gradient_scaler=None):
+    def __init__(self, regularizer=None, gradient_scaling=False, gradient_scaler=None):
         super(CategoricalCrossEntropy, self).__init__(regularizer=regularizer, 
-                                  gradient_scaler=gradient_scaler)
+                                                      gradient_scaling=gradient_scaling,
+                                                      gradient_scaler=gradient_scaler)
 
         self.name = "Categorical Cross Entropy Loss"        
         self.type = "Multiclass Classification"
@@ -276,8 +284,8 @@ class CategoricalCrossEntropy(Loss):
         # Compute unregularized cost
         J = -np.mean(np.sum(y * np.log(y_out), axis=1))
         # Add regularizer of weights 
-        if self.regularizer:
-            J += self.regularizer(theta) 
+        if self._regularizer:
+            J += self._regularizer(theta) 
         # Return cost as average of cross-entropy
         return J
 
@@ -309,8 +317,8 @@ class CategoricalCrossEntropy(Loss):
         # Compute unregularized gradient
         gradient = -(1/m) * (X.T.dot(y-y_out))
         # Add regularizer of weights 
-        if self.regularizer:
-            gradient += self.regularizer.gradient(theta)     
+        if self._regularizer:
+            gradient += self._regularizer.gradient(theta)     
         # Check gradient scale before applying regularization
         gradient = self._check_gradient_scale(gradient)                    
         return gradient                  

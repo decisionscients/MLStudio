@@ -156,13 +156,13 @@ def test_validate_regularizer():
 # --------------------------------------------------------------------------  #    
 @mark.utils
 @mark.validation
-def test_validate_metric():    
-    from mlstudio.utils.validation import validate_metric
+def test_validate_monitor():    
+    from mlstudio.utils.validation import validate_monitor
     from mlstudio.supervised.metrics.regression import MSE    
     with pytest.raises(TypeError) as v:
-        validate_metric('hand')
+        validate_monitor('hand')
         assert "value error"  in str(v.value)
-    validate_metric(MSE())           
+    validate_monitor(MSE())           
 
 # --------------------------------------------------------------------------  #    
 @mark.utils

@@ -257,11 +257,42 @@ def make_classification_data():
 
 @fixture(scope="session")
 def make_multiclass_data():
-    X, y = make_classification(n_samples=1000,n_features=10, n_informative=3,
+    X, y = make_classification(n_samples=10000,n_features=10, n_informative=3,
                 n_classes=4, random_state=5)
     scaler = StandardScaler()    
     X = scaler.fit_transform(X)    
     return X, y
+
+@fixture(scope="session")
+def make_regression_data_split():
+    X, y = make_regression(n_samples=10000, n_features=10, random_state=5)    
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.33, random_state=50)
+    scaler = StandardScaler()    
+    X_train = scaler.fit_transform(X_train)    
+    X_test = scaler.transform(X_test)    
+    return X_train, X_test, y_train, y_test
+
+@fixture(scope="session")
+def make_classification_data_split():
+    X, y, = make_classification(n_samples=10000, n_features=10, random_state=5)        
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.33, random_state=50)
+    scaler = StandardScaler()    
+    X_train = scaler.fit_transform(X_train)    
+    X_test = scaler.transform(X_test)    
+    return X_train, X_test, y_train, y_test
+
+@fixture(scope="session")
+def make_multiclass_data_split():
+    X, y = make_classification(n_samples=10000,n_features=10, n_informative=3,
+                n_classes=4, random_state=5)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.33, random_state=50)
+    scaler = StandardScaler()    
+    X_train = scaler.fit_transform(X_train)    
+    X_test = scaler.transform(X_test)    
+    return X_train, X_test, y_train, y_test
 
 @fixture(scope="session")
 def make_regression_data_unscaled():

@@ -24,6 +24,7 @@ Note: The ObserverList and Observer abstract base classes were inspired by
 the Keras implementation.  
 """
 from abc import ABC, abstractmethod, ABCMeta
+from copy import copy, deepcopy
 import warnings
 warnings.filterwarnings("once", category=UserWarning, module='base')
 
@@ -33,7 +34,7 @@ import pandas as pd
 from sklearn.base import BaseEstimator
 
 from mlstudio.utils.validation import validate_int, validate_zero_to_one
-from mlstudio.utils.validation import validate_metric
+from mlstudio.utils.validation import validate_monitor
 # --------------------------------------------------------------------------- #
 #                             OBSERVER LIST                                   #
 # --------------------------------------------------------------------------- #
@@ -48,8 +49,7 @@ class ObserverList(BaseEstimator):
         observers : list
             List of 'Observer' instances.        
         """
-        observers = observers or []
-        self.observers = [c for c in observers]        
+        self.observers = observers                        
         self.params = {}
         self.model = None
 
@@ -60,7 +60,9 @@ class ObserverList(BaseEstimator):
         ----------
         observer : Observer instance            
         """
-        self.observers.append(observer)
+        observers = deepcopy(self.observers) or []
+        self._observers = [c for c in observers]
+        self._observers.append(observer)
 
     def set_params(self, params):
         """Sets the parameters variable, and in list of observers.
@@ -71,7 +73,7 @@ class ObserverList(BaseEstimator):
             Dictionary containing model parameters
         """
         self.params = params
-        for observer in self.observers:
+        for observer in self._observers:
             observer.set_params(params)
 
     def set_model(self, model):
@@ -83,7 +85,7 @@ class ObserverList(BaseEstimator):
         
         """
         self.model = model
-        for observer in self.observers:
+        for observer in self._observers:
             observer.set_model(model)
 
     def on_batch_begin(self, batch, log=None):
@@ -99,7 +101,7 @@ class ObserverList(BaseEstimator):
             change in the future.
         """
         log = log or {}
-        for observer in self.observers:
+        for observer in self._observers:
             observer.on_batch_begin(batch, log)
 
     def on_batch_end(self, batch, log=None):
@@ -114,7 +116,7 @@ class ObserverList(BaseEstimator):
             Dictionary containing the data, cost, batch size and current weights
         """
         log = log or {}
-        for observer in self.observers:
+        for observer in self._observers:
             observer.on_batch_end(batch, log)
 
     def on_epoch_begin(self, epoch, log=None):
@@ -130,7 +132,7 @@ class ObserverList(BaseEstimator):
             but that may change in the future.
         """
         log = log or {}
-        for observer in self.observers:
+        for observer in self._observers:
             observer.on_epoch_begin(epoch, log)
 
     def on_epoch_end(self, epoch, log=None):
@@ -147,7 +149,7 @@ class ObserverList(BaseEstimator):
             validation epoch if validation is performed.
         """
         log = log or {}
-        for observer in self.observers:
+        for observer in self._observers:
             observer.on_epoch_end(epoch, log)
 
     def on_train_begin(self, log=None):
@@ -159,7 +161,7 @@ class ObserverList(BaseEstimator):
             Currently no data is passed to this argument for this method
                 but that may change in the future.
         """
-        for observer in self.observers:
+        for observer in self._observers:
             observer.on_train_begin(log)
 
     def on_train_end(self, log=None):
@@ -171,11 +173,11 @@ class ObserverList(BaseEstimator):
             Currently no data is passed to this argument for this method
                 but that may change in the future.
         """
-        for observer in self.observers:
+        for observer in self._observers:
             observer.on_train_end(log)
 
     def __iter__(self):
-        return iter(self.observers)
+        return iter(self._observers)
 
 # --------------------------------------------------------------------------- #
 #                             OBSERVER CLASS                                  #
@@ -286,7 +288,7 @@ class PerformanceObserver(Observer):
 
     def __init__(self): 
         super(PerformanceObserver, self).__init__()               
-        self._metric = None
+        self._monitor = None
         self._epsilon = None
         self._patience = None
 
@@ -295,12 +297,12 @@ class PerformanceObserver(Observer):
         return "Performance Base Observer"
 
     @property
-    def metric(self):
-        return self._metric
+    def monitor(self):
+        return self._monitor
 
-    @metric.setter
-    def metric(self, x):
-        self._metric = x
+    @monitor.setter
+    def monitor(self, x):
+        self._monitor = x
 
     @property
     def epsilon(self):
@@ -344,19 +346,19 @@ class PerformanceObserver(Observer):
         self._iter_no_improvement = 0
         self._stabilized = False
 
-        # If score metric is designated, obtain what constitutes a better
-        # or best scores from the model's metric object. 
-        if 'score' in self.metric:
+        # If a variable has been designated for monitoring, obtain what constitutes a better
+        # or best scores from the model's scorer object. 
+        if 'score' in self._monitor:
             self._best = self.model.scorer.best
             self._better = self.model.scorer.better
-        # Otherwise, the metric is cost and best and better costs are min and
+        # Otherwise, cost is being monitored and best and better costs are min and
         # less, respectively
         else:
             self._best = np.min            
             self._better = np.less            
 
         # Validation
-        validate_metric(self.metric)
+        validate_monitor(self.monitor)
         validate_zero_to_one(param=self.epsilon, param_name='epsilon',
                              left='open', right='open')
         validate_int(param=self.patience, param_name='patience')
@@ -402,10 +404,10 @@ class PerformanceObserver(Observer):
 
     def _get_current_value(self, log):
         """Obtain the designated metric or fallback metric from the log."""
-        current = log.get(self.metric)
+        current = log.get(self.monitor)
         if not current:
             current = log.get('train_score')            
-            msg = self.metric + " not evaluated for this estimator. Using\
+            msg = self.monitor + " not evaluated for this estimator. Using\
                 train_score instead."
             warnings.warn(msg, UserWarning)
         return current

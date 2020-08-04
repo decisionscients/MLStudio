@@ -32,7 +32,7 @@ from mlstudio.utils.validation import is_valid_array_size
 class GradientCheck(Observer):
     """Performs gradient checking."""
 
-    def __init__(self, iterations=50, epsilon=1e-4, verbose=False):
+    def __init__(self, iterations=50, epsilon=10e-7, verbose=False):
         super(GradientCheck, self).__init__()
         self.epsilon = epsilon
         self.iterations = iterations
@@ -66,12 +66,12 @@ class GradientCheck(Observer):
             self._objective = copy.deepcopy(self.model.task.loss)
         except:
             self._objective = copy.deepcopy(self.model.objective)
-        self._objective.turn_off_gradient_scaling
+        self._objective.gradient_scaling = False
 
     def _check_cost_functions(self, log):
         """Computes gradient and approximation for cost functions."""
-        X = self.model.X_train_
-        y = self.model.y_train_
+        X = self.model.X_train
+        y = self.model.y_train
         theta = log.get('theta')               
 
         cost = []
@@ -198,22 +198,22 @@ class GradientCheck(Observer):
         for p in problems:
             print("\n\n  Iteration: {i} Theta: {t}".format(i=str(p), \
                 t=str(self._theta[p])))
-            print("  Iteration: {i} Cost: {c}  CostPlus: {l}   CostMinus: {m}".format(i=str(p), \
+            print("\n  Iteration: {i} Cost: {c}  CostPlus: {l}   CostMinus: {m}".format(i=str(p), \
                 c=str(np.mean(self._cost[p])), l=str(np.mean(self._cost_plus[p])), m=str(np.mean(self._cost_minus[p]))))
-            print("  Iteration: {i} Gradient: {g}".format(i=str(p), \
+            print("\n  Iteration: {i} Gradient: {g}".format(i=str(p), \
                 g=str(self._gradients[p])))
-            print("  Iteration: {i} Approximation {a}".format(i=str(p), \
+            print("\n  Iteration: {i} Approximation {a}".format(i=str(p), \
                 a=str(self._approximations[p])))
-            print("  Iteration: {i} Gradient Norm {a}".format(i=str(p), \
+            print("\n  Iteration: {i} Gradient Norm {a}".format(i=str(p), \
                 a=str(self._grad_norm[p])))
-            print("  Iteration: {i} Gradient Approximation Norm {a}".format(i=str(p), \
+            print("\n  Iteration: {i} Gradient Approximation Norm {a}".format(i=str(p), \
                 a=str(self._grad_approx_norm[p])))
-            print("  Iteration: {i} Absolute Difference {a}".format(i=str(p), \
+            print("\n  Iteration: {i} Absolute Difference {a}".format(i=str(p), \
                 a=str(self._abs_differences[p])))                                                                                
-            print("  Iteration: {i} Relative Difference {a}".format(i=str(p), \
+            print("\n  Iteration: {i} Relative Difference {a}".format(i=str(p), \
                 a=str(self._rel_differences[p])))                
         if problems:
-            msg = "Gradient check failed for " + self._objective.name 
+            msg = "\nGradient check failed for " + self._objective.name 
             if hasattr(self._objective, 'regularization'):
                 msg = msg + ' with ' + self._objective.regularization.name 
             raise Exception(msg)        

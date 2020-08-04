@@ -154,6 +154,10 @@ class Summary(base.Observer):
         performance_summary = OrderedDict()
         for i in range(len(print_data)):
             performance_summary[print_data[i]['label']] = print_data[i]['data']
+        performance_summary['Max Gradient Norm'] = \
+            np.round(np.nanmax(np.array(log.get('gradient_norm'),dtype=np.float64)),4)
+        performance_summary['Min Gradient Norm'] = \
+            np.round(np.nanmin(np.array(log.get('gradient_norm'),dtype=np.float64)),4)
         title = "Performance Summary"
         self.printer.print_dictionary(performance_summary, title)    
         
