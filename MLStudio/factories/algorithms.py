@@ -37,6 +37,7 @@ from mlstudio.supervised.algorithms.optimization.observers.base import ObserverL
 from mlstudio.supervised.algorithms.optimization.observers import report, history
 from mlstudio.supervised.algorithms.optimization.services import optimizers, regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks, loss
+from mlstudio.supervised.algorithms.optimization.services import activations
 from mlstudio.supervised.metrics import regression, binaryclass, multiclass
 
 
@@ -70,4 +71,50 @@ class GradientDescent(containers.DeclarativeContainer):
             random_state=None,
             check_gradient=False,
             gradient_checker=debug.GradientCheck())
+
+    binaryclass = providers.Factory(
+        gradient_descent.GDBinaryclass,
+            eta0=0.01,
+            epochs=1000,
+            batch_size=None,
+            val_size=0.3,
+            loss=loss.CrossEntropy(),
+            data_processor = BinaryClassDataProcessor(),
+            activation = activations.Sigmoid(),
+            theta_init=None,
+            optimizer=optimizers.GradientDescentOptimizer(),                                    
+            scorer=binaryclass.Accuracy(),
+            early_stop=None,
+            learning_rate=None,                           
+            observer_list=ObserverList(),
+            progress=report.Progress(),
+            blackbox=history.BlackBox(),
+            summary=report.Summary(),
+            verbose=False,
+            random_state=None,
+            check_gradient=False,
+            gradient_checker=debug.GradientCheck())            
+
+    multiclass = providers.Factory(
+        gradient_descent.GDMulticlass,
+            eta0=0.01,
+            epochs=1000,
+            batch_size=None,
+            val_size=0.3,
+            loss=loss.CategoricalCrossEntropy(),
+            data_processor = MultiClassDataProcessor(),
+            activation = activations.Softmax(),
+            theta_init=None,
+            optimizer=optimizers.GradientDescentOptimizer(),                                    
+            scorer=multiclass.Accuracy(),
+            early_stop=None,
+            learning_rate=None,                           
+            observer_list=ObserverList(),
+            progress=report.Progress(),
+            blackbox=history.BlackBox(),
+            summary=report.Summary(),
+            verbose=False,
+            random_state=None,
+            check_gradient=False,
+            gradient_checker=debug.GradientCheck())                        
 
