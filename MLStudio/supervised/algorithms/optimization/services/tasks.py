@@ -164,7 +164,7 @@ class Task(ABC, BaseEstimator):
         -------
         J : average loss
         """
-        return self._loss(theta, y, y_out)
+        return self._loss.cost(theta, y, y_out)
 
     def compute_output(self, theta, X):
         """Computes output as a linear combination of parameters and inputs.

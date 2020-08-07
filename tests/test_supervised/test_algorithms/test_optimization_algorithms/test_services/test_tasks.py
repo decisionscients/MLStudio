@@ -24,7 +24,8 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.factories.tasks import Task
+from mlstudio.factories.tasks import RegressionTasks, BinaryclassTasks
+from mlstudio.factories.tasks import MulticlassTasks
 from mlstudio.supervised.algorithms.optimization.services import activations
 from mlstudio.supervised.algorithms.optimization.services import loss
 from mlstudio.supervised.algorithms.optimization.services import regularizers

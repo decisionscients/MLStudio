@@ -23,83 +23,51 @@ import site
 PROJECT_DIR = Path(__file__).resolve().parents[2]
 site.addsitedir(PROJECT_DIR)
 
-import collections
+from collections import namedtuple
 import dependency_injector.containers as containers
 import dependency_injector.providers as providers
 
-from mlstudio.supervised.algorithms.optimization.gradient_descent import GDRegressor
-from mlstudio.supervised.algorithms.optimization.gradient_descent import GDBinaryClass
-from mlstudio.supervised.algorithms.optimization.gradient_descent import GDMultiClass
-from mlstudio.supervised.algorithms.optimization.observers import base, debug
+from mlstudio.data_services.preprocessing import RegressionDataProcessor
+from mlstudio.data_services.preprocessing import BinaryClassDataProcessor
+from mlstudio.data_services.preprocessing import MultiClassDataProcessor
+from mlstudio.supervised.algorithms.optimization import gradient_descent
+from mlstudio.supervised.algorithms.optimization.observers import debug, early_stop
+from mlstudio.supervised.algorithms.optimization.observers import learning_rate
+from mlstudio.supervised.algorithms.optimization.observers.base import ObserverList
 from mlstudio.supervised.algorithms.optimization.observers import report, history
-from mlstudio.supervised.algorithms.optimization.services import optimizers
+from mlstudio.supervised.algorithms.optimization.services import optimizers, regularizers
+from mlstudio.supervised.algorithms.optimization.services import tasks, loss
 from mlstudio.supervised.metrics import regression, binaryclass, multiclass
-from mlstudio.factories.tasks import Task
-from mlstudio.factories.observers import Summary
 
 
 # --------------------------------------------------------------------------- #
+Lasso = namedtuple('Lasso', ['alpha'])
+Ridge = namedtuple('Ridge', ['alpha'])
+Elasticnet = namedtuple('Elasticnet', ['alpha', 'ratio'])
+# --------------------------------------------------------------------------- #
 class GradientDescent(containers.DeclarativeContainer):
-    """IoC Container for gradient descent estimator providers."""                                    
-    regression = providers.Factory(GDRegressor,
-                                    task=Task.regression(),
-                                    eta0=0.01,
-                                    epochs=1000,
-                                    batch_size=None,
-                                    val_size=0.3,
-                                    theta_init=None,
-                                    optimizer=optimizers.GradientDescentOptimizer(),                                    
-                                    scorer=regression.R2(),
-                                    early_stop=None,
-                                    learning_rate=None,                           
-                                    observer_list=base.ObserverList(),
-                                    progress=report.Progress(),
-                                    blackbox=history.BlackBox(),
-                                    summary=Summary.factory(),
-                                    verbose=False,
-                                    random_state=None,
-                                    check_gradient=False,
-                                    gradient_checker=debug.GradientCheck()
-                                    )
+    """Application container for regression and classification factories."""
 
-    binaryclass = providers.Factory(GDBinaryClass,
-                                    task=Task.binaryclass(),
-                                    eta0=0.01,
-                                    epochs=1000,
-                                    batch_size=None,
-                                    val_size=0.3,
-                                    theta_init=None,
-                                    optimizer=optimizers.GradientDescentOptimizer(),
-                                    scorer=binaryclass.Accuracy(),
-                                    early_stop=None,
-                                    learning_rate=None,                           
-                                    observer_list=base.ObserverList(),
-                                    progress=report.Progress(),
-                                    blackbox=history.BlackBox(),
-                                    summary=Summary.factory(),
-                                    verbose=False,
-                                    random_state=None,
-                                    check_gradient=False,
-                                    gradient_checker=debug.GradientCheck()
-                                    )
+    regressor = providers.Factory(
+        gradient_descent.GDRegressor,
+            eta0=0.01,
+            epochs=1000,
+            batch_size=None,
+            val_size=0.3,
+            loss=loss.Quadratic(),
+            data_processor = RegressionDataProcessor(),
+            activation = None,
+            theta_init=None,
+            optimizer=optimizers.GradientDescentOptimizer(),                                    
+            scorer=regression.R2(),
+            early_stop=None,
+            learning_rate=None,                           
+            observer_list=ObserverList(),
+            progress=report.Progress(),
+            blackbox=history.BlackBox(),
+            summary=report.Summary(),
+            verbose=False,
+            random_state=None,
+            check_gradient=False,
+            gradient_checker=debug.GradientCheck())
 
-    multiclass = providers.Factory(GDMultiClass,
-                                    task=Task.multiclass(),
-                                    eta0=0.01,
-                                    epochs=1000,
-                                    batch_size=None,
-                                    val_size=0.3,
-                                    theta_init=None,
-                                    optimizer=optimizers.GradientDescentOptimizer(),
-                                    scorer=multiclass.Accuracy(),
-                                    early_stop=None,
-                                    learning_rate=None,                           
-                                    observer_list=base.ObserverList(),
-                                    progress=report.Progress(),
-                                    blackbox=history.BlackBox(),
-                                    summary=Summary.factory(),
-                                    verbose=False,
-                                    random_state=None,
-                                    check_gradient=False,
-                                    gradient_checker=debug.GradientCheck()
-                                    )

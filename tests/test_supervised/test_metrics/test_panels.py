@@ -21,7 +21,8 @@ import numpy as np
 import pytest
 from pytest import mark
 
-from mlstudio.factories.algorithms import GradientDescent
+from mlstudio.factories.algorithms import GDRegressor, GDBinaryClassifier
+from mlstudio.factories.algorithms import GDMultiClassifier
 from mlstudio.supervised.metrics.base import *
 from mlstudio.supervised.metrics import regression, binaryclass, multiclass
 from mlstudio.supervised.algorithms.optimization.observers.early_stop import EarlyStop

@@ -33,21 +33,79 @@ from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.services import tasks
 from mlstudio.factories.data import DataProcessors
 # --------------------------------------------------------------------------- #
-class Task(containers.DeclarativeContainer):
-    """IoC container for task providers."""
+L1_regularizer = collections.namedtuple('L1', ['alpha'])
+L2_regularizer = collections.namedtuple('L1', ['alpha'])
+L1_L2_regularizer = collections.namedtuple('L1_L2', ['alpha', 'ratio'])
 
-    regression = providers.Factory(tasks.LinearRegression,
+# --------------------------------------------------------------------------- #
+class RegressionTasks(containers.DeclarativeContainer):
+    """IoC container for regression task providers."""
+
+    base = providers.Factory(tasks.LinearRegression,
                                           loss=loss.Quadratic(),
                                           data_processor=DataProcessors.regression(),
                                           activation=None)
 
-    binaryclass = providers.Factory(tasks.BinaryClassification,
+    lasso = providers.Factory(tasks.LinearRegression,
+                                          loss=loss.Quadratic(regularizer=L1_regularizer),
+                                          data_processor=DataProcessors.regression(),    
+                                          activation=None)                                      
+
+    ridge = providers.Factory(tasks.LinearRegression,
+                                          loss=loss.Quadratic(regularizer=regularizers.L2(alpha=0.01)),
+                                          data_processor=DataProcessors.regression(),
+                                          activation=None)                           
+
+    elasticnet = providers.Factory(tasks.LinearRegression,
+                                          loss=loss.Quadratic(regularizer=regularizers.L1_L2(alpha=0.01, ratio=0.5)),
+                                          data_processor=DataProcessors.regression(),
+                                          activation=None)                                                         
+
+# --------------------------------------------------------------------------- #
+class BinaryclassTasks(containers.DeclarativeContainer):
+    """IoC container for binary classification task providers."""
+
+    base = providers.Factory(tasks.BinaryClassification,
                                           loss=loss.CrossEntropy(),
                                           data_processor=DataProcessors.binaryclass(),
                                           activation=activations.Sigmoid())     
 
-    multiclass = providers.Factory(tasks.MultiClassification,
+    lasso = providers.Factory(tasks.BinaryClassification,                                          
+                                          loss=loss.CrossEntropy(regularizer=regularizers.L1(alpha=0.01)),
+                                          data_processor=DataProcessors.binaryclass(),
+                                          activation=activations.Sigmoid())       
+
+    ridge = providers.Factory(tasks.BinaryClassification,                                          
+                                          loss=loss.CrossEntropy(regularizer=regularizers.L2(alpha=0.01)),
+                                          data_processor=DataProcessors.binaryclass(),
+                                          activation=activations.Sigmoid())              
+
+    elasticnet = providers.Factory(tasks.BinaryClassification,                                          
+                                          loss=loss.CrossEntropy(regularizer=regularizers.L1_L2(alpha=0.01, ratio=0.5)),
+                                          data_processor=DataProcessors.binaryclass(),
+                                          activation=activations.Sigmoid())                                                                                                                                   
+
+# --------------------------------------------------------------------------- #
+class MulticlassTasks(containers.DeclarativeContainer):
+    """IoC container for regression task providers."""
+
+    base = providers.Factory(tasks.MultiClassification,
                                           loss=loss.CategoricalCrossEntropy(),
                                           data_processor=DataProcessors.multiclass(),
                                           activation=activations.Softmax())
+
+    lasso = providers.Factory(tasks.MultiClassification,
+                                          loss=loss.CategoricalCrossEntropy(regularizer=regularizers.L1(alpha=0.01)),
+                                          data_processor=DataProcessors.multiclass(),
+                                          activation=activations.Softmax())                                          
+
+    ridge = providers.Factory(tasks.MultiClassification,
+                                          loss=loss.CategoricalCrossEntropy(regularizer=regularizers.L2(alpha=0.01)),
+                                          data_processor=DataProcessors.multiclass(),
+                                          activation=activations.Softmax())                                                                                    
+
+    elasticnet = providers.Factory(tasks.MultiClassification,
+                                          loss=loss.CategoricalCrossEntropy(regularizer=regularizers.L1_L2(alpha=0.01, ratio=0.5)),
+                                          data_processor=DataProcessors.multiclass(),
+                                          activation=activations.Softmax())                                                                                                                              
 

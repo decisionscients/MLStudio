@@ -53,7 +53,8 @@ sys.path.append(datadir)
 #                               FILES TO SKIP                                  #
 # ---------------------------------------------------------------------------- #
 
-collect_ignore_glob = ["*ions.py", "*ic_regression.py", "performance*",
+collect_ignore_glob = ["*ions.py", "*regression.py", "performance*",
+                       "*panels.py",
                        "*ss_regression.py", "*metrics.py", "*_test.py",
                        "*stop.py", "*IoC.py", "*validation.py",                       
                        "*test_cross_validation.py", "test_pure*.py"]

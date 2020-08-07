@@ -63,8 +63,16 @@ class Loss(ABC, BaseEstimator):
     def gradient_scaling(self, x):
         self._gradient_scaling = x
 
+    @property
+    def regularizer(self):
+        return self._regularizer
+
+    @regularizer.setter
+    def regularizer(self, x):
+        self._regularizer = x
+
     @abstractmethod
-    def __call__(self, theta, **kwargs):
+    def cost(self, theta, **kwargs):
         """Computes the objective function.
 
         Parameters
@@ -109,7 +117,7 @@ class Quadratic(Loss):
         self.name = "Quadratic Loss"        
         self.type = "Regression"
 
-    def __call__(self, theta, y, y_out):
+    def cost(self, theta, y, y_out):
         """Computes the quadratic mean squared error cost.
 
         Parameters
@@ -182,7 +190,7 @@ class CrossEntropy(Loss):
         self.name = "Cross Entropy Loss"        
         self.type = "Binary Classification"
 
-    def __call__(self, theta, y, y_out):
+    def cost(self, theta, y, y_out):
         """Computes cross entropy cost.
 
         Parameters
@@ -258,7 +266,7 @@ class CategoricalCrossEntropy(Loss):
         self.name = "Categorical Cross Entropy Loss"        
         self.type = "Multiclass Classification"
 
-    def __call__(self, theta, y, y_out):
+    def cost(self, theta, y, y_out):
         """Computes categorical cross entropy cost.
 
         Parameters
