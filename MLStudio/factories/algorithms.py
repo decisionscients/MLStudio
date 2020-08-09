@@ -39,6 +39,9 @@ from mlstudio.supervised.algorithms.optimization.services import optimizers, reg
 from mlstudio.supervised.algorithms.optimization.services import tasks, loss
 from mlstudio.supervised.algorithms.optimization.services import activations
 from mlstudio.supervised.metrics import regression, binaryclass, multiclass
+from mlstudio.utils.data_manager import AddBiasTerm, OneHotLabelEncoder, LabelEncoder
+from mlstudio.utils.data_manager import LabelEncoder, DataSplitter
+from mlstudio.utils.print import Printer
 
 
 # --------------------------------------------------------------------------- #
@@ -56,7 +59,10 @@ class GradientDescent(containers.DeclarativeContainer):
             batch_size=None,
             val_size=0.3,
             loss=loss.Quadratic(),
-            data_processor = RegressionDataProcessor(),
+            data_processor = RegressionDataProcessor(add_bias_transformer=AddBiasTerm(),
+                    split_transformer=DataSplitter(),
+                    one_hot_label_encoder=OneHotLabelEncoder(),
+                    label_encoder=LabelEncoder()),
             activation = None,
             theta_init=None,
             optimizer=optimizers.GradientDescentOptimizer(),                                    
@@ -66,7 +72,7 @@ class GradientDescent(containers.DeclarativeContainer):
             observer_list=ObserverList(),
             progress=report.Progress(),
             blackbox=history.BlackBox(),
-            summary=report.Summary(),
+            summary=report.Summary(printer=Printer()),
             verbose=False,
             random_state=None,
             check_gradient=False,
@@ -79,7 +85,10 @@ class GradientDescent(containers.DeclarativeContainer):
             batch_size=None,
             val_size=0.3,
             loss=loss.CrossEntropy(),
-            data_processor = BinaryClassDataProcessor(),
+            data_processor = BinaryClassDataProcessor(add_bias_transformer=AddBiasTerm(),
+                    split_transformer=DataSplitter(),
+                    one_hot_label_encoder=OneHotLabelEncoder(),
+                    label_encoder=LabelEncoder()),
             activation = activations.Sigmoid(),
             theta_init=None,
             optimizer=optimizers.GradientDescentOptimizer(),                                    
@@ -89,7 +98,7 @@ class GradientDescent(containers.DeclarativeContainer):
             observer_list=ObserverList(),
             progress=report.Progress(),
             blackbox=history.BlackBox(),
-            summary=report.Summary(),
+            summary=report.Summary(printer=Printer()),
             verbose=False,
             random_state=None,
             check_gradient=False,
@@ -102,7 +111,10 @@ class GradientDescent(containers.DeclarativeContainer):
             batch_size=None,
             val_size=0.3,
             loss=loss.CategoricalCrossEntropy(),
-            data_processor = MultiClassDataProcessor(),
+            data_processor = MultiClassDataProcessor(add_bias_transformer=AddBiasTerm(),
+                    split_transformer=DataSplitter(),
+                    one_hot_label_encoder=OneHotLabelEncoder(),
+                    label_encoder=LabelEncoder()),
             activation = activations.Softmax(),
             theta_init=None,
             optimizer=optimizers.GradientDescentOptimizer(),                                    
@@ -112,7 +124,7 @@ class GradientDescent(containers.DeclarativeContainer):
             observer_list=ObserverList(),
             progress=report.Progress(),
             blackbox=history.BlackBox(),
-            summary=report.Summary(),
+            summary=report.Summary(printer=Printer()),
             verbose=False,
             random_state=None,
             check_gradient=False,

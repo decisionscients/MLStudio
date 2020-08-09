@@ -99,7 +99,10 @@ class Printer:
         if title:
             self.print_title(title)
         for k, v in content.items():
+            if v == " ":
+                self.print_blank_line()                        
             self._print_line(anchor, k,v)
+
 
     def print_dataframe(self, content, title=None):
         """Prints a table with a heading.

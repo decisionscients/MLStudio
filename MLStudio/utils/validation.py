@@ -236,7 +236,7 @@ def validate_multiclass_activation(param):
 def validate_observer_list(param):
     from mlstudio.supervised.algorithms.optimization.observers.base import ObserverList    
     if not isinstance(param, ObserverList):
-        raise ValueError("This class requires an ObserverList object.")
+        raise TypeError("This class requires an ObserverList object.")
     return True
 # --------------------------------------------------------------------------  #
 def validate_observers(param, param_name='observers'):
@@ -246,9 +246,9 @@ def validate_observers(param, param_name='observers'):
         raise TypeError(msg)
     return True
 # --------------------------------------------------------------------------  #
-def validate_scorer(task, scorer):
-    classname = task.__class__.__name__
-    if "Regression" in classname:
+def validate_scorer(estimator, scorer):
+    classname = estimator.__class__.__name__
+    if "Regressor" in classname:
         validate_regression_scorer(scorer)    
     elif "Binary" in classname:
         validate_binaryclass_scorer(scorer)
@@ -422,9 +422,9 @@ def search_all_subclasses(cls):
 # --------------------------------------------------------------------------  #     
 def validate_estimator(estimator):
     """Validates an estimator object."""
-    validate_task(estimator.task)
+    
     validate_range(estimator.eta0, param_name="eta0", minimum=0, 
-                                maximum=1, left='open', right='close')
+                                    maximum=1, left='open', right='close')    
     validate_int(estimator.epochs, param_name="epochs", minimum=0,
                             left='open', right='close')                 
     if estimator.batch_size:
@@ -435,7 +435,7 @@ def validate_estimator(estimator):
                                 minimum=0, maximum=1, left='closed', 
                                 right='open')
     validate_optimizer(estimator.optimizer)
-    validate_scorer(estimator.task, estimator.scorer)    
+    validate_scorer(estimator, estimator.scorer)    
        
     if estimator.early_stop:
         validate_observers(estimator.early_stop, 

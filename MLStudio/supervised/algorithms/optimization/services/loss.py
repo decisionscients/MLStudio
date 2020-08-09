@@ -142,7 +142,7 @@ class Quadratic(Loss):
         J = 0.5 * np.mean((y_out-y)**2)        
         # Apply regularization
         if self._regularizer:
-            J += self._regularizer(theta)
+            J += self._regularizer.cost(theta)
         # Normalize cost and regularization by 
         return J
 
@@ -217,7 +217,7 @@ class CrossEntropy(Loss):
         J = -np.mean(y * np.log(y_out) + (1-y) * np.log(1-y_out)) 
         # Apply regularization to the weights (not bias) in gradient
         if self._regularizer: 
-            J += self._regularizer(theta)
+            J += self._regularizer.cost(theta)
         # Return cost as average of cross entropy
         return J 
 
@@ -293,7 +293,7 @@ class CategoricalCrossEntropy(Loss):
         J = -np.mean(np.sum(y * np.log(y_out), axis=1))
         # Add regularizer of weights 
         if self._regularizer:
-            J += self._regularizer(theta) 
+            J += self._regularizer.cost(theta) 
         # Return cost as average of cross-entropy
         return J
 

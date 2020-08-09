@@ -152,11 +152,6 @@ class GradientDescent(ABC, BaseEstimator):
 
     # ----------------------------------------------------------------------- #                
     @property
-    def description(self):
-        """Creates and returns the estimator description."""                   
-        return self._task.name + " by " + self.variant 
-
-    @property
     def eta(self):
         return self._eta
 
@@ -197,28 +192,6 @@ class GradientDescent(ABC, BaseEstimator):
     def train_data_package(self):
         return self._train_data_package
 
-    @property
-    def X_train(self):
-        return self._X_train 
-
-    @property
-    def y_train(self):
-        return self._y_train 
-
-    @property
-    def X_val(self):
-        try:
-            return self._X_val
-        except:
-            warnings.warn("This estimator has no X_val attribute.")
-
-    @property
-    def y_val(self):
-        try:
-            return self._y_val
-        except:
-            warnings.warn("This estimator has no y_val attribute.")
-    
     def get_blackbox(self):
         return self._blackbox
 
@@ -230,7 +203,7 @@ class GradientDescent(ABC, BaseEstimator):
         return scorer
 
     def set_scorer(self, x):
-        validation.validate_scorer(self._task, x)
+        validation.validate_scorer(self, x)
         self._scorer = x
 
     # ----------------------------------------------------------------------- #
@@ -281,20 +254,20 @@ class GradientDescent(ABC, BaseEstimator):
     # ----------------------------------------------------------------------- #  
     def _unpack_data(self, data):
         """Unpacks the data into attributes"""
-        data_sets = {'X_train': False, 'y_train': False,
-                     'X_val': False, 'y_val' : False, 
-                     'X_test': False, 'y_test' : False}
-        for d in data_sets:
-            if data.get(d):
-                if data[d].get('data'):
-                    attr_name = d + "_"
-                    data_sets[d] = True
-                    setattr(self, attr_name, data[d]['data'])                    
+        data_sets = {'X_train_': False, 'y_train_': False,
+                     'X_val_': False, 'y_val_' : False, 
+                     'X_test_': False, 'y_test_' : False}
+        for k,v in data_sets.items():
+            if data.get(k):
+                if data[k].get('data') is not None:                    
+                    data_sets[k] = True
+                    setattr(self, k, data[k]['data'])                    
         
-        if data.get('X_train'):
-            self.n_features_in_ = data['X_train']['metadata']['orig']['n_features']
-            self.n_features_out_ = data['X_train']['metadata']['processed']['n_features']
+        if data.get('X_train_'):
+            self.n_features_in_ = data['X_train_']['metadata']['orig']['n_features']
+            self.n_features_out_ = data['X_train_']['metadata']['processed']['n_features']
 
+        self.train_data_package_ = data
 
     # ----------------------------------------------------------------------- #    
     def _prepare_train_data(self, X, y=None, random_state=None):
@@ -453,14 +426,14 @@ class GradientDescent(ABC, BaseEstimator):
             raise Exception("Data must be prepared before weights are initialized.")
 
         if theta_init is not None:
-            if theta_init.shape != (self._n_features_out,):
+            if theta_init.shape != (self.n_features_out_,):
                 msg = "Initial parameters theta must have shape (n_features,)."
                 raise ValueError(msg)
             theta = theta_init
         else:
             # Random initialization of weights
             rng = np.random.RandomState(self.random_state)                
-            theta = rng.randn(self._n_features_out) 
+            theta = rng.randn(self.n_features_out_) 
             # Set the bias initialization to zero
             theta[0] = 0
         return theta        
@@ -521,18 +494,18 @@ class GradientDescent(ABC, BaseEstimator):
         log['eta'] = self._eta
         log['theta'] = self._theta
 
-        y_out = self._compute_output(self._theta, self._X_train)
-        log['train_cost'] = self._compute_loss(self._theta, self._y_train,
+        y_out = self._compute_output(self._theta, self.X_train_)
+        log['train_cost'] = self._compute_loss(self._theta, self.y_train_,
                                                     y_out)
-        log['train_score'] = self.score(self._X_train, self._y_train)
+        log['train_score'] = self.score(self.X_train_, self.y_train_)
 
         # Check not only val_size but also for empty validation sets 
         if self.val_size:
-            if hasattr(self, '_X_val'):
-                if self._X_val.shape[0] > 0:                
-                    y_out_val = self._compute_output(self._theta, self._X_val)
-                    log['val_cost'] = self._compute_loss(self._theta, self._y_val, y_out_val)                                
-                    log['val_score'] = self.score(self._X_val, self._y_val)
+            if hasattr(self, 'X_val_'):
+                if self.X_val_.shape[0] > 0:                
+                    y_out_val = self._compute_output(self._theta, self.X_val_)
+                    log['val_cost'] = self._compute_loss(self._theta, self.y_val_, y_out_val)                                
+                    log['val_score'] = self.score(self.X_val_, self.y_val_)
         # Store the gradient and its magnitude
         log['gradient'] = self._gradient
         log['gradient_norm'] = None
@@ -549,7 +522,7 @@ class GradientDescent(ABC, BaseEstimator):
         log = {}
         log['epoch'] = self._epoch
 
-        for X_batch, y_batch in batch_iterator(self._X_train, self._y_train, batch_size=self.batch_size):
+        for X_batch, y_batch in batch_iterator(self.X_train_, self.y_train_, batch_size=self.batch_size):
             self._on_batch_begin()
 
             y_out = self._compute_output(self._theta, X_batch)     
@@ -596,7 +569,8 @@ class GradientDescent(ABC, BaseEstimator):
         """Checks X to ensure that it has been processed for training/prediction."""
         X = validation.check_X(X)        
         if X.shape[1] != theta.shape[0]:                
-            X = self._data_processor.process_X_test_data(X)                    
+            data = self._data_processor.process_X_test_data(X)                    
+            X = data['X_test_']['data']
         return X
     
     # ----------------------------------------------------------------------- #    
@@ -658,6 +632,10 @@ class GDRegressor(GradientDescent, RegressorMixin):
     """Gradient Descent Regressor."""
 
     @property
+    def description(self):        
+        return "Linear Regression by " + self.variant     
+
+    @property
     def loss(self):
         return self._loss
 
@@ -708,10 +686,15 @@ class GDRegressor(GradientDescent, RegressorMixin):
         raise NotImplementedError("predict_proba is not implemented for the GDRegression class.")        
 
 # --------------------------------------------------------------------------- #
-#                       GRADIENT DESCENT REGRESSOR                            #
+#                     GRADIENT DESCENT CLASSIFIER (BINARY)                    #
 # --------------------------------------------------------------------------- #
 class GDBinaryclass(GradientDescent, ClassifierMixin):
     """Gradient Descent Regressor."""
+
+    @property
+    def description(self):        
+        return "Binary Classification by " + self.variant 
+
     @property
     def loss(self):
         return self._loss
@@ -743,15 +726,15 @@ class GDBinaryclass(GradientDescent, ClassifierMixin):
     def _get_tags(self):
         tags = {}
         tags['binary_only'] = True
-        if self.learning_rate or self.task.loss.regularizer:
+        if self.learning_rate or self.loss.regularizer:
             tags['poor_score'] = True
         return tags
         
     def _unpack_data(self, data):
         """Unpacks the data into attributes."""
         super(GDMulticlass, self)._unpack_data(data)
-        self.classes_ = data['y_train']['metadata']['orig']['classes']
-        self.n_classes_ = data['y_train']['metadata']['orig']['n_classes']                
+        self.classes_ = data['y_train_']['metadata']['orig']['classes']
+        self.n_classes_ = data['y_train_']['metadata']['orig']['n_classes']                
 
     # --------------------------------------------------------------------------- #        
     def compute_output(self, theta, X):
@@ -781,7 +764,7 @@ class GDBinaryclass(GradientDescent, ClassifierMixin):
         """Confirms y has been encoded."""
         if not validation.is_binary(y):
             data = self._data_processor.process_y_test_data(y)
-            return data['y_test']['data']
+            return data['y_test_']['data']
         return y
 
     def predict(self, X):
@@ -800,7 +783,7 @@ class GDBinaryclass(GradientDescent, ClassifierMixin):
         y_pred : array-like of shape (n_samples, )
         
         """                
-        return self._task.predict(X, self._theta)
+        return self.predict(X, self._theta)
 
     def predict_proba(self, X, theta):
         """Predicts the probability of the positive class
@@ -853,6 +836,10 @@ class GDBinaryclass(GradientDescent, ClassifierMixin):
 # --------------------------------------------------------------------------- #
 class GDMulticlass(GradientDescent, ClassifierMixin):
     """Gradient Descent Multiclass Classifier."""
+
+    @property
+    def description(self):
+        return "Multiclass Classification by " + self.variant     
 
     @property
     def loss(self):
@@ -920,8 +907,8 @@ class GDMulticlass(GradientDescent, ClassifierMixin):
     def _unpack_data(self, data):
         """Unpacks the data into attributes."""
         super(GDMulticlass, self)._unpack_data(data)
-        self.classes_ = data['y_train']['metadata']['orig']['classes']
-        self.n_classes_ = data['y_train']['metadata']['orig']['n_classes']                
+        self.classes_ = data['y_train_']['metadata']['orig']['classes']
+        self.n_classes_ = data['y_train_']['metadata']['orig']['n_classes']                
     
     # --------------------------------------------------------------------------- #
     def _compute_output(self, theta, X):
@@ -949,7 +936,7 @@ class GDMulticlass(GradientDescent, ClassifierMixin):
         """Confirms y has been one-hot encoded."""
         if not validation.is_one_hot(y):
             data = self._data_processor.process_y_test_data(y)
-            y = data['y_test']['data'] 
+            y = data['y_test_']['data'] 
         return y
     
     # --------------------------------------------------------------------------- #
