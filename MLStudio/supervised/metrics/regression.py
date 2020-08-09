@@ -67,7 +67,7 @@ class R2(BaseRegressionMetric):
     _name  = 'R2'
     _label  = 'Coefficient of Determination (R2)'
     
-    _best  = np.max
+    _best  = max
     _better  = np.greater
     _worst  = -np.Inf
     _epsilon_factor  = 1
@@ -89,7 +89,7 @@ class AdjustedR2(BaseRegressionMetric):
     _name  = 'adjusted_r2'
     _label  = "Adjusted R2"
     
-    _best  = np.max
+    _best  = max
     _better  = np.greater
     _worst  = -np.Inf
     _epsilon_factor  = 1
@@ -112,7 +112,7 @@ class PercentVarianceExplained(BaseRegressionMetric):
     _name  = 'percent_variance_explained'
     _label  = "Percent Variance Explained"
     
-    _best  = np.max
+    _best  = max
     _better  = np.greater
     _worst  = -np.Inf
     _epsilon_factor  = 1
@@ -168,7 +168,7 @@ class NegativeMeanSquaredError(BaseRegressionMetric):
     _name  = 'negative_mean_squared_error'
     _label  = "Negative Mean Squared Error"
     
-    _best  = np.max
+    _best  = max
     _better  = np.greater
     _worst  = -np.Inf
     _epsilon_factor  = 1
@@ -205,7 +205,7 @@ class NegativeRootMeanSquaredError(BaseRegressionMetric):
     _name  = 'negative_root_mean_squared_error'
     _label  = "Negative Root Mean Squared Error"
     
-    _best  = np.max
+    _best  = max
     _better  = np.greater
     _worst  = -np.Inf
     _epsilon_factor  = 1

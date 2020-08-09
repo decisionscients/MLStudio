@@ -39,7 +39,7 @@ class Loss(ABC, BaseEstimator):
         threshold = 1e-10 and upper threshold = 1.
     """
 
-    def __init__(self, regularizer=None, gradient_scaling=False, gradient_scaler=None):
+    def __init__(self, regularizer=None, gradient_scaling=True, gradient_scaler=None):
         self._regularizer = regularizer
         self._gradient_scaler = gradient_scaler
         self._gradient_scaling = gradient_scaling

@@ -455,7 +455,7 @@ class Adaptive(LearningRateSchedule):
 
     def __init__(self, eta0=0.1, eta_min=1e-4,
                  decay_factor=0.5, monitor='train_cost',  epsilon=0.001, 
-                 patience=10):
+                 patience=10, performance_observer=None):
         super(Adaptive, self).__init__(
             eta0=eta0,
             eta_min=eta_min,
@@ -465,9 +465,7 @@ class Adaptive(LearningRateSchedule):
         self.monitor = monitor
         self.epsilon = epsilon
         self.patience = patience  
-        self.observer = PerformanceObserver(monitor=monitor,
-                                            epsilon=epsilon,
-                                            patience=patience)      
+        self.performance_observer = performance_observer
 
     def on_train_begin(self, log=None):        
         """Sets key variables at beginning of training.
@@ -476,21 +474,22 @@ class Adaptive(LearningRateSchedule):
         ----------
         log : dict
             Contains no information
-        """
-        self._observer = deepcopy(self.observer)
+        """        
+        self._performance_observer = deepcopy(self.performance_observer)
         super(Adaptive, self).on_train_begin(log)
         try:
-            self._observer.monitor = self.monitor
-            self._observer.epsilon = self.epsilon
-            self._observer.patience = self.patience
+            self._performance_observer.set_model(self.model)
+            self._performance_observer.monitor = self.monitor
+            self._performance_observer.epsilon = self.epsilon
+            self._performance_observer.patience = self.patience
         except:
             raise ValueError("The performance observer object is required for this object.")
         
-        self._observer.on_train_begin()        
+        self._performance_observer.on_train_begin(log)        
 
     def _compute_learning_rate(self, epoch, log):
         lr = log.get('eta') * self.decay_factor \
-            if self._observer.stabilized else log.get('eta')
+            if self._performance_observer.stabilized else log.get('eta')
         return lr
 
 
@@ -505,7 +504,7 @@ class Adaptive(LearningRateSchedule):
             validation cost)  
         """        
         log = log or {}                        
-        self._observer.on_epoch_end(epoch, log)
+        self._performance_observer.on_epoch_end(epoch, log)
         super(Adaptive, self).on_epoch_end(epoch, log)        
         
            

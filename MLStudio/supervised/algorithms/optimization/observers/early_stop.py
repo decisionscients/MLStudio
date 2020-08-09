@@ -28,9 +28,11 @@ PROJECT_DIR = Path(__file__).resolve().parents[5]
 print(PROJECT_DIR)
 site.addsitedir(PROJECT_DIR)
 
+from copy import copy, deepcopy
 import datetime
 import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator
 
 from mlstudio.supervised.algorithms.optimization.observers.base import Observer
 from mlstudio.utils.validation import validate_monitor, validate_int
@@ -38,7 +40,7 @@ from mlstudio.utils.validation import validate_zero_to_one
 # --------------------------------------------------------------------------- #
 #                               EARLYSTOP                                     #
 # --------------------------------------------------------------------------- #
-class EarlyStop(Observer):
+class EarlyStop(Observer,BaseEstimator):
     """Performances and log model performance, critical points and stability. 
 
     Performance is defined in terms of:
@@ -75,12 +77,12 @@ class EarlyStop(Observer):
 
     """
 
-    def __init__(self, metric='val_score', epsilon=0.001, patience=5, observer=None): 
+    def __init__(self, monitor='val_score', epsilon=0.001, patience=5, performance_observer=None): 
         super(EarlyStop, self).__init__()
-        self.metric = metric
+        self.monitor = monitor
         self.epsilon = epsilon
         self.patience = patience
-        self.observer = observer
+        self.performance_observer = performance_observer
         self.name = "EarlyStop Observer"        
 
     def on_train_begin(self, log=None):
@@ -91,14 +93,17 @@ class EarlyStop(Observer):
         log: dict
             Currently not used
         """
-        if self.observer:
-            self.observer.metric = self.metric
-            self.observer.epsilon = self.epsilon
-            self.observer.patience = self.patience
+        self._performance_observer = deepcopy(self.performance_observer)
+        super(EarlyStop, self).on_train_begin(log)
+        if self._performance_observer:
+            self._performance_observer.set_model(model=self.model)
+            self._performance_observer.monitor = self.monitor
+            self._performance_observer.epsilon = self.epsilon
+            self._performance_observer.patience = self.patience
         else:
             raise Exception("EarlyStop requires a PerformanceObserver object.")
 
-        self.observer.on_train_begin(log)
+        self._performance_observer.on_train_begin(log)
         super(EarlyStop, self).on_train_begin(log=log)
 
     def on_epoch_end(self, epoch, log=None):
@@ -113,8 +118,8 @@ class EarlyStop(Observer):
             Dictionary containing the data, cost, batch size and current weights
         """                  
         super(EarlyStop, self).on_epoch_end(epoch=epoch, log=log)
-        self.observer.on_epoch_end(epoch, log)
-        if self.observer.stabilized:
+        self._performance_observer.on_epoch_end(epoch, log)
+        if self._performance_observer.stabilized:
             self.model.converged = True       
 
 

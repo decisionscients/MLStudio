@@ -24,12 +24,11 @@ import math
 
 import numpy as np
 from sklearn.base import BaseEstimator  
+
+from mlstudio.utils.data_manager import GradientScaler   
 # --------------------------------------------------------------------------  #
 class Optimizer(ABC, BaseEstimator):
     """Base class for all optimizers."""
-
-    def __init__(self):
-        pass
 
     @abstractmethod        
     def __call__(self, gradient, learning_rate, theta, **kwargs):   
@@ -81,6 +80,7 @@ class Momentum(Optimizer):
         self.name = "Momentum"
         self.gamma = gamma
         self._velocity = 0
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):             
         grad = gradient(theta, **kwargs)
@@ -92,10 +92,11 @@ class Momentum(Optimizer):
 class Nesterov(Optimizer):
     """Nesterov accelerated gradient optimizer."""
 
-    def __init__(self, gamma=0.9):
+    def __init__(self, gamma=0.9, ):
         self.name = "Nesterov"
         self.gamma = gamma
         self._velocity = 0
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):
         next_position = theta - self.gamma * self._velocity        
@@ -112,6 +113,7 @@ class Adagrad(Optimizer):
         self.name = "Adagrad"
         self.epsilon = epsilon
         self.sum_squared_gradients = 0
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):
         grad = gradient(theta, **kwargs)
@@ -140,6 +142,7 @@ class Adadelta(Optimizer):
         self.epsilon = epsilon
         self.avg_sqr_gradient = 0
         self.avg_sqr_delta_theta = 0
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):                
         grad = gradient(theta, **kwargs)     
@@ -169,6 +172,7 @@ class RMSprop(Optimizer):
         self.epsilon = epsilon
         self.avg_sqr_gradient = 0
         self.avg_sqr_delta_theta = 0
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):                
         grad = gradient(theta, **kwargs)        
@@ -188,6 +192,7 @@ class Adam(Optimizer):
         self.beta_one = beta_one
         self.beta_two = beta_two        
         self.epsilon = epsilon
+
 
         self.t = 0
         self.m = 0        
@@ -217,6 +222,7 @@ class AdaMax(Optimizer):
         self.t = 0
         self.m = 0
         self.u = 0
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):                
         self.t += 1
@@ -240,6 +246,7 @@ class Nadam(Optimizer):
         self.t = 0
         self.m = 0
         self.v = 0
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
@@ -269,6 +276,7 @@ class AMSGrad(Optimizer):
         self.m = 0
         self.v = 0
         self.v_hat = 0
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
@@ -294,6 +302,7 @@ class AdamW(Optimizer):
         self.m = 0
         self.v = 0
         self.v_hat = 0
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
@@ -322,6 +331,7 @@ class QHAdam(Optimizer):
         self.m = 0
         self.v = 0
         self.v_hat = 0
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1
@@ -344,6 +354,7 @@ class AggMo(Optimizer):
         self.betas = betas
         self.t = 0
         self.v = 0
+
         
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
@@ -373,7 +384,7 @@ class QuasiHyperbolicMomentum(Optimizer):
         self.beta = beta
         self.t = 0
         self.m = 0
-        
+
     
     def __call__(self, gradient, learning_rate, theta, **kwargs):    
         self.t += 1

@@ -38,7 +38,7 @@ from mlstudio.utils.validation import validate_monitor
 # --------------------------------------------------------------------------- #
 #                             OBSERVER LIST                                   #
 # --------------------------------------------------------------------------- #
-class ObserverList(BaseEstimator):
+class ObserverList(ABC, BaseEstimator):
     """Container of observers."""
 
     def __init__(self, observers=None):
@@ -285,11 +285,8 @@ class Observer(ABC, BaseEstimator):
 class PerformanceObserver(Observer):
     """Base class for performance observers."""
 
-    def __init__(self, monitor='train_cost', epsilon=0.01, patience=10): 
+    def __init__(self): 
         super(PerformanceObserver, self).__init__()               
-        self._monitor = monitor
-        self._epsilon = epsilon
-        self._patience = patience
 
     @property
     def name(self):
@@ -353,7 +350,7 @@ class PerformanceObserver(Observer):
         # Otherwise, cost is being monitored and best and better costs are min and
         # less, respectively
         else:
-            self._best = np.min            
+            self._best = min            
             self._better = np.less            
 
         # Validation
@@ -397,7 +394,7 @@ class PerformanceObserver(Observer):
             # another 'patience' epochs to achieve real improvement from
             # new baseline.  
             self._iter_no_improvement = 0
-            self._baseline = self._best((current, self._baseline)) 
+            self._baseline = self._best(current, self._baseline)
         else:
             self._stabilized = False               
 

@@ -187,7 +187,7 @@ class Summary(base.Observer):
     def _get_params(self, obj):
         """Gets the hyperparameters for an object."""        
         self._implicit_dependencies = (debug.GradientCheck, BlackBox, Printer, 
-                              Progress, base.ObserverList, BaseMetric,
+                              Progress, base.ObserverList, BaseMetric, base.PerformanceObserver,
                               AddBiasTerm, OneHotLabelEncoder, LabelEncoder,
                               DataSplitter, RegressionDataProcessor, MultiClassDataProcessor,
                               BinaryClassDataProcessor, debug.GradientCheck,

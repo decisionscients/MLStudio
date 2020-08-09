@@ -29,6 +29,7 @@ from sklearn.utils.estimator_checks import check_estimator
 from sklearn.linear_model import SGDRegressor, SGDClassifier
 
 from mlstudio.factories.algorithms import GradientDescent
+from mlstudio.factories.observers import ObserverFactory
 from mlstudio.supervised.algorithms.optimization.observers import base
 from mlstudio.supervised.algorithms.optimization.observers import history
 from mlstudio.supervised.algorithms.optimization.observers import report
@@ -36,6 +37,8 @@ from mlstudio.supervised.algorithms.optimization.services import loss
 from mlstudio.supervised.algorithms.optimization.services import optimizers
 from mlstudio.supervised.algorithms.optimization.services import regularizers
 from mlstudio.supervised.algorithms.optimization.observers import learning_rate
+from mlstudio.supervised.algorithms.optimization.observers import early_stop
+from mlstudio.utils.data_manager import GradientScaler
 from mlstudio.supervised import metrics 
 # --------------------------------------------------------------------------  #
 
@@ -123,22 +126,27 @@ class GradientRegressorTests:
 
     # Test learning rates
     learning_rates = \
-        [learning_rate.TimeDecay(eta0=0.5), learning_rate.StepDecay(eta0=0.5), 
-         learning_rate.SqrtTimeDecay(eta0=0.1),learning_rate.ExponentialDecay(eta0=0.1), 
-         learning_rate.ExponentialSchedule(eta0=0.1), learning_rate.PolynomialDecay(eta0=0.1), 
-         learning_rate.PowerSchedule(eta0=0.1), learning_rate.BottouSchedule(eta0=0.1), 
-         learning_rate.Adaptive(eta0=0.1)]
+        [ObserverFactory.time_decay(eta0=0.5, decay_factor=0.8), 
+         ObserverFactory.step_decay(eta0=0.5, step_size=20), 
+         ObserverFactory.sqrt_time_decay(eta0=0.1),
+         ObserverFactory.exponential_decay(eta0=0.1), 
+         ObserverFactory.polynomial_decay(eta0=0.1), 
+         ObserverFactory.power_decay(eta0=0.1), ObserverFactory.bottou_decay(eta0=0.1), 
+         ObserverFactory.adaptive_decay(eta0=0.1, monitor='val_score', epsilon=0.01,
+                                        patience=50)]
 
     scenarios = [[learning_rate] for learning_rate in learning_rates]         
     
     lr_scenarios = [GradientDescent().regressor(learning_rate=scenario[0],
+                                                loss=loss.Quadratic(gradient_scaling=True,
+                                                               gradient_scaler=GradientScaler()),
                                                         epochs=1000) 
                                                         for scenario in scenarios]
     @mark.regressor_learning_rates                                                            
     def test_regressor_learning_rates(self, get_regression_data_split):
         X_train, X_test, y_train, y_test = get_regression_data_split        
-        for estimator in GradientRegressorTests.lr_scenarios:            
-            est = estimator
+        for estimator in GradientRegressorTests.lr_scenarios:                            
+            est = estimator            
             est.fit(X_train, y_train)
             skl = SGDRegressor()
             skl.fit(X_train, y_train)
@@ -182,7 +190,7 @@ class GradientRegressorTests:
             assert est_scores_ar2 != est_scores_mape, "Regressor: ar2 score not different than mape"
             assert isinstance(est_scores_mape, float), "Regressor: mape score not float"
 
-    # Test learning rates
+    # Test regularizers
     regs = \
         [regularizers.L1(alpha=0.1), regularizers.L2(alpha=0.02), regularizers.L1_L2(alpha=0.03, ratio=0.6)]
 
@@ -239,4 +247,37 @@ class GradientRegressorTests:
             assert est_scores_ar2 != est_scores_mape, "Regressor: ar2 score not different than mape"
             assert isinstance(est_scores_mape, float), "Regressor: mape score not float"
 
-    
+
+    @mark.regressor_early_stop                                                           
+    def test_regressor_early_stop(self, get_regression_data_split):
+        X_train, X_test, y_train, y_test = get_regression_data_split                   
+        est = GradientDescent().regressor(early_stop=ObserverFactory().early_stop(monitor='val_score', 
+                                                                                  epsilon=0.001, 
+                                                                                  patience=30))
+        est.fit(X_train, y_train)
+        skl = SGDRegressor()
+        skl.fit(X_train, y_train)
+        # Test data split
+        m = X_train.shape[0]
+        assert np.isclose(est.X_train_.shape[0], (0.7 * m), rtol=1), "Regressor: training data shape incorrect."
+        assert np.isclose(est.X_val_.shape[0], (0.3 * m), rtol=1), "Regressor: validation data shape incorrect."
+        assert est.X_train_.shape[0] == len(est.y_train_), "Regressor: X_train,y_train shape mismatch "
+        assert est.X_val_.shape[0] == len(est.y_val_), "Regressor: X_val,y_val shape mismatch "
+        # Evaluate results vis-a-vis sklearn
+        skl_scores = skl.score(X_train, y_train)
+        est_scores = est.score(X_train, y_train)
+        msg = est.early_stop.name
+        d = (skl_scores-est_scores)/skl_scores
+        print("\nSKL {k}     MLS {m}     RDIF {d}".format(k=str(skl_scores), m=str(est_scores), d=str(d)))
+        est.summarize()
+        assert np.isclose(skl.score(X_train,y_train), est.score(X_train, y_train), rtol=1e-1), "Regressor: inaccurate train scores " + msg
+        assert np.isclose(skl.score(X_test,y_test), est.score(X_test, y_test), rtol=1e-1), "Regressor: inaccurate test scores " + msg
+        # Test scorer
+        est.set_scorer(metrics.regression.AdjustedR2())
+        est_scores_ar2 = est.score(X_train, y_train)
+        assert est_scores != est_scores_ar2, "Regressor: ar2 score not different than r2"
+        assert isinstance(est_scores_ar2, float), "Regressor: ar2 score not float"
+        est.set_scorer(metrics.regression.MeanAbsolutePercentageError())
+        est_scores_mape =  est.score(X_train, y_train)
+        assert est_scores_ar2 != est_scores_mape, "Regressor: ar2 score not different than mape"
+        assert isinstance(est_scores_mape, float), "Regressor: mape score not float"    

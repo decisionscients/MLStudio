@@ -33,53 +33,47 @@ from mlstudio.supervised.algorithms.optimization.observers import learning_rate
 from mlstudio.utils.print import Printer
 
 # --------------------------------------------------------------------------- #
-class EarlyStop(containers.DeclarativeContainer):
+class ObserverFactory(containers.DeclarativeContainer):
     """IoC Container for observer providers."""
-    
-    factory = providers.Factory(early_stop.EarlyStop,
-                                    observer=base.PerformanceObserver) 
 
-# --------------------------------------------------------------------------- #
-class Summary(containers.DeclarativeContainer):
-    """IoC Container for observer providers."""
-    
-    factory = providers.Factory(report.Summary,
-                                    printer=providers.Factory(Printer)) 
-# --------------------------------------------------------------------------- #
-class LearningRate(containers.DeclarativeContainer):
-    """IoC container for learning rate schedule providers."""
+    # Early stop observer factory
+    early_stop = providers.Factory(early_stop.EarlyStop,
+                                   monitor='train_cost',
+                                   epsilon=0.01,
+                                   patience=10,
+                                   performance_observer=base.PerformanceObserver())
+        
 
-    step_decay_factory = providers.Factory(learning_rate.StepDecay,
+    # Learning rate factories.
+    step_decay = providers.Factory(learning_rate.StepDecay,
                                     eta0=0.1, eta_min=1e-4, decay_factor=0.96,
-                                    decay_steps=10)
+                                    step_size=10)
 
-    time_decay_factory = providers.Factory(learning_rate.TimeDecay,
+    time_decay = providers.Factory(learning_rate.TimeDecay,
                                     eta0=0.1, eta_min=1e-4, decay_factor='optimal')
 
-    sqrt_time_decay_factory = providers.Factory(learning_rate.SqrtTimeDecay,
+    sqrt_time_decay = providers.Factory(learning_rate.SqrtTimeDecay,
                                     eta0=0.1, eta_min=1e-4, decay_factor=0.5)
 
-    exponential_decay_factory = providers.Factory(learning_rate.ExponentialDecay,
+    exponential_decay = providers.Factory(learning_rate.ExponentialDecay,
                                     eta0=0.1, eta_min=1e-4, decay_factor=0.1)      
-
-    exponential_step_decay_factory = providers.Factory(learning_rate.ExponentialSchedule,
-                                    eta0=0.1, eta_min=1e-4, decay_factor=0.96,
-                                    staircase=False)                         
-
-    polynomial_decay_factory = providers.Factory(learning_rate.PolynomialDecay,
+   
+    polynomial_decay = providers.Factory(learning_rate.PolynomialDecay,
                                     eta0=0.1, eta_min=1e-4, power=1.0)                       
 
-    power_decay_factory = providers.Factory(learning_rate.PowerSchedule,
+    power_decay = providers.Factory(learning_rate.PowerSchedule,
                                     eta0=0.1, eta_min=1e-4, decay_steps=100,
                                     power=1.0)                                                                 
 
-    bottou_decay_factory = providers.Factory(learning_rate.BottouSchedule,
+    bottou_decay = providers.Factory(learning_rate.BottouSchedule,
                                     eta0=0.1, eta_min=1e-4, decay_factor=0.5)                                                                                                                                                                   
 
-    adaptive_decay_factory = providers.Factory(learning_rate.Adaptive,
+    adaptive_decay = providers.Factory(learning_rate.Adaptive,
                                     eta0=0.1, eta_min=1e-4, decay_factor=0.5,
-                                    metric='train_cost', epsilon=0.001,
-                                    patience=10, observer=base.PerformanceObserver)      
+                                    monitor='train_cost', epsilon=0.001,
+                                    patience=10, performance_observer=base.PerformanceObserver())  
+
+  
                         
 
 
