@@ -38,111 +38,138 @@ class AbstractDataProcessor(ABC, BaseEstimator):
 
     def _compile(self):
         """Compiles the class for scikit-learn compatibility."""
-        self._add_bias_transformer = deepcopy(self.add_bias_transformer)
-        self._split_transformer = deepcopy(self.split_transformer)
-        self._label_encoder = deepcopy(self.label_encoder)
-        self._one_hot_label_encoder = deepcopy(self.one_hot_label_encoder)
+        self.add_bias_transformer = deepcopy(self.add_bias_transformer)
+        self.split_transformer = deepcopy(self.split_transformer)
+        self.label_encoder = deepcopy(self.label_encoder)
+        self.one_hot_label_encoder = deepcopy(self.one_hot_label_encoder)
 
-    def _check_in_X(self, X, name):
-        """Initializes a data object for X input data and grabs some metadata."""
-        data = OrderedDict()
-        data[name] = OrderedDict()        
-        data[name]['metadata'] = OrderedDict()
-        data[name]['metadata']['orig'] = get_feature_info(X)
-        return data
+    def _check_in_X(self, X):
+        """Initializes a metadata object for X input metadata and grabs some metadata."""
+        metadata = OrderedDict()
+        metadata['orig'] = get_feature_info(X)
+        return metadata
 
-    def _check_out_X(self, X, name, data):
+    def _check_out_X(self, X):
         """Wraps up preprocessing with addition of metadata on processed X ."""                        
-        data[name]['data'] = X
-        data[name]['metadata']['processed'] = get_feature_info(X)
-        return data        
+        metadata = OrderedDict()        
+        metadata['processed'] = get_feature_info(X)
+        return metadata        
 
-    def _check_in_y(self, y, name):
-        """Initializes a data object for X input data."""
-        data = OrderedDict()
-        data[name] = OrderedDict()        
-        data[name]['metadata'] = OrderedDict()
-        data[name]['metadata']['orig'] = get_target_info(y)
-        return data
+    def _check_in_y(self, y):
+        """Initializes a metadata object for X input metadata."""
+        metadata = OrderedDict()        
+        metadata['orig'] = get_target_info(y)
+        return metadata
 
-    def _check_out_y(self, y, name, data):         
-        """Wraps up preprocessing with additional metadata."""
-        data[name]['data'] = y
-        data[name]['metadata']['processed'] = get_target_info(y)
-        return data
+    def _check_out_y(self, y):         
+        """Wraps up preprocessing with additional metadata."""        
+        metadata = OrderedDict()        
+        metadata['processed'] = get_target_info(y)
+        return metadata
 
     def _transform_X(self, X):
         """Adds bias term to X."""
-        return self._add_bias_transformer.fit_transform(X)
+        return self.add_bias_transformer.fit_transform(X)
 
-    def _transform_X_y_split(self, X, y, val_size=None, stratify=False, 
+    def _transform_X_ysplit(self, X, y, val_size=None, stratify=False, 
                                 random_state=None):
         """Splits the data."""
         
-        X_train, X_val, y_train, y_val = self._split_transformer.fit_transform(
+        X_train, X_val, y_train, y_val = self.split_transformer.fit_transform(
             X, y, test_size=val_size, stratify=stratify, 
             random_state=random_state)        
         return X_train, X_val, y_train, y_val
     
-    def process_X_test_data(self, X, y=None):        
+    def process_X_test_data(self, X, y=None):     
+        data = OrderedDict()
+        data['X_test'] = OrderedDict()  
+        data['X_test']['metadata'] = OrderedDict()
+
+        data['X_test']['metadata']['orig'] = self._check_in_X(X)
+
         X = self._transform_X(X)
-        return X
+        
+        data['X_test']['data'] = X
+        data['X_test']['metadata']['processed'] = self._check_out_X(X)               
+        return data
     
     @abstractmethod
     def process_y_test_data(self, y):
-        """Default behavior for processing y_test data."""
+        """Default behavior for processing y_test metadata."""
         # Default behavior does nothing to y variable.
-        return y
+        data = OrderedDict()
+        data['y_test'] = OrderedDict()
+        data['y_test']['metadata'] = OrderedDict()
+        data['y_test']['metadata']['orig'] = self._check_in_y(y)        
+        data['y_test']['data'] = y
+        data['y_test']['metadata']['processed'] = self._check_out_y(y)        
+        
+        return data
+        
 
     def process_train_data(self, X, y=None):
-        """Default behavior for processing training data."""
+        """Default behavior for processing training metadata."""
         # Default behavior adds bias to X, does nothing to y
         # Copies mutable parameters to private variables for scikit-learn
         self._compile()
 
-        X_train = self._check_in_X(X, name='X_train')
-        y_train = self._check_in_y(y, name='y_train')
+        data = OrderedDict()
+        data['X_train'] = OrderedDict()
+        data['y_train'] = OrderedDict()
+        data['X_train']['metadata'] = OrderedDict()
+        data['y_train']['metadata'] = OrderedDict()
+        data['X_train']['metadata']['orig'] = self._check_in_X(X)        
+        data['y_train']['metadata']['orig'] = self._check_in_y(y)
 
         X = self._transform_X(X)        
         
-        X_train = self._check_out_X(X, name='X_train', data=X_train)
-        y_train = self._check_out_y(y, name='y_train', data=y_train)
-        data = OrderedDict()
-        data = {**X_train, **y_train}
+        data['X_train']['data'] = X
+        data['X_train']['metadata']['processed'] = self._check_out_X(X)
+        data['y_train']['metadata']['processed'] = self._check_out_y(y)
         return data
 
     def process_train_val_data(self, X, y=None, val_size=None, random_state=None):
-        """Default behavior for processing training and validation data."""
-        # Copies mutable parameters to private variables for scikit-learn
-        data = OrderedDict()
+        """Default behavior for processing training and validation metadata."""
+        # Copies mutable parameters to private variables for scikit-learn        
         self._compile()
 
-        X_train = self._check_in_X(X, name='X_train')
-        y_train = self._check_in_y(y, name='y_train')
-        X_val = self._check_in_X(X, name='X_val')
-        y_val = self._check_in_y(y, name='y_val')
+        data = OrderedDict()
+        data['X_train'] = OrderedDict()
+        data['y_train'] = OrderedDict()
+        data['X_val'] = OrderedDict()
+        data['y_val'] = OrderedDict()        
+        data['X_train']['metadata'] = OrderedDict()
+        data['y_train']['metadata'] = OrderedDict()        
+        data['X_val']['metadata'] = OrderedDict()
+        data['y_val']['metadata'] = OrderedDict()                
+
+        data['X_train']['metadata']['orig'] = self._check_in_X(X)
+        data['y_train']['metadata']['orig'] = self._check_in_y(y)
+        data['X_val']['metadata']['orig'] = self._check_in_X(X)
+        data['y_val']['metadata']['orig'] = self._check_in_y(y)
 
         X = self._transform_X(X)
 
         X_train_xform, X_val_xform, y_train_xform, y_val_xform = \
-            self._transform_X_y_split(X=X, y=y, val_size=val_size, 
+            self._transform_X_ysplit(X=X, y=y, val_size=val_size, 
                                       stratify=False, random_state=random_state)
 
-        X_train = self._check_out_X(X_train_xform, name='X_train', data=X_train)
-        y_train = self._check_out_y(y_train_xform, name='y_train', data=y_train)            
+        data['X_train']['data'] = X_train_xform
+        data['y_train']['data'] = y_train_xform
+        data['X_train']['metadata']['processed'] = self._check_out_X(X_train_xform)
+        data['y_train']['metadata']['processed'] = self._check_out_y(y_train_xform)            
 
         # Confirm split was successful
         if X_val_xform is not None:
-            X_val = self._check_out_X(X_val_xform, name='X_val', data=X_val)            
-            y_val = self._check_out_y(y_val_xform, name='y_val', data=y_val)        
-            data = {**X_train, **X_val, **y_train, **y_val}
-        else:
-            data = {**X_train, **y_train}
-        return data        
+            data['X_val']['data'] = X_val_xform
+            data['y_val']['data'] = y_val_xform
+            data['X_val']['metadata']['processed'] = self._check_out_X(X_val_xform)            
+            data['y_val']['metadata']['processed'] = self._check_out_y(y_val_xform)                                
+        return data
     
 # --------------------------------------------------------------------------- #
 class RegressionDataProcessor(AbstractDataProcessor):
-    """Performs preprocessing of data for regression."""
+    """Performs preprocessing of metadata for regression."""
 
     def process_train_data(self, X, y=None):
         return super(RegressionDataProcessor, self).process_train_data(X, y)
@@ -162,111 +189,157 @@ class RegressionDataProcessor(AbstractDataProcessor):
 class BinaryClassDataProcessor(AbstractDataProcessor):
 
     def process_train_data(self, X, y=None):
-        X_train = self._check_in_X(X, name='X_train')
-        y_train = self._check_in_y(y, name='y_train')
+
+        data = OrderedDict()
+        data['X_train'] = OrderedDict()
+        data['y_train'] = OrderedDict()
+        data['X_train']['metadata'] = OrderedDict()
+        data['y_train']['metadata'] = OrderedDict()
+                
+        data['X_train']['metadata']['orig'] = self._check_in_X(X)
+        data['y_train']['metadata']['orig'] = self._check_in_y(y)
 
         X = self._transform_X(X)        
-        y = self._label_encoder.fit_transform(y)
+        y = self.label_encoder.fit_transform(y)
         
-        X_train = self._check_out_X(X, name='X_train', data=X_train)
-        y_train = self._check_out_y(y, name='y_train', data=y_train)
-        data = OrderedDict()
-        data = {**X_train, **y_train}
+        data['X_train']['data'] = X
+        data['y_train']['data'] = y
+
+        data['X_train']['metadata']['processed'] = self._check_out_X(X)
+        data['y_train']['metadata']['processed'] = self._check_out_y(y)
         return data
 
     def process_train_val_data(self, X, y=None, val_size=None, random_state=None):
-        X_train = self._check_in_X(X, name='X_train')
-        y_train = self._check_in_y(y, name='y_train')
-        X_val = self._check_in_X(X, name='X_val')
-        y_val = self._check_in_y(y, name='y_val')
+
+        data = OrderedDict()
+        data['X_train'] = OrderedDict()
+        data['y_train'] = OrderedDict()
+        data['X_val'] = OrderedDict()
+        data['y_val'] = OrderedDict()        
+        data['X_train']['metadata'] = OrderedDict()
+        data['y_train']['metadata'] = OrderedDict()        
+        data['X_val']['metadata'] = OrderedDict()
+        data['y_val']['metadata'] = OrderedDict()      
+
+        data['X_train']['metadata']['orig'] = self._check_in_X(X)
+        data['y_train']['metadata']['orig'] = self._check_in_y(y)
+        data['X_val']['metadata']['orig'] = self._check_in_X(X)
+        data['y_val']['metadata']['orig'] = self._check_in_y(y)
 
         X = self._transform_X(X)        
 
         X_train_xform, X_val_xform, y_train_xform, y_val_xform = \
-            self._transform_X_y_split(X=X, y=y, val_size=val_size, 
+            self._transform_X_ysplit(X=X, y=y, val_size=val_size, 
                                      stratify=True, random_state=random_state)
 
-        y_train_xform = self._label_encoder.fit_transform(y_train_xform)
-        X_train = self._check_out_X(X_train_xform, name='X_train', data=X_train)        
-        y_train = self._check_out_y(y_train_xform, name='y_train', data=y_train)
+        y_train_xform = self.label_encoder.fit_transform(y_train_xform)
+        
+        data['X_train']['data'] = X_train_xform
+        data['y_train']['data'] = y_train_xform
+        data['X_train']['metadata']['processed'] = self._check_out_X(X_train_xform)        
+        data['y_train']['metadata']['processed'] = self._check_out_y(y_train_xform)
+
 
         # Check if split was successful
         if X_val_xform is not None:
-            y_val_xform = self._label_encoder.transform(y_val_xform)
-            X_val = self._check_out_X(X_val_xform, name='X_val', data=X_val)
-            y_val = self._check_out_y(y_val_xform, name='y_val', data=y_val)     
-        
-            data = {**X_train, **X_val, **y_train, **y_val}            
-        else:
-            data = {**X_train, **y_train}            
+            data['X_val']['data'] = X_val_xform
+            data['y_val']['data'] = y_val_xform
+            data['X_val']['metadata']['processed'] = self._check_out_X(X_val_xform)        
+            data['y_val']['metadata']['processed'] = self._check_out_y(y_val_xform)        
         return data           
 
     def process_X_test_data(self, X, y=None):     
         return super(BinaryClassDataProcessor, self).process_X_test_data(X)
 
     def process_y_test_data(self, y):           
-        y_test = self._check_in_y(y, name='y_test')
-        y = self._label_encoder.transform(y)
-        y_test = self._check_out_y(y, name='y_test', data=y_test)
-        return y_test
+        data = OrderedDict()
+        data['y_test'] = OrderedDict()
+        data['y_test']['metadata'] = OrderedDict()
+        data['y_test']['metadata']['orig'] = self._check_in_y(y)        
+        data['y_test']['data'] = self.label_encoder.transform(y)
+        data['y_test']['metadata']['processed'] = self._check_out_y(y)          
+        return data
 
         
 # --------------------------------------------------------------------------- #
 class MultiClassDataProcessor(AbstractDataProcessor):
 
     def process_train_data(self, X, y=None):
-        data = OrderedDict()
 
-        X_train = self._check_in_X(X, name='X_train')
-        y_train = self._check_in_y(y, name='y_train')
+
+        data = OrderedDict()
+        data['X_train'] = OrderedDict()
+        data['y_train'] = OrderedDict()
+        data['X_train']['metadata'] = OrderedDict()
+        data['y_train']['metadata'] = OrderedDict()
+                
+        data['X_train']['metadata']['orig'] = self._check_in_X(X)
+        data['y_train']['metadata']['orig'] = self._check_in_y(y)
 
         X = self._transform_X(X)        
-        y = self._label_encoder.fit_transform(y)
-        y = self._one_hot_label_encoder.fit_transform(y)
+        y = self.label_encoder.fit_transform(y)
+        y = self.one_hot_label_encoder.fit_transform(y)
         
-        X_train = self._check_out_X(X, name='X_train', data=X_train)
-        y_train = self._check_out_y(y, name='y_train', data=y_train)
+        data['X_train']['data'] = X
+        data['y_train']['data'] = y
+
+        data['X_train']['metadata']['processed'] = self._check_out_X(X)
+        data['y_train']['metadata']['processed'] = self._check_out_y(y)
         
-        data = {**X_train, **y_train}
         return data
 
     def process_train_val_data(self, X, y=None, val_size=None, random_state=None):
+
         data = OrderedDict()
+        data['X_train'] = OrderedDict()
+        data['y_train'] = OrderedDict()
+        data['X_val'] = OrderedDict()
+        data['y_val'] = OrderedDict()        
+        data['X_train']['metadata'] = OrderedDict()
+        data['y_train']['metadata'] = OrderedDict()        
+        data['X_val']['metadata'] = OrderedDict()
+        data['y_val']['metadata'] = OrderedDict()      
 
-        X_train = self._check_in_X(X, name='X_train')
-        y_train = self._check_in_y(y, name='y_train')
-        X_val = self._check_in_X(X, name='X_val')
-        y_val = self._check_in_y(y, name='y_val')
+        data['X_train']['metadata']['orig'] = self._check_in_X(X)
+        data['y_train']['metadata']['orig'] = self._check_in_y(y)
+        data['X_val']['metadata']['orig'] = self._check_in_X(X)
+        data['y_val']['metadata']['orig'] = self._check_in_y(y)
 
-        X = self._transform_X(X)
+        X = self._transform_X(X)        
 
         X_train_xform, X_val_xform, y_train_xform, y_val_xform = \
-            self._transform_X_y_split(X=X, y=y, val_size=val_size, 
-                                      random_state=random_state)
+            self._transform_X_ysplit(X=X, y=y, val_size=val_size, 
+                                     stratify=True, random_state=random_state)
 
-        y_train_xform = self._label_encoder.fit_transform(y_train_xform)
-        y_train_xform = self._one_hot_label_encoder.fit_transform(y_train_xform)
-        X_train = self._check_out_X(X_train_xform, name='X_train', data=X_train)        
-        y_train = self._check_out_y(y_train_xform, name='y_train', data=y_train)
+        y_train_xform = self.label_encoder.fit_transform(y_train_xform)
+        y_train_xform = self.one_hot_label_encoder.fit_transform(y_train_xform)
+        
+        data['X_train']['data'] = X_train_xform
+        data['y_train']['data'] = y_train_xform
+        data['X_train']['metadata']['processed'] = self._check_out_X(X_train_xform)        
+        data['y_train']['metadata']['processed'] = self._check_out_y(y_train_xform)
+
 
         # Check if split was successful
         if X_val_xform is not None:
-            y_val_xform = self._label_encoder.transform(y_val_xform)
-            y_val_xform = self._one_hot_label_encoder.transform(y_val_xform)
-            X_val = self._check_out_X(X_val_xform, name='X_val', data=X_val)
-            y_val = self._check_out_y(y_val_xform, name='y_val', data=y_val)     
-        
-            data = {**X_train, **X_val, **y_train, **y_val}            
-        else:
-            data = {**X_train, **y_train}            
+            y_val_xform = self.label_encoder.transform(y_val_xform)
+            y_val_xform = self.one_hot_label_encoder.transform(y_val_xform)
+
+            data['X_val']['data'] = X_val_xform
+            data['y_val']['data'] = y_val_xform            
+            data['X_val']['metadata']['processed'] = self._check_out_X(X_val_xform)        
+            data['y_val']['metadata']['processed'] = self._check_out_y(y_val_xform)        
         return data        
 
     def process_X_test_data(self, X, y=None):     
-        return super(BinaryClassDataProcessor, self).process_X_test_data(X)
+        return super(MultiClassDataProcessor, self).process_X_test_data(X)
 
     def process_y_test_data(self, y):           
-        y_test = self._check_in_y(y, name='y_test')
-        y = self._label_encoder.transform(y)            
-        y = self._one_hot_label_encoder.fit_transform(y)
-        y_test = self._check_out_y(y, name='y_test', data=y_test)
-        return y_test
+        data = OrderedDict()
+        data['y_test'] = OrderedDict()
+        data['y_test']['metadata'] = OrderedDict()
+        data['y_test']['metadata']['orig'] = self._check_in_y(y)        
+        y = self.label_encoder.transform(y)
+        data['y_test']['data'] = self.one_hot_label_encoder.transform(y)
+        data['y_test']['metadata']['processed'] = self._check_out_y(y)          
+        return data
